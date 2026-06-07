@@ -6,7 +6,7 @@
     <title>赏金集市 · 双向议价版</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: #f5f7fb; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; padding-bottom: 70px; }
+        body { background: #f5f7fb; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1e293b; padding-bottom: 70px; }
         .app-container { max-width: 600px; margin: 0 auto; background: #f5f7fb; min-height: 100vh; }
         .page { display: none; animation: fadeIn 0.25s ease; }
         .page.active { display: block; }
@@ -36,7 +36,6 @@
         .form-textarea { min-height: 100px; }
         .btn-primary { background: linear-gradient(95deg, #059669, #047857); border: none; border-radius: 60px; padding: 14px; font-weight: 600; color: white; width: 100%; text-align: center; cursor: pointer; font-size: 1rem; }
         .btn-secondary { background: #f1f5f9; color: #1e4a6b; border-radius: 60px; padding: 12px; font-weight: 600; border: none; width: 100%; cursor: pointer; }
-        .btn-outline { background: transparent; border: 1px solid #1e4a6b; color: #1e4a6b; border-radius: 60px; padding: 10px; font-weight: 600; cursor: pointer; }
         .btn-danger { background: #fee2e2; color: #b91c1c; border-radius: 60px; padding: 8px 16px; font-weight: 600; border: none; cursor: pointer; }
         .btn-success { background: #10b981; color: white; border-radius: 60px; padding: 6px 12px; font-weight: 600; border: none; cursor: pointer; }
         .btn-phone { background: #10b981; color: white; border-radius: 60px; padding: 10px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
@@ -51,7 +50,6 @@
         .upload-btn { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 20px; padding: 12px; text-align: center; cursor: pointer; margin-top: 8px; }
         .profile-header { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 28px; margin: 16px; padding: 20px; color: white; display: flex; align-items: center; gap: 16px; cursor: pointer; }
         .profile-avatar { width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 600; overflow: hidden; }
-        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .stats-row { display: flex; background: #fff; margin: 0 16px 16px; border-radius: 24px; padding: 16px; justify-content: space-around; }
         .stat-item { text-align: center; flex: 1; cursor: pointer; }
         .stat-number { font-size: 1.3rem; font-weight: 800; color: #1e4a6b; }
@@ -97,7 +95,6 @@
         .chat-message-input { flex: 1; padding: 10px 14px; border-radius: 30px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; }
         .send-btn { background: #1e4a6b; border: none; border-radius: 30px; padding: 10px 20px; font-weight: 600; color: white; cursor: pointer; }
         .task-card-in-chat { background: #f8fafc; border-radius: 20px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #e2e8f0; }
-        .refresh-container { text-align: center; padding: 10px 0; font-size: 0.8rem; color: #94a3b8; transition: transform 0.2s; }
         .category-bar, .sort-bar { display: flex; gap: 12px; padding: 8px 16px; background: white; border-bottom: 1px solid #eef2f8; overflow-x: auto; white-space: nowrap; }
         .category-chip, .sort-chip { background: #f1f5f9; padding: 6px 12px; border-radius: 40px; font-size: 0.75rem; color: #1e4a6b; cursor: pointer; display: inline-block; }
         .category-chip.active, .sort-chip.active { background: #1e4a6b; color: white; }
@@ -387,7 +384,7 @@
             loadProfile();
             initPullToRefresh();
             initFiltersAndCategories();
-            renderMessageList();  // 关键：登录后加载消息列表
+            renderMessageList();  // 关键：登录后立即加载消息列表
         } else errorDiv.innerText = result.error || '登录失败';
     }
     
@@ -567,7 +564,6 @@
         document.body.appendChild(modal);
     }
     
-    // ==================== 任务详情（简化但完整） ====================
     window.viewTask = async function(taskId) {
         if (countdownTimer) clearInterval(countdownTimer);
         const task = await callApi(`/tasks/${taskId}`);
@@ -639,7 +635,7 @@
         switchPage('detail');
     };
     
-    // ==================== 消息相关 ====================
+    // ==================== 消息核心 ====================
     async function sendMessage(taskId, senderId, senderName, text, isNego = false) {
         try {
             const response = await fetch(API_BASE + '/messages', {
@@ -701,7 +697,7 @@
             if (success) {
                 document.getElementById('chatInput').value = '';
                 await refreshMessagesOnly();
-                await renderMessageList();  // 刷新消息列表页
+                await renderMessageList();  // 发送后刷新消息列表页
             }
         };
         document.getElementById('sendNegoBtn').onclick = async () => {
@@ -760,13 +756,15 @@
     async function renderMessageList() {
         console.log('🔵 renderMessageList 被调用');
         if (!currentUser || !currentUser.id) {
-            console.error('用户未登录，无法加载消息列表');
+            console.error('❌ 用户未登录，无法加载消息列表');
+            const container = document.getElementById('messageContainer');
+            if (container) container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">请先登录</div></div>';
             return;
         }
         const url = `/user/${currentUser.id}/conversations`;
-        console.log('请求URL:', API_BASE + url);
+        console.log('📡 请求URL:', API_BASE + url);
         const convs = await callApi(url);
-        console.log('获取到的会话数据:', convs);
+        console.log('✅ 获取到的会话数据:', convs);
         const container = document.getElementById('messageContainer');
         if (!convs || convs.length === 0) {
             container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
@@ -800,10 +798,10 @@
                 openChat(taskId, otherId, otherName, reward, title);
             });
         });
-        console.log('✅ 消息列表渲染完成');
+        console.log('🎉 消息列表渲染完成，共', convs.length, '条对话');
     }
     
-    // 其他辅助函数（保持原有功能）
+    // 辅助函数（简化版，确保功能完整）
     function resetPublishForm() {
         document.getElementById('pubTitle').value = '';
         document.getElementById('pubDesc').value = '';
@@ -931,7 +929,7 @@
             if (chatState.active) closeChat();
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById('messagePage').classList.add('active');
-            renderMessageList();
+            renderMessageList();  // 每次切换到消息页都重新加载
             return;
         }
         if (page === 'publish') resetPublishForm();
@@ -988,7 +986,7 @@
         loadProfile();
         initPullToRefresh();
         initFiltersAndCategories();
-        renderMessageList();  // 关键
+        renderMessageList();  // 自动加载消息列表
     }
 </script>
 </body>
