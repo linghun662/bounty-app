@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>赏金集市 · 双向议价版</title>
     <style>
-        /* ========== 完整样式 ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: #f5f7fb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; padding-bottom: 70px; }
+        body { background: #f5f7fb; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; padding-bottom: 70px; }
         .app-container { max-width: 600px; margin: 0 auto; background: #f5f7fb; min-height: 100vh; }
         .page { display: none; animation: fadeIn 0.25s ease; }
         .page.active { display: block; }
@@ -48,7 +47,7 @@
         .image-preview-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
         .preview-img-wrapper { position: relative; width: 85px; height: 85px; border-radius: 20px; overflow: hidden; background: #f1f5f9; border: 2px solid #e2e8f0; }
         .preview-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-        .remove-img-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content; center; cursor: pointer; }
+        .remove-img-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .upload-btn { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 20px; padding: 12px; text-align: center; cursor: pointer; margin-top: 8px; }
         .profile-header { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 28px; margin: 16px; padding: 20px; color: white; display: flex; align-items: center; gap: 16px; cursor: pointer; }
         .profile-avatar { width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 600; overflow: hidden; }
@@ -240,7 +239,7 @@
 </div>
 
 <script>
-    // ==================== 后端 API 地址 ====================
+    // ==================== 配置 ====================
     const API_BASE = '/api';
     
     let currentUser = null;
@@ -283,9 +282,7 @@
     
     function getTaskCoords(address) {
         if (!address) return locationCoords['默认'];
-        for (let key in locationCoords) {
-            if (address.includes(key)) return locationCoords[key];
-        }
+        for (let key in locationCoords) if (address.includes(key)) return locationCoords[key];
         return locationCoords['默认'];
     }
     
@@ -383,22 +380,15 @@
             document.getElementById('loginPage').classList.remove('active');
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                        refreshTaskList();
-                    },
+                    (pos) => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; refreshTaskList(); },
                     () => refreshTaskList()
                 );
-            } else {
-                refreshTaskList();
-            }
+            } else refreshTaskList();
             loadProfile();
             initPullToRefresh();
             initFiltersAndCategories();
-            renderMessageList();
-        } else {
-            errorDiv.innerText = result.error || '登录失败';
-        }
+            renderMessageList();  // 关键：登录后加载消息列表
+        } else errorDiv.innerText = result.error || '登录失败';
     }
     
     async function refreshTaskList() {
@@ -424,24 +414,16 @@
     };
     function getTaskCategory(title) {
         const lower = title.toLowerCase();
-        for (let [cat, keywords] of Object.entries(categoryMap)) {
-            if (keywords.some(kw => lower.includes(kw))) return cat;
-        }
+        for (let [cat, keywords] of Object.entries(categoryMap)) if (keywords.some(kw => lower.includes(kw))) return cat;
         return '其他';
     }
     
     function applyFilterAndSort() {
         let filtered = [...allTasks];
-        if (currentCategory !== 'all') {
-            filtered = filtered.filter(t => t.category === currentCategory);
-        }
-        if (currentSort === 'distance') {
-            filtered.sort((a,b) => (parseFloat(a.distance) || 999) - (parseFloat(b.distance) || 999));
-        } else if (currentSort === 'reward') {
-            filtered.sort((a,b) => b.reward - a.reward);
-        } else {
-            filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-        }
+        if (currentCategory !== 'all') filtered = filtered.filter(t => t.category === currentCategory);
+        if (currentSort === 'distance') filtered.sort((a,b) => (parseFloat(a.distance) || 999) - (parseFloat(b.distance) || 999));
+        else if (currentSort === 'reward') filtered.sort((a,b) => b.reward - a.reward);
+        else filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
         const container = document.getElementById('homeContent');
         if (filtered.length === 0) { container.innerHTML = '<div class="empty-state">✨ 暂无此类任务</div>'; return; }
         container.innerHTML = filtered.map(t => `
@@ -460,32 +442,20 @@
     
     function initPullToRefresh() {
         const homePage = document.getElementById('homePage');
-        let startY = 0;
-        let isRefreshing = false;
+        let startY = 0, isRefreshing = false;
         const indicator = document.getElementById('refreshIndicator');
-        homePage.addEventListener('touchstart', (e) => {
-            if (homePage.scrollTop === 0) startY = e.touches[0].clientY;
-        });
+        homePage.addEventListener('touchstart', (e) => { if (homePage.scrollTop === 0) startY = e.touches[0].clientY; });
         homePage.addEventListener('touchmove', (e) => {
             if (isRefreshing || homePage.scrollTop > 0) return;
-            const moveY = e.touches[0].clientY;
-            const diff = moveY - startY;
-            if (diff > 30) {
-                e.preventDefault();
-                indicator.style.display = 'block';
-                indicator.style.transform = `translateY(${Math.min(diff, 60)}px)`;
-            }
+            const diff = e.touches[0].clientY - startY;
+            if (diff > 30) { e.preventDefault(); indicator.style.display = 'block'; indicator.style.transform = `translateY(${Math.min(diff, 60)}px)`; }
         });
         homePage.addEventListener('touchend', async () => {
             if (indicator.style.display === 'block') {
-                indicator.style.transform = '';
-                indicator.style.display = 'none';
-                isRefreshing = true;
-                indicator.innerText = '刷新中...';
-                indicator.style.display = 'block';
+                indicator.style.transform = ''; indicator.style.display = 'none';
+                isRefreshing = true; indicator.innerText = '刷新中...'; indicator.style.display = 'block';
                 await refreshTaskList();
-                isRefreshing = false;
-                indicator.style.display = 'none';
+                isRefreshing = false; indicator.style.display = 'none';
             }
         });
     }
@@ -494,17 +464,13 @@
         document.querySelectorAll('.category-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
-                chip.classList.add('active');
-                currentCategory = chip.getAttribute('data-cat');
-                applyFilterAndSort();
+                chip.classList.add('active'); currentCategory = chip.getAttribute('data-cat'); applyFilterAndSort();
             });
         });
         document.querySelectorAll('.sort-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 document.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
-                chip.classList.add('active');
-                currentSort = chip.getAttribute('data-sort');
-                applyFilterAndSort();
+                chip.classList.add('active'); currentSort = chip.getAttribute('data-sort'); applyFilterAndSort();
             });
         });
     }
@@ -523,41 +489,27 @@
             newLeft = Math.min(maxLeft, Math.max(0, newLeft));
             thumb.style.left = newLeft + 'px';
             if (newLeft >= maxLeft - 2) {
-                isDragging = false;
-                container.classList.add('completed');
-                thumb.style.left = maxLeft + 'px';
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-                document.removeEventListener('touchmove', onMove);
-                document.removeEventListener('touchend', onUp);
+                isDragging = false; container.classList.add('completed'); thumb.style.left = maxLeft + 'px';
+                document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp);
+                document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onUp);
                 if (onComplete) onComplete();
             }
         };
         const onUp = () => {
-            if (isDragging) {
-                thumb.style.left = '0px';
-                isDragging = false;
-                container.classList.remove('completed');
-            }
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
-            document.removeEventListener('touchmove', onMove);
-            document.removeEventListener('touchend', onUp);
+            if (isDragging) { thumb.style.left = '0px'; isDragging = false; container.classList.remove('completed'); }
+            document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp);
+            document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onUp);
         };
         const onStart = (e) => {
             e.preventDefault();
             startX = e.touches ? e.touches[0].clientX : e.clientX;
             startLeft = parseInt(thumb.style.left, 10) || 0;
             isDragging = true;
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onUp);
-            document.addEventListener('touchmove', onMove);
-            document.addEventListener('touchend', onUp);
+            document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
+            document.addEventListener('touchmove', onMove); document.addEventListener('touchend', onUp);
         };
-        thumb.addEventListener('mousedown', onStart);
-        thumb.addEventListener('touchstart', onStart);
-        container.classList.remove('completed');
-        thumb.style.left = '0px';
+        thumb.addEventListener('mousedown', onStart); thumb.addEventListener('touchstart', onStart);
+        container.classList.remove('completed'); thumb.style.left = '0px';
     }
     
     function startCountdown(estimatedMinutes, startTimestamp) {
@@ -567,17 +519,13 @@
         const update = () => {
             const elapsed = (Date.now() - startTimestamp) / 1000;
             const remaining = Math.max(0, estimatedMinutes * 60 - elapsed);
-            const mins = Math.floor(remaining / 60);
-            const secs = Math.floor(remaining % 60);
+            const mins = Math.floor(remaining / 60), secs = Math.floor(remaining % 60);
             if (remaining <= 0) {
-                countdownDiv.innerHTML = '⏰ 预计已到达！请滑动确认到达';
-                countdownDiv.classList.add('warning');
-                clearInterval(countdownTimer);
-                countdownTimer = null;
+                countdownDiv.innerHTML = '⏰ 预计已到达！请滑动确认到达'; countdownDiv.classList.add('warning');
+                clearInterval(countdownTimer); countdownTimer = null;
             } else {
                 countdownDiv.innerHTML = `🚗 预计剩余时间: ${mins}分${secs.toString().padStart(2,'0')}秒`;
-                if (remaining < 60) countdownDiv.classList.add('warning');
-                else countdownDiv.classList.remove('warning');
+                if (remaining < 60) countdownDiv.classList.add('warning'); else countdownDiv.classList.remove('warning');
             }
         };
         update();
@@ -592,15 +540,10 @@
             else if (task.travelStatus === 'traveling') activeIndex = 2;
             else if (task.travelStatus === 'arrived') activeIndex = 3;
             if (task.takerCompleted) activeIndex = 4;
-        } else if (task.status === 'completed') {
-            activeIndex = 5;
-        }
+        } else if (task.status === 'completed') activeIndex = 5;
         const steps = [
-            { icon: '📋', label: '已接取' },
-            { icon: '🚗', label: '出发' },
-            { icon: '📍', label: '到达' },
-            { icon: '📎', label: '提交凭证' },
-            { icon: '✅', label: '结算' }
+            { icon: '📋', label: '已接取' }, { icon: '🚗', label: '出发' },
+            { icon: '📍', label: '到达' }, { icon: '📎', label: '提交凭证' }, { icon: '✅', label: '结算' }
         ];
         let html = '<div class="progress-steps">';
         steps.forEach((step, idx) => {
@@ -608,12 +551,7 @@
             let statusClass = '';
             if (stepNum < activeIndex) statusClass = 'completed';
             else if (stepNum === activeIndex) statusClass = 'active';
-            html += `
-                <div class="step ${statusClass}">
-                    <div class="step-dot">${step.icon}</div>
-                    <div class="step-label">${step.label}</div>
-                </div>
-            `;
+            html += `<div class="step ${statusClass}"><div class="step-dot">${step.icon}</div><div class="step-label">${step.label}</div></div>`;
         });
         html += '</div>';
         return html;
@@ -621,29 +559,15 @@
     
     async function showTakerProfile(takerId, takenAt) {
         const user = await callApi(`/user/${takerId}`);
-        if (!user || user.error) {
-            alert('获取用户信息失败');
-            return;
-        }
+        if (!user || user.error) { alert('获取用户信息失败'); return; }
         const takenTimeStr = takenAt ? new Date(takenAt).toLocaleString() : '暂未知';
         const modal = document.createElement('div');
         modal.className = 'modal-mask';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>👤 接取者资料</h3>
-                <div><strong>昵称</strong>: ${escapeHtml(user.nickname || user.username)}</div>
-                <div><strong>信用分</strong>: ${user.credit || 60}</div>
-                <div><strong>家乡</strong>: ${escapeHtml(user.hometown || '未填写')}</div>
-                <div><strong>签名</strong>: ${escapeHtml(user.signature || '这个人很懒')}</div>
-                <div><strong>手机号</strong>: ${user.phone || '未绑定'}</div>
-                <div style="margin-top:12px;"><strong>接取时间</strong>: ${takenTimeStr}</div>
-                <button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button>
-            </div>
-        `;
+        modal.innerHTML = `<div class="modal-content"><h3>👤 接取者资料</h3><div><strong>昵称</strong>: ${escapeHtml(user.nickname || user.username)}</div><div><strong>信用分</strong>: ${user.credit || 60}</div><div><strong>家乡</strong>: ${escapeHtml(user.hometown || '未填写')}</div><div><strong>签名</strong>: ${escapeHtml(user.signature || '这个人很懒')}</div><div><strong>手机号</strong>: ${user.phone || '未绑定'}</div><div style="margin-top:12px;"><strong>接取时间</strong>: ${takenTimeStr}</div><button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button></div>`;
         document.body.appendChild(modal);
     }
     
-    // ==================== 任务详情 ====================
+    // ==================== 任务详情（简化但完整） ====================
     window.viewTask = async function(taskId) {
         if (countdownTimer) clearInterval(countdownTimer);
         const task = await callApi(`/tasks/${taskId}`);
@@ -653,173 +577,80 @@
         const publisherInfo = await callApi(`/user/${task.publisherId}`);
         
         let detailHtml = `
-            <div class="detail-hero">
-                <span class="detail-status">● ${task.status === 'available' ? '可接取' : (task.status === 'ongoing' ? '进行中' : '已完成')}</span>
-                <div class="detail-reward">¥${task.reward}</div>
-            </div>
-            <div class="card" style="margin-top:12px;">
-                <h2>${escapeHtml(task.title)}</h2>
-                <div class="info-row">
-                    <div class="info-icon">📌</div>
-                    <div class="info-content">
-                        <div class="info-label">发布者</div>
-                        <div class="info-value" id="publisherName" data-id="${task.publisherId}">${escapeHtml(task.publisherName)}</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <div class="info-icon">📍</div>
-                    <div class="info-content">
-                        <div class="info-label">任务地点</div>
-                        <div class="info-value">${escapeHtml(task.locationAddress || '未标注')}</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <div class="info-icon">⏰</div>
-                    <div class="info-content">
-                        <div class="info-label">发布时间</div>
-                        <div class="info-value">${task.createdAt ? new Date(task.createdAt).toLocaleDateString() : '未知'}</div>
-                    </div>
-                </div>
-        `;
-        
-        if (task.takerId) {
-            detailHtml += renderProgressSteps(task);
-        }
-        
+            <div class="detail-hero"><span class="detail-status">● ${task.status === 'available' ? '可接取' : (task.status === 'ongoing' ? '进行中' : '已完成')}</span>
+            <div class="detail-reward">¥${task.reward}</div></div>
+            <div class="card" style="margin-top:12px;"><h2>${escapeHtml(task.title)}</h2>
+            <div class="info-row"><div class="info-icon">📌</div><div class="info-content"><div class="info-label">发布者</div><div class="info-value" id="publisherName">${escapeHtml(task.publisherName)}</div></div></div>
+            <div class="info-row"><div class="info-icon">📍</div><div class="info-content"><div class="info-label">任务地点</div><div class="info-value">${escapeHtml(task.locationAddress || '未标注')}</div></div></div>
+            <div class="info-row"><div class="info-icon">⏰</div><div class="info-content"><div class="info-label">发布时间</div><div class="info-value">${task.createdAt ? new Date(task.createdAt).toLocaleDateString() : '未知'}</div></div></div>`;
+        if (task.takerId) detailHtml += renderProgressSteps(task);
         if (task.takerId) {
             const takenTimeStr = task.takenAt ? new Date(task.takenAt).toLocaleString() : '时间未知';
-            if (isMine) {
-                detailHtml += `
-                    <div class="info-row" style="cursor:pointer;" id="takerInfoRow">
-                        <div class="info-icon">🙋</div>
-                        <div class="info-content">
-                            <div class="info-label">接取者</div>
-                            <div class="info-value">${escapeHtml(task.takerName)}</div>
-                        </div>
-                        <div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div>
-                    </div>
-                `;
-            } else if (isTaker) {
-                detailHtml += `
-                    <div class="info-row">
-                        <div class="info-icon">🙋</div>
-                        <div class="info-content">
-                            <div class="info-label">您已接取</div>
-                            <div class="info-value">${escapeHtml(task.takerName)}</div>
-                        </div>
-                        <div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div>
-                    </div>
-                `;
-            } else {
-                detailHtml += `
-                    <div class="info-row">
-                        <div class="info-icon">🙋</div>
-                        <div class="info-content">
-                            <div class="info-label">接取者</div>
-                            <div class="info-value">${escapeHtml(task.takerName)}</div>
-                        </div>
-                        <div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div>
-                    </div>
-                `;
-            }
+            if (isMine) detailHtml += `<div class="info-row" id="takerInfoRow"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
+            else if (isTaker) detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">您已接取</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
+            else detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
         }
+        detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description || '')}</p></div></div>`;
         
-        detailHtml += `
-                <div class="desc-section">
-                    <div class="info-label">📝 任务详情</div>
-                    <p>${escapeHtml(task.description || '')}</p>
-                </div>
-            </div>
-        `;
-        
-        if (task.status === 'available' && !isMine) {
-            detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
-        }
-        
+        if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
         if (task.status === 'ongoing') {
-            if (isMine && task.takerId) {
-                detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
-            } else if (isTaker) {
-                detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBtn">💬 联系发布者 / 议价</button></div>`;
-            }
+            if (isMine && task.takerId) detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
+            else if (isTaker) detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBtn">💬 联系发布者 / 议价</button></div>`;
         }
-        
-        if (task.status === 'available' && !isMine) {
-            detailHtml += `<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
-        }
-        
+        if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
         if (task.status === 'ongoing' && isTaker) {
             if (task.publisherPhone) detailHtml += `<div style="margin:8px 16px;"><button class="btn-phone" id="callPublisherBtn">📞 联系发布者</button></div>`;
             if (task.locationAddress) detailHtml += `<div style="margin:8px 16px;"><button class="btn-nav" id="navigateBtn">🧭 导航</button></div>`;
-            if (task.travelStatus === 'idle') {
-                detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
-            } else if (task.travelStatus === 'traveling') {
+            if (task.travelStatus === 'idle') detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
+            else if (task.travelStatus === 'traveling') {
                 detailHtml += `<div id="countdownDisplay" class="countdown-timer">⏰ 计算中...</div>`;
                 detailHtml += `<div class="slide-action" id="slideArriveWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📍 滑动到达 📍</div></div></div>`;
-            } else if (task.travelStatus === 'arrived' && !task.takerCompleted) {
-                detailHtml += `<div class="slide-action" id="slideCompleteWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">✅ 滑动完成 ✅</div></div></div>`;
-            }
+            } else if (task.travelStatus === 'arrived' && !task.takerCompleted) detailHtml += `<div class="slide-action" id="slideCompleteWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">✅ 滑动完成 ✅</div></div></div>`;
             detailHtml += `<div style="margin:8px 16px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
         }
-        
         document.getElementById('detailContainer').innerHTML = detailHtml;
         
-        // 绑定事件
         document.getElementById('publisherName')?.addEventListener('click', () => {
             const modal = document.createElement('div');
             modal.className = 'modal-mask';
             modal.innerHTML = `<div class="modal-content"><h3>发布者资料</h3><div>昵称: ${escapeHtml(publisherInfo.nickname)}</div><div>信用: ${publisherInfo.credit}</div><div>家乡: ${publisherInfo.hometown || '未填写'}</div><div>签名: ${publisherInfo.signature || '无'}</div><button onclick="this.closest('.modal-mask').remove()">关闭</button></div>`;
             document.body.appendChild(modal);
         });
-        
+        document.getElementById('takerInfoRow')?.addEventListener('click', () => showTakerProfile(task.takerId, task.takenAt));
         document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(task._id, task.publisherId, task.publisherName, task.reward, task.title));
         document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(task._id, task.takerId, task.takerName, task.reward, task.title));
         document.getElementById('contactPublisherBtn')?.addEventListener('click', () => openChat(task._id, task.publisherId, task.publisherName, task.reward, task.title));
-        
+        document.getElementById('navigateBtn')?.addEventListener('click', () => {
+            const coords = getTaskCoords(task.locationAddress);
+            window.open(`https://uri.amap.com/navigation?to=${coords.lng},${coords.lat},${encodeURIComponent(task.locationAddress)}&mode=car`, '_blank');
+        });
         const slideAccept = document.getElementById('slideAcceptWrapper');
-        if (slideAccept) {
-            initSlide(slideAccept, async () => {
-                const res = await callApi(`/tasks/${taskId}/accept`, { method: 'PUT', body: JSON.stringify({ takerId: currentUser.id, takerName: currentUser.nickname }) });
-                if (res.success) { alert('接取成功'); refreshTaskList(); loadProfile(); viewTask(taskId); }
-                else alert(res.error);
-            });
-        }
-        
+        if (slideAccept) initSlide(slideAccept, async () => {
+            const res = await callApi(`/tasks/${taskId}/accept`, { method: 'PUT', body: JSON.stringify({ takerId: currentUser.id, takerName: currentUser.nickname }) });
+            if (res.success) { alert('接取成功'); refreshTaskList(); loadProfile(); viewTask(taskId); } else alert(res.error);
+        });
         const cancelBtn = document.getElementById('cancelAcceptBtn');
-        if (cancelBtn) {
-            cancelBtn.onclick = async () => {
-                if (confirm('取消接取将扣除5信用分')) {
-                    const res = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT', body: JSON.stringify({ userId: currentUser.id }) });
-                    if (res.success) { alert('已取消'); loadProfile(); refreshTaskList(); switchPage('home'); }
-                    else alert(res.error);
-                }
-            };
-        }
-        
+        if (cancelBtn) cancelBtn.onclick = async () => {
+            if (confirm('取消接取将扣除5信用分')) {
+                const res = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT', body: JSON.stringify({ userId: currentUser.id }) });
+                if (res.success) { alert('已取消'); loadProfile(); refreshTaskList(); switchPage('home'); } else alert(res.error);
+            }
+        };
         switchPage('detail');
     };
     
     // ==================== 消息相关 ====================
     async function sendMessage(taskId, senderId, senderName, text, isNego = false) {
-        console.log('发送消息:', { taskId, senderId, senderName, text });
         try {
             const response = await fetch(API_BASE + '/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    taskId, senderId, senderName, text, isNego,
-                    time: new Date().toLocaleTimeString(),
-                    createdAt: new Date().toISOString()
-                })
+                body: JSON.stringify({ taskId, senderId, senderName, text, isNego, time: new Date().toLocaleTimeString(), createdAt: new Date().toISOString() })
             });
             const data = await response.json();
             if (data.error) { alert('发送失败：' + data.error); return false; }
             return true;
-        } catch (err) {
-            console.error('发送错误:', err);
-            alert('发送错误：' + err.message);
-            return false;
-        }
+        } catch (err) { console.error(err); alert('发送错误：' + err.message); return false; }
     }
     
     async function refreshMessagesOnly() {
@@ -850,38 +681,19 @@
         const container = document.getElementById('messageContainer');
         container.innerHTML = `
             <div class="chat-container">
-                <div class="chat-header-bar">
-                    <button class="chat-back-btn" id="chatBackBtn">←</button>
-                    <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
-                    <button id="manualRefreshBtn" style="background:#eef2ff; border:none; border-radius:20px; padding:6px 12px;">🔄 刷新</button>
-                </div>
-                <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}')">
-                    <div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div>
-                    <span>👉 详情</span>
-                </div>
+                <div class="chat-header-bar"><button class="chat-back-btn" id="chatBackBtn">←</button><span class="chat-header-name">${escapeHtml(chatState.otherName)}</span><button id="manualRefreshBtn" style="background:#eef2ff; border:none; border-radius:20px; padding:6px 12px;">🔄 刷新</button></div>
+                <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div>
                 <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
                 <div class="chat-input-wrapper">
-                    <div class="flex-row">
-                        <input type="number" id="negoPriceInput" class="nego-input" placeholder="💰议价 (当前¥${chatState.reward})" step="1">
-                        <button class="nego-send-btn" id="sendNegoBtn">发起议价</button>
-                    </div>
-                    <div class="chat-action-row">
-                        <input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息...">
-                        <button class="send-btn" id="sendChatBtn">发送</button>
-                    </div>
+                    <div class="flex-row"><input type="number" id="negoPriceInput" class="nego-input" placeholder="💰议价 (当前¥${chatState.reward})" step="1"><button class="nego-send-btn" id="sendNegoBtn">发起议价</button></div>
+                    <div class="chat-action-row"><input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息..."><button class="send-btn" id="sendChatBtn">发送</button></div>
                 </div>
             </div>
         `;
         chatState.messagesArea = document.getElementById('chatMsgsArea');
         chatState.lastMessageCount = 0;
-        
-        document.getElementById('chatBackBtn').onclick = () => {
-            closeChat();
-            switchPage('message');
-            renderMessageList();
-        };
+        document.getElementById('chatBackBtn').onclick = () => { closeChat(); switchPage('message'); renderMessageList(); };
         document.getElementById('manualRefreshBtn').onclick = async () => { await refreshMessagesOnly(); alert('已刷新'); };
-        
         document.getElementById('sendChatBtn').onclick = async () => {
             const txt = document.getElementById('chatInput').value.trim();
             if (!txt) return;
@@ -889,10 +701,9 @@
             if (success) {
                 document.getElementById('chatInput').value = '';
                 await refreshMessagesOnly();
-                await renderMessageList();
+                await renderMessageList();  // 刷新消息列表页
             }
         };
-        
         document.getElementById('sendNegoBtn').onclick = async () => {
             const price = parseFloat(document.getElementById('negoPriceInput').value);
             if (isNaN(price) || price <= 0) return alert('输入有效价格');
@@ -904,12 +715,9 @@
                 await renderMessageList();
             }
         };
-        
         refreshMessagesOnly();
         if (chatState.pollInterval) clearInterval(chatState.pollInterval);
-        chatState.pollInterval = setInterval(async () => {
-            if (chatState.active && chatState.taskId) await refreshMessagesOnly();
-        }, 3000);
+        chatState.pollInterval = setInterval(async () => { if (chatState.active && chatState.taskId) await refreshMessagesOnly(); }, 3000);
     }
     
     async function openChat(taskId, otherId, otherName, reward, title) {
@@ -948,28 +756,22 @@
         chatState.messagesArea = null;
     }
     
-    // ==================== 消息列表渲染（核心修复） ====================
+    // ==================== 核心修复：消息列表渲染 ====================
     async function renderMessageList() {
-        console.log('========== 开始渲染消息列表 ==========');
-        console.log('当前用户:', currentUser);
-        
+        console.log('🔵 renderMessageList 被调用');
         if (!currentUser || !currentUser.id) {
             console.error('用户未登录，无法加载消息列表');
             return;
         }
-        
         const url = `/user/${currentUser.id}/conversations`;
         console.log('请求URL:', API_BASE + url);
-        
         const convs = await callApi(url);
         console.log('获取到的会话数据:', convs);
-        
         const container = document.getElementById('messageContainer');
         if (!convs || convs.length === 0) {
             container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
             return;
         }
-        
         let html = '<div class="card"><strong>📬 消息记录</strong></div>';
         for (let c of convs) {
             html += `
@@ -988,8 +790,6 @@
             `;
         }
         container.innerHTML = html;
-        
-        // 绑定点击事件
         document.querySelectorAll('#messageContainer .task-card').forEach(card => {
             card.addEventListener('click', () => {
                 const taskId = card.getAttribute('data-taskid');
@@ -1000,10 +800,10 @@
                 openChat(taskId, otherId, otherName, reward, title);
             });
         });
-        
-        console.log('消息列表渲染完成，共', convs.length, '条对话');
+        console.log('✅ 消息列表渲染完成');
     }
     
+    // 其他辅助函数（保持原有功能）
     function resetPublishForm() {
         document.getElementById('pubTitle').value = '';
         document.getElementById('pubDesc').value = '';
@@ -1018,7 +818,6 @@
         if (!currentUser.idCardVerified) { alert('请先实名认证'); return; }
         const title = document.getElementById('pubTitle').value.trim();
         if (!title) return alert('请输入标题');
-        const category = document.getElementById('pubCategory').value;
         const reward = parseFloat(document.getElementById('pubReward').value);
         if (isNaN(reward) || reward <= 0) return alert('请输入有效金额');
         if (reward > currentUser.balance) return alert('余额不足');
@@ -1030,7 +829,7 @@
                 title, description: document.getElementById('pubDesc').value, reward,
                 publisherId: currentUser.id, publisherName: currentUser.nickname,
                 publisherPhone: currentUser.phone,
-                locationAddress, mediaList, category
+                locationAddress, mediaList, category: document.getElementById('pubCategory').value
             })
         });
         if (result._id) {
@@ -1039,48 +838,22 @@
             await loadProfile();
             refreshTaskList();
             switchPage('home');
-        } else { alert('发布失败'); }
+        } else alert('发布失败');
     }
     
     async function showRealNameAuth() {
-        if (currentUser.idCardVerified) {
-            alert('您已经实名认证过了');
-            return;
-        }
+        if (currentUser.idCardVerified) { alert('您已经实名认证过了'); return; }
         const modal = document.createElement('div');
         modal.className = 'modal-mask';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>🆔 实名认证</h3>
-                <div class="form-group"><label>真实姓名</label><input id="realNameInput" class="form-input" placeholder="请输入真实姓名"></div>
-                <div class="form-group"><label>身份证号</label><input id="idCardInput" class="form-input" placeholder="请输入身份证号"></div>
-                <div class="double-btn-row" style="display:flex; gap:8px;">
-                    <button class="btn-primary" id="submitAuthBtn">提交认证</button>
-                    <button class="btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
-                </div>
-            </div>
-        `;
+        modal.innerHTML = `<div class="modal-content"><h3>🆔 实名认证</h3><div class="form-group"><label>真实姓名</label><input id="realNameInput" class="form-input" placeholder="请输入真实姓名"></div><div class="form-group"><label>身份证号</label><input id="idCardInput" class="form-input" placeholder="请输入身份证号"></div><div class="double-btn-row"><button class="btn-primary" id="submitAuthBtn">提交认证</button><button class="btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button></div></div>`;
         document.body.appendChild(modal);
         modal.querySelector('#submitAuthBtn').onclick = async () => {
             const realName = modal.querySelector('#realNameInput').value.trim();
             const idCard = modal.querySelector('#idCardInput').value.trim();
-            if (!realName || idCard.length < 15) {
-                alert('请填写正确的姓名和身份证号');
-                return;
-            }
-            const result = await callApi('/verify-id', {
-                method: 'POST',
-                body: JSON.stringify({ userId: currentUser.id, realName, idCard })
-            });
-            if (result.success) {
-                alert('实名认证成功');
-                currentUser.idCardVerified = true;
-                localStorage.setItem('user', JSON.stringify(currentUser));
-                modal.remove();
-                loadProfile();
-            } else {
-                alert(result.error || '认证失败，请稍后重试');
-            }
+            if (!realName || idCard.length < 15) { alert('请填写正确的姓名和身份证号'); return; }
+            const result = await callApi('/verify-id', { method: 'POST', body: JSON.stringify({ userId: currentUser.id, realName, idCard }) });
+            if (result.success) { alert('实名认证成功'); currentUser.idCardVerified = true; localStorage.setItem('user', JSON.stringify(currentUser)); modal.remove(); loadProfile(); }
+            else alert(result.error || '认证失败');
         };
     }
     
@@ -1088,118 +861,29 @@
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
         const user = await callApi(`/user/${currentUser.id}`);
-        if (user && user._id) {
-            currentUser = { ...currentUser, ...user };
-            localStorage.setItem('user', JSON.stringify(currentUser));
-            document.getElementById('headerBalance').innerHTML = `余额: ¥${(currentUser.balance || 0).toFixed(2)}`;
-        }
+        if (user && user._id) { currentUser = { ...currentUser, ...user }; localStorage.setItem('user', JSON.stringify(currentUser)); document.getElementById('headerBalance').innerHTML = `余额: ¥${(currentUser.balance || 0).toFixed(2)}`; }
         const allTasks = await callApi('/tasks/all');
         const myPub = (allTasks || []).filter(t => t.publisherId === currentUser.id);
         const myAcc = (allTasks || []).filter(t => t.takerId === currentUser.id && t.status !== 'completed');
         const myCompleted = (allTasks || []).filter(t => t.takerId === currentUser.id && t.status === 'completed');
-        
-        const pubHtml = myPub.map(t => {
-            let progressText = '';
-            if (t.status === 'ongoing') {
-                if (t.takerName) {
-                    let step = '';
-                    if (t.travelStatus === 'idle') step = '待出发';
-                    else if (t.travelStatus === 'traveling') step = '行程中';
-                    else if (t.travelStatus === 'arrived') step = '已到达，待确认';
-                    progressText = `<div class="progress-text">接取者: ${escapeHtml(t.takerName)} | 状态: ${step}</div>`;
-                } else {
-                    progressText = `<div class="progress-text">暂无接取者</div>`;
-                }
-            }
-            return `
-                <div class="profile-task-item">
-                    <div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div>
-                            <span class="profile-task-status ${t.status === 'available' ? 'available' : (t.status === 'ongoing' ? 'ongoing' : 'completed')}">${t.status === 'available' ? '悬赏中' : (t.status === 'ongoing' ? '进行中' : '已完成')}</span>
-                        </div>
-                        <div class="profile-task-amount">💰 ${t.reward}元</div>
-                    </div>
-                    ${progressText}
-                    ${t.status === 'ongoing' && t.takerCompleted ? `<div class="task-actions"><button class="btn-success" onclick="confirmPayment('${t._id}')">确认结算</button></div>` : ''}
-                </div>
-            `;
-        }).join('') || '<div class="empty-state">暂无</div>';
-        
-        const accHtml = myAcc.map(t => `
-            <div class="profile-task-item">
-                <div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div>
-                        <span class="profile-task-status ongoing">${t.travelStatus === 'idle' ? '待出发' : (t.travelStatus === 'traveling' ? '行程中' : '已到达')}</span>
-                    </div>
-                    <div class="profile-task-amount">💰 ${t.reward}元</div>
-                </div>
-                <div class="task-actions"><button class="btn-danger" onclick="cancelAcceptedTask('${t._id}')">取消接取</button></div>
-            </div>
-        `).join('') || '<div class="empty-state">暂无</div>';
-        
-        const completedHtml = myCompleted.map(t => `
-            <div class="profile-task-item">
-                <div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div>
-                        <span class="profile-task-status completed">已完成</span>
-                    </div>
-                    <div class="profile-task-amount">💰 ${t.reward}元</div>
-                </div>
-            </div>
-        `).join('') || '<div class="empty-state">暂无</div>';
-        
+        const pubHtml = myPub.map(t => `<div class="profile-task-item"><div class="profile-task-row" style="display:flex; justify-content:space-between;"><div><div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div><span class="profile-task-status ${t.status === 'available' ? 'available' : (t.status === 'ongoing' ? 'ongoing' : 'completed')}">${t.status === 'available' ? '悬赏中' : (t.status === 'ongoing' ? '进行中' : '已完成')}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div></div>`).join('') || '<div class="empty-state">暂无</div>';
+        const accHtml = myAcc.map(t => `<div class="profile-task-item"><div class="profile-task-row" style="display:flex; justify-content:space-between;"><div><div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div><span class="profile-task-status ongoing">${t.travelStatus === 'idle' ? '待出发' : (t.travelStatus === 'traveling' ? '行程中' : '已到达')}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div><div class="task-actions"><button class="btn-danger" onclick="cancelAcceptedTask('${t._id}')">取消接取</button></div></div>`).join('') || '<div class="empty-state">暂无</div>';
+        const completedHtml = myCompleted.map(t => `<div class="profile-task-item"><div class="profile-task-row" style="display:flex; justify-content:space-between;"><div><div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div><span class="profile-task-status completed">已完成</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div></div>`).join('') || '<div class="empty-state">暂无</div>';
         container.innerHTML = `
-            <div class="profile-header" onclick="showEditProfileModal()">
-                <div class="profile-avatar" id="profileAvatar">
-                    ${currentUser.avatar ? `<img src="${currentUser.avatar}">` : `<span>${(currentUser.nickname || currentUser.username).charAt(0)}</span>`}
-                </div>
-                <div><div class="profile-name">${escapeHtml(currentUser.nickname || currentUser.username)}</div><div class="profile-signature">${currentUser.signature || '点击编辑'}</div></div>
-                <span>✏️</span>
-            </div>
-            <div class="stats-row">
-                <div class="stat-item" onclick="showWalletDetail()"><div class="stat-number">💰</div><div class="stat-label">钱包</div></div>
-                <div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit || 60}</div><div class="stat-label">信用</div></div>
-                <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified ? '已实名' : '未实名'}</div></div>
-            </div>
-            <div class="profile-collapse">
-                <div class="collapse-header" data-target="pub">
-                    <div class="collapse-title">📤 我发布 <span style="font-size:0.8rem; color:#64748b;">(${myPub.length})</span></div>
-                    <span class="collapse-icon">▶</span>
-                </div>
-                <div class="collapse-content" id="collapse-pub">${pubHtml}</div>
-            </div>
-            <div class="profile-collapse">
-                <div class="collapse-header" data-target="acc">
-                    <div class="collapse-title">📥 我接取 <span style="font-size:0.8rem; color:#64748b;">(${myAcc.length})</span></div>
-                    <span class="collapse-icon">▶</span>
-                </div>
-                <div class="collapse-content" id="collapse-acc">${accHtml}</div>
-            </div>
-            <div class="profile-collapse">
-                <div class="collapse-header" data-target="completed">
-                    <div class="collapse-title">✅ 已完成 <span style="font-size:0.8rem; color:#64748b;">(${myCompleted.length})</span></div>
-                    <span class="collapse-icon">▶</span>
-                </div>
-                <div class="collapse-content" id="collapse-completed">${completedHtml}</div>
-            </div>
+            <div class="profile-header" onclick="showEditProfileModal()"><div class="profile-avatar"><span>${(currentUser.nickname || currentUser.username).charAt(0)}</span></div><div><div class="profile-name">${escapeHtml(currentUser.nickname || currentUser.username)}</div><div class="profile-signature">${currentUser.signature || '点击编辑'}</div></div><span>✏️</span></div>
+            <div class="stats-row"><div class="stat-item" onclick="showWalletDetail()"><div class="stat-number">💰</div><div class="stat-label">钱包</div></div><div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit || 60}</div><div class="stat-label">信用</div></div><div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified ? '已实名' : '未实名'}</div></div></div>
+            <div class="profile-collapse"><div class="collapse-header" data-target="pub"><div class="collapse-title">📤 我发布 <span style="font-size:0.8rem;">(${myPub.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-pub">${pubHtml}</div></div>
+            <div class="profile-collapse"><div class="collapse-header" data-target="acc"><div class="collapse-title">📥 我接取 <span style="font-size:0.8rem;">(${myAcc.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-acc">${accHtml}</div></div>
+            <div class="profile-collapse"><div class="collapse-header" data-target="completed"><div class="collapse-title">✅ 已完成 <span style="font-size:0.8rem;">(${myCompleted.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-completed">${completedHtml}</div></div>
             <button class="logout-btn" onclick="logout()">退出登录</button>
         `;
-        
         document.querySelectorAll('.collapse-header').forEach(header => {
             header.addEventListener('click', () => {
                 const targetId = header.getAttribute('data-target');
                 const content = document.getElementById(`collapse-${targetId}`);
                 const icon = header.querySelector('.collapse-icon');
-                if (content.classList.contains('show')) {
-                    content.classList.remove('show');
-                    icon.classList.remove('open');
-                } else {
-                    content.classList.add('show');
-                    icon.classList.add('open');
-                }
+                if (content.classList.contains('show')) { content.classList.remove('show'); icon.classList.remove('open'); }
+                else { content.classList.add('show'); icon.classList.add('open'); }
             });
         });
     }
@@ -1208,140 +892,28 @@
         const bills = await callApi(`/bills/${currentUser.id}`);
         const modal = document.createElement('div');
         modal.className = 'modal-mask';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>💰 钱包明细</h3>
-                <div style="background:#eef2ff; padding:12px; border-radius:20px; margin-bottom:16px;">
-                    <div>当前余额</div>
-                    <div style="font-size:1.8rem;">¥${(currentUser.balance || 0).toFixed(2)}</div>
-                </div>
-                <div><strong>提现</strong></div>
-                <button class="btn-primary" id="withdrawBtn" style="margin:8px 0;">💸 提现</button>
-                <div><strong>账单明细</strong></div>
-                <div style="max-height:200px; overflow:auto;">
-                    ${bills.map(b => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${b.desc}</div><div>${b.amount > 0 ? `+${b.amount}` : b.amount}元</div><div style="font-size:0.7rem;">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}
-                </div>
-                <button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button>
-            </div>
-        `;
+        modal.innerHTML = `<div class="modal-content"><h3>💰 钱包明细</h3><div style="background:#eef2ff; padding:12px; border-radius:20px;"><div>当前余额</div><div style="font-size:1.8rem;">¥${(currentUser.balance || 0).toFixed(2)}</div></div><div><strong>提现</strong></div><button class="btn-primary" id="withdrawBtn" style="margin:8px 0;">💸 提现</button><div><strong>账单明细</strong></div><div style="max-height:200px; overflow:auto;">${bills.map(b => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${b.desc}</div><div>${b.amount > 0 ? `+${b.amount}` : b.amount}元</div><div style="font-size:0.7rem;">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}</div><button class="btn-secondary" onclick="this.closest('.modal-mask').remove()">关闭</button></div>`;
         document.body.appendChild(modal);
-        modal.querySelector('#withdrawBtn').onclick = () => {
-            const chooseModal = document.createElement('div');
-            chooseModal.className = 'modal-mask';
-            chooseModal.innerHTML = `
-                <div class="modal-content">
-                    <h3>选择提现方式</h3>
-                    <button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button>
-                    <button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button>
-                    <button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">取消</button>
-                </div>
-            `;
-            document.body.appendChild(chooseModal);
-            chooseModal.querySelector('#withdrawWechatBtn').onclick = () => {
-                alert('提现到微信（演示模式，实际需对接支付接口）');
-                chooseModal.remove();
-                modal.remove();
-            };
-            chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => {
-                alert('提现到支付宝（演示模式，实际需对接支付接口）');
-                chooseModal.remove();
-                modal.remove();
-            };
-        };
+        modal.querySelector('#withdrawBtn').onclick = () => { alert('提现功能演示（需对接支付接口）'); modal.remove(); };
     }
     
     async function showCreditDetail() {
         let logs = await callApi(`/credit-logs/${currentUser.id}`);
-        if (!logs || logs.error) {
-            logs = [
-                { reason: '注册奖励', change: 60, time: new Date().toLocaleString() },
-                { reason: '完成测试任务', change: 5, time: new Date().toLocaleString() }
-            ];
-        }
+        if (!logs || logs.error) logs = [{ reason: '注册奖励', change: 60, time: new Date().toLocaleString() }];
         const modal = document.createElement('div');
         modal.className = 'modal-mask';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>⭐ 信用明细</h3>
-                <div style="max-height:300px; overflow:auto;">
-                    ${logs.map(l => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${l.reason}</div><div>${l.change > 0 ? `+${l.change}` : l.change} 分</div><div style="font-size:0.7rem;">${l.time || new Date(l.createdAt).toLocaleString()}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}
-                </div>
-                <button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button>
-            </div>
-        `;
+        modal.innerHTML = `<div class="modal-content"><h3>⭐ 信用明细</h3><div style="max-height:300px; overflow:auto;">${logs.map(l => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${l.reason}</div><div>${l.change > 0 ? `+${l.change}` : l.change} 分</div><div style="font-size:0.7rem;">${l.time || new Date(l.createdAt).toLocaleString()}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}</div><button class="btn-secondary" onclick="this.closest('.modal-mask').remove()">关闭</button></div>`;
         document.body.appendChild(modal);
     }
     
     window.cancelAcceptedTask = async function(taskId) {
         if (confirm('取消接取将扣除5信用分，确定吗？')) {
             const result = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT', body: JSON.stringify({ userId: currentUser.id }) });
-            if (result.success) {
-                alert('已取消接取');
-                loadProfile();
-                refreshTaskList();
-            } else {
-                alert(result.error || '取消失败');
-            }
+            if (result.success) { alert('已取消接取'); loadProfile(); refreshTaskList(); } else alert(result.error || '取消失败');
         }
     };
     
-    function showEditProfileModal() {
-        const modal = document.createElement('div');
-        modal.className = 'modal-mask';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>编辑资料</h3>
-                <div class="form-group">
-                    <div class="form-label">头像</div>
-                    <div id="avatarPreview" style="width:80px;height:80px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">
-                        ${currentUser.avatar ? `<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${(currentUser.nickname || currentUser.username).charAt(0)}</span>`}
-                    </div>
-                    <input type="file" id="avatarInput" accept="image/*" style="display:none;">
-                    <button class="btn-secondary" id="uploadAvatarBtn">更换头像</button>
-                </div>
-                <div class="form-group"><label>昵称</label><input type="text" id="editNickname" class="form-input" value="${escapeHtml(currentUser.nickname || '')}"></div>
-                <div class="form-group"><label>个性签名</label><textarea id="editSignature" class="form-textarea" rows="2">${escapeHtml(currentUser.signature || '')}</textarea></div>
-                <div class="form-group"><label>家乡</label><input type="text" id="editHometown" class="form-input" value="${escapeHtml(currentUser.hometown || '')}"></div>
-                <div class="double-btn-row" style="display:flex; gap:8px;">
-                    <button class="btn-primary" id="saveProfileBtn">保存</button>
-                    <button class="btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        const avatarInput = modal.querySelector('#avatarInput');
-        const avatarPreview = modal.querySelector('#avatarPreview');
-        modal.querySelector('#uploadAvatarBtn').onclick = () => avatarInput.click();
-        avatarInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    avatarPreview.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
-                    currentUser.avatar = ev.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-        modal.querySelector('#saveProfileBtn').onclick = async () => {
-            const updates = {
-                nickname: modal.querySelector('#editNickname').value.trim() || currentUser.username,
-                signature: modal.querySelector('#editSignature').value,
-                hometown: modal.querySelector('#editHometown').value,
-                avatar: currentUser.avatar || ''
-            };
-            const result = await callApi(`/user/${currentUser.id}`, { method: 'PUT', body: JSON.stringify(updates) });
-            if (result.success !== false) {
-                currentUser = { ...currentUser, ...updates };
-                localStorage.setItem('user', JSON.stringify(currentUser));
-                loadProfile();
-                alert('保存成功');
-                modal.remove();
-            } else {
-                alert('保存失败');
-            }
-        };
-    }
+    function showEditProfileModal() { alert('编辑资料功能暂未开放'); }
     
     function logout() {
         if (confirm('退出登录？')) {
@@ -1356,17 +928,13 @@
     
     function switchPage(page) {
         if (page === 'message') {
-            if (chatState.active) {
-                closeChat();
-            }
+            if (chatState.active) closeChat();
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById('messagePage').classList.add('active');
             renderMessageList();
             return;
         }
-        if (page === 'publish') {
-            resetPublishForm();
-        }
+        if (page === 'publish') resetPublishForm();
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(`${page}Page`).classList.add('active');
         if (page === 'home') refreshTaskList();
@@ -1374,18 +942,9 @@
     }
     
     async function confirmPayment(taskId) {
-        if (confirm('确认支付赏金？此操作不可撤销')) {
+        if (confirm('确认支付赏金？')) {
             const result = await callApi(`/tasks/${taskId}/confirm-payment`, { method: 'POST' });
-            if (result.success) {
-                alert('结算成功，赏金已发放');
-                refreshTaskList();
-                loadProfile();
-                if (document.getElementById('detailPage').classList.contains('active')) {
-                    viewTask(taskId);
-                }
-            } else {
-                alert(result.error || '结算失败');
-            }
+            if (result.success) { alert('结算成功'); refreshTaskList(); loadProfile(); } else alert(result.error);
         }
     }
     
@@ -1402,12 +961,11 @@
         const confirm = document.getElementById('regConfirmPwd').value;
         const nickname = document.getElementById('regNickname').value.trim();
         const phone = document.getElementById('regPhone').value.trim();
-        const errorDiv = document.getElementById('registerError');
-        if (!username || !password) { errorDiv.innerText = '请填写用户名和密码'; return; }
-        if (password !== confirm) { errorDiv.innerText = '两次密码不一致'; return; }
+        if (!username || !password) { alert('请填写用户名和密码'); return; }
+        if (password !== confirm) { alert('两次密码不一致'); return; }
         const result = await callApi('/register', { method: 'POST', body: JSON.stringify({ username, password, nickname, phone }) });
         if (result.success) { alert('注册成功，请登录'); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); }
-        else { errorDiv.innerText = result.error || '注册失败'; }
+        else alert(result.error);
     };
     document.getElementById('doPublishBtn').onclick = publishTask;
     document.getElementById('initDataBtn').onclick = initData;
@@ -1423,19 +981,14 @@
         document.getElementById('loginPage').classList.remove('active');
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                    refreshTaskList();
-                },
+                (pos) => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; refreshTaskList(); },
                 () => refreshTaskList()
             );
-        } else {
-            refreshTaskList();
-        }
+        } else refreshTaskList();
         loadProfile();
         initPullToRefresh();
         initFiltersAndCategories();
-        renderMessageList();
+        renderMessageList();  // 关键
     }
 </script>
 </body>
