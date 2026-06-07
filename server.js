@@ -205,7 +205,7 @@ app.get('/api/bills/:userId', async (req, res) => {
   res.json(bills);
 });
 
-// ==================== 关键：会话列表接口 ====================
+// ==================== 关键：会话列表接口（实时从 Message 表查询最后一条消息） ====================
 app.get('/api/user/:userId/conversations', async (req, res) => {
   const userId = req.params.userId;
   const tasks = await Task.find({
@@ -213,6 +213,7 @@ app.get('/api/user/:userId/conversations', async (req, res) => {
   }).sort({ updatedAt: -1 });
   const conversations = [];
   for (const task of tasks) {
+    // 关键修复：从 Message 表中查询最新的一条消息
     const lastMsg = await Message.findOne({ taskId: task._id.toString() }).sort({ createdAt: -1 });
     const otherId = task.publisherId === userId ? task.takerId : task.publisherId;
     const otherName = task.publisherId === userId ? task.takerName : task.publisherName;
@@ -221,7 +222,7 @@ app.get('/api/user/:userId/conversations', async (req, res) => {
         taskId: task._id,
         otherId,
         otherName,
-        lastMsg: lastMsg?.text || '暂无消息',
+        lastMsg: lastMsg?.text || '暂无消息',   // 实时获取
         reward: task.reward,
         taskTitle: task.title,
         unread: 0,
