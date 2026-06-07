@@ -384,7 +384,7 @@
             loadProfile();
             initPullToRefresh();
             initFiltersAndCategories();
-            renderMessageList();  // 关键：登录后立即加载消息列表
+            renderMessageList();
         } else errorDiv.innerText = result.error || '登录失败';
     }
     
@@ -635,7 +635,7 @@
         switchPage('detail');
     };
     
-    // ==================== 消息核心 ====================
+    // ==================== 消息核心（修复自动跳转） ====================
     async function sendMessage(taskId, senderId, senderName, text, isNego = false) {
         try {
             const response = await fetch(API_BASE + '/messages', {
@@ -672,6 +672,7 @@
     }
     
     function showChatView() {
+        // 切换到消息页面并显示聊天视图（不额外跳转）
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('messagePage').classList.add('active');
         const container = document.getElementById('messageContainer');
@@ -688,8 +689,16 @@
         `;
         chatState.messagesArea = document.getElementById('chatMsgsArea');
         chatState.lastMessageCount = 0;
-        document.getElementById('chatBackBtn').onclick = () => { closeChat(); switchPage('message'); renderMessageList(); };
+        // 返回按钮：返回到消息列表页（不自动跳回详情页）
+        document.getElementById('chatBackBtn').onclick = () => {
+            closeChat();
+            // 切换到消息列表页（显示对话列表，而不是自动跳转）
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('messagePage').classList.add('active');
+            renderMessageList();
+        };
         document.getElementById('manualRefreshBtn').onclick = async () => { await refreshMessagesOnly(); alert('已刷新'); };
+        // 发送普通消息：成功后只刷新当前聊天消息和消息列表数据，不切换页面
         document.getElementById('sendChatBtn').onclick = async () => {
             const txt = document.getElementById('chatInput').value.trim();
             if (!txt) return;
@@ -697,9 +706,11 @@
             if (success) {
                 document.getElementById('chatInput').value = '';
                 await refreshMessagesOnly();
-                await renderMessageList();  // 发送后刷新消息列表页
+                // 更新消息列表数据（但保持当前聊天界面，不跳转）
+                await renderMessageList();
             }
         };
+        // 发送议价：同样只刷新数据，不跳转
         document.getElementById('sendNegoBtn').onclick = async () => {
             const price = parseFloat(document.getElementById('negoPriceInput').value);
             if (isNaN(price) || price <= 0) return alert('输入有效价格');
@@ -717,6 +728,7 @@
     }
     
     async function openChat(taskId, otherId, otherName, reward, title) {
+        // 先关闭之前的轮询和状态
         if (chatState.pollInterval) clearInterval(chatState.pollInterval);
         chatState.active = true;
         chatState.taskId = taskId;
@@ -724,7 +736,7 @@
         chatState.otherName = otherName;
         chatState.reward = reward;
         chatState.title = title;
-        showChatView();
+        showChatView();  // 切换到聊天视图（会切换到 messagePage）
     }
     
     window.respondToNego = async function(taskId, price, isAccept) {
@@ -736,7 +748,7 @@
             alert(`已同意议价，新价格 ¥${price}`);
             if (chatState.taskId === taskId) chatState.reward = price;
             refreshTaskList();
-            await renderMessageList();
+            await renderMessageList();  // 仅刷新数据，不跳转
         } else {
             await sendMessage(taskId, 'system', '系统', `❌ ${currentUser.nickname} 拒绝了议价`, false);
             alert('已拒绝议价');
@@ -752,19 +764,16 @@
         chatState.messagesArea = null;
     }
     
-    // ==================== 核心修复：消息列表渲染 ====================
+    // 消息列表渲染（无页面跳转）
     async function renderMessageList() {
-        console.log('🔵 renderMessageList 被调用');
+        console.log('renderMessageList 被调用');
         if (!currentUser || !currentUser.id) {
-            console.error('❌ 用户未登录，无法加载消息列表');
             const container = document.getElementById('messageContainer');
             if (container) container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">请先登录</div></div>';
             return;
         }
         const url = `/user/${currentUser.id}/conversations`;
-        console.log('📡 请求URL:', API_BASE + url);
         const convs = await callApi(url);
-        console.log('✅ 获取到的会话数据:', convs);
         const container = document.getElementById('messageContainer');
         if (!convs || convs.length === 0) {
             container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
@@ -798,10 +807,9 @@
                 openChat(taskId, otherId, otherName, reward, title);
             });
         });
-        console.log('🎉 消息列表渲染完成，共', convs.length, '条对话');
     }
     
-    // 辅助函数（简化版，确保功能完整）
+    // 辅助函数（保持原有功能）
     function resetPublishForm() {
         document.getElementById('pubTitle').value = '';
         document.getElementById('pubDesc').value = '';
@@ -929,7 +937,7 @@
             if (chatState.active) closeChat();
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById('messagePage').classList.add('active');
-            renderMessageList();  // 每次切换到消息页都重新加载
+            renderMessageList();
             return;
         }
         if (page === 'publish') resetPublishForm();
@@ -986,7 +994,7 @@
         loadProfile();
         initPullToRefresh();
         initFiltersAndCategories();
-        renderMessageList();  // 自动加载消息列表
+        renderMessageList();
     }
 </script>
 </body>
