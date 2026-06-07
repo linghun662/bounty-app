@@ -6,15 +6,11 @@ const path = require('path');
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// 托管前端静态文件（将 index.html 放入 public 文件夹）
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 连接 MongoDB（Railway 上应设置环境变量 MONGODB_URL）
 mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty');
 
 // ==================== 数据模型 ====================
-
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
@@ -72,7 +68,6 @@ const BillSchema = new mongoose.Schema({
 const Bill = mongoose.model('Bill', BillSchema);
 
 // ==================== API 路由 ====================
-
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   const user = await User.findOne({ username, password });
@@ -204,6 +199,7 @@ app.get('/api/bills/:userId', async (req, res) => {
   res.json(bills);
 });
 
+// 修复后的 conversations 接口（关键）
 app.get('/api/user/:userId/conversations', async (req, res) => {
   const userId = req.params.userId;
   const tasks = await Task.find({
@@ -211,6 +207,7 @@ app.get('/api/user/:userId/conversations', async (req, res) => {
   }).sort({ createdAt: -1 });
   const conversations = [];
   for (const task of tasks) {
+    // 将 task._id 转为字符串，确保与 Message.taskId 匹配
     const lastMsg = await Message.findOne({ taskId: task._id.toString() }).sort({ createdAt: -1 });
     const otherId = task.publisherId === userId ? task.takerId : task.publisherId;
     const otherName = task.publisherId === userId ? task.takerName : task.publisherName;
@@ -257,9 +254,7 @@ app.post('/api/verify-id', async (req, res) => {
 });
 
 app.get('/api/credit-logs/:userId', async (req, res) => {
-  res.json([
-    { reason: '注册奖励', change: 60, time: new Date().toLocaleString() }
-  ]);
+  res.json([{ reason: '注册奖励', change: 60, time: new Date().toLocaleString() }]);
 });
 
 app.post('/api/init', async (req, res) => {
@@ -272,7 +267,7 @@ app.post('/api/init', async (req, res) => {
   res.json({ success: true });
 });
 
-// ==================== 单页应用路由（必须放在所有 API 路由之后） ====================
+// 单页应用路由
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
