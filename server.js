@@ -8,7 +8,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 连接 MongoDB（Railway 上需设置环境变量 MONGODB_URL）
 mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty');
 
 // ==================== 数据模型 ====================
@@ -205,7 +204,7 @@ app.get('/api/bills/:userId', async (req, res) => {
   res.json(bills);
 });
 
-// ==================== 关键：会话列表接口（修复版） ====================
+// ==================== 关键：消息列表接口（必须存在） ====================
 app.get('/api/user/:userId/conversations', async (req, res) => {
   const userId = req.params.userId;
   const tasks = await Task.find({
@@ -213,7 +212,6 @@ app.get('/api/user/:userId/conversations', async (req, res) => {
   }).sort({ updatedAt: -1 });
   const conversations = [];
   for (const task of tasks) {
-    // 关键修复：从 Message 表查询最新的一条消息，按 createdAt 降序
     const lastMsg = await Message.findOne({ taskId: task._id.toString() }).sort({ createdAt: -1 });
     const otherId = task.publisherId === userId ? task.takerId : task.publisherId;
     const otherName = task.publisherId === userId ? task.takerName : task.publisherName;
@@ -241,7 +239,6 @@ app.get('/api/messages/:taskId', async (req, res) => {
 app.post('/api/messages', async (req, res) => {
   const message = new Message(req.body);
   await message.save();
-  // 同时更新对应任务的 updatedAt
   await Task.findByIdAndUpdate(message.taskId, { updatedAt: new Date() });
   res.json(message);
 });
@@ -275,7 +272,7 @@ app.post('/api/init', async (req, res) => {
   res.json({ success: true });
 });
 
-// ==================== 单页应用路由（必须放在所有 API 路由之后） ====================
+// ==================== 单页应用路由 ====================
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
