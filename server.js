@@ -8,6 +8,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 连接 MongoDB（Railway 上应设置环境变量 MONGODB_URL）
 mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty');
 
 // ==================== 数据模型 ====================
@@ -159,8 +160,7 @@ app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
 });
 
 app.put('/api/tasks/:id/status', async (req, res) => {
-  const updateData = { ...req.body, updatedAt: new Date() };
-  await Task.findByIdAndUpdate(req.params.id, updateData);
+  await Task.findByIdAndUpdate(req.params.id, { ...req.body, updatedAt: new Date() });
   res.json({ success: true });
 });
 
@@ -205,7 +205,7 @@ app.get('/api/bills/:userId', async (req, res) => {
   res.json(bills);
 });
 
-// 修复后的 conversations 接口（确保返回最新消息）
+// ==================== 关键：会话列表接口 ====================
 app.get('/api/user/:userId/conversations', async (req, res) => {
   const userId = req.params.userId;
   const tasks = await Task.find({
@@ -274,7 +274,7 @@ app.post('/api/init', async (req, res) => {
   res.json({ success: true });
 });
 
-// 单页应用路由
+// 单页应用路由（必须放在所有 API 路由之后）
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
