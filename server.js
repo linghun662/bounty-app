@@ -42,7 +42,8 @@ const TaskSchema = new mongoose.Schema({
   mediaList: Array,
   proofMedia: Array,
   category: String,
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 const Task = mongoose.model('Task', TaskSchema);
 
@@ -132,6 +133,7 @@ app.put('/api/tasks/:id/accept', async (req, res) => {
   task.takerName = takerName;
   task.takerPhone = takerPhone;
   task.takenAt = new Date();
+  task.updatedAt = new Date();
   await task.save();
   res.json({ success: true, task });
 });
@@ -146,6 +148,7 @@ app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
   task.takerId = null;
   task.takerName = null;
   task.takenAt = null;
+  task.updatedAt = new Date();
   await task.save();
   const user = await User.findById(userId);
   if (user) {
@@ -156,7 +159,8 @@ app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
 });
 
 app.put('/api/tasks/:id/status', async (req, res) => {
-  await Task.findByIdAndUpdate(req.params.id, req.body);
+  const updateData = { ...req.body, updatedAt: new Date() };
+  await Task.findByIdAndUpdate(req.params.id, updateData);
   res.json({ success: true });
 });
 
@@ -167,6 +171,7 @@ app.post('/api/tasks/:id/complete', async (req, res) => {
   await User.findByIdAndUpdate(task.takerId, { $inc: { balance: task.reward } });
   await new Bill({ userId: task.takerId, type: 'income', amount: task.reward, desc: `完成任务：${task.title}` }).save();
   task.status = 'completed';
+  task.updatedAt = new Date();
   await task.save();
   res.json({ success: true });
 });
@@ -178,6 +183,7 @@ app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
   await User.findByIdAndUpdate(task.takerId, { $inc: { balance: task.reward } });
   await new Bill({ userId: task.takerId, type: 'income', amount: task.reward, desc: `完成任务：${task.title}` }).save();
   task.status = 'completed';
+  task.updatedAt = new Date();
   await task.save();
   res.json({ success: true });
 });
@@ -199,15 +205,14 @@ app.get('/api/bills/:userId', async (req, res) => {
   res.json(bills);
 });
 
-// 修复后的 conversations 接口（关键）
+// 修复后的 conversations 接口（确保返回最新消息）
 app.get('/api/user/:userId/conversations', async (req, res) => {
   const userId = req.params.userId;
   const tasks = await Task.find({
     $or: [{ publisherId: userId }, { takerId: userId }]
-  }).sort({ createdAt: -1 });
+  }).sort({ updatedAt: -1 });
   const conversations = [];
   for (const task of tasks) {
-    // 将 task._id 转为字符串，确保与 Message.taskId 匹配
     const lastMsg = await Message.findOne({ taskId: task._id.toString() }).sort({ createdAt: -1 });
     const otherId = task.publisherId === userId ? task.takerId : task.publisherId;
     const otherName = task.publisherId === userId ? task.takerName : task.publisherName;
@@ -235,6 +240,8 @@ app.get('/api/messages/:taskId', async (req, res) => {
 app.post('/api/messages', async (req, res) => {
   const message = new Message(req.body);
   await message.save();
+  // 同时更新对应任务的 updatedAt
+  await Task.findByIdAndUpdate(message.taskId, { updatedAt: new Date() });
   res.json(message);
 });
 

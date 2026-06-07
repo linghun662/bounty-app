@@ -681,51 +681,130 @@
                 </div>
         `;
         
-        if (task.takerId) detailHtml += renderProgressSteps(task);
+        if (task.takerId) {
+            detailHtml += renderProgressSteps(task);
+        }
         
         if (task.takerId) {
             const takenTimeStr = task.takenAt ? new Date(task.takenAt).toLocaleString() : '时间未知';
             if (isMine) {
-                detailHtml += `<div class="info-row" style="cursor:pointer;" id="takerInfoRow"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div></div>`;
+                detailHtml += `
+                    <div class="info-row" style="cursor:pointer;" id="takerInfoRow">
+                        <div class="info-icon">🙋</div>
+                        <div class="info-content">
+                            <div class="info-label">接取者</div>
+                            <div class="info-value">${escapeHtml(task.takerName)}</div>
+                        </div>
+                        <div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div>
+                    </div>
+                `;
             } else if (isTaker) {
-                detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">您已接取</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div></div>`;
+                detailHtml += `
+                    <div class="info-row">
+                        <div class="info-icon">🙋</div>
+                        <div class="info-content">
+                            <div class="info-label">您已接取</div>
+                            <div class="info-value">${escapeHtml(task.takerName)}</div>
+                        </div>
+                        <div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div>
+                    </div>
+                `;
             } else {
-                detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div></div>`;
+                detailHtml += `
+                    <div class="info-row">
+                        <div class="info-icon">🙋</div>
+                        <div class="info-content">
+                            <div class="info-label">接取者</div>
+                            <div class="info-value">${escapeHtml(task.takerName)}</div>
+                        </div>
+                        <div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div>
+                    </div>
+                `;
             }
         }
         
-        detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description || '')}</p></div></div>`;
+        detailHtml += `
+                <div class="desc-section">
+                    <div class="info-label">📝 任务详情</div>
+                    <p>${escapeHtml(task.description || '')}</p>
+                </div>
+            </div>
+        `;
         
         // 可接取状态下，非发布者显示“联系发布者/议价”按钮
         if (task.status === 'available' && !isMine) {
-            detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6; margin-bottom:8px;">💬 联系发布者 / 议价</button></div>`;
+            detailHtml += `
+                <div style="margin:8px 16px;">
+                    <button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6; margin-bottom:8px;">💬 联系发布者 / 议价</button>
+                </div>
+            `;
         }
         
+        // 进行中状态的联系按钮
         if (task.status === 'ongoing') {
             if (isMine && task.takerId) {
-                detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn" style="background:#3b82f6;">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
+                detailHtml += `<div class="contact-buttons">
+                    <button class="btn-primary" id="contactTakerBtn" style="background:#3b82f6;">💬 联系接取者</button>
+                    <button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button>
+                </div>`;
             } else if (isTaker) {
                 detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
             }
         }
         
+        // 接取滑块
         if (task.status === 'available' && !isMine) {
-            detailHtml += `<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
+            detailHtml += `
+                <div style="margin:8px 16px 20px;">
+                    <div class="slide-confirm" id="slideAcceptWrapper">
+                        <div class="slide-track">
+                            <div class="slide-thumb">→</div>
+                            <div class="slide-text">👉 滑动接取任务 👈</div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
         
+        // 接取者进度操作
         if (task.status === 'ongoing' && isTaker) {
-            if (task.publisherPhone) detailHtml += `<div style="margin:8px 16px;"><button class="btn-phone" id="callPublisherBtn">📞 联系发布者 (${task.publisherPhone})</button></div>`;
-            if (task.locationAddress) detailHtml += `<div style="margin:8px 16px;"><button class="btn-nav" id="navigateBtn">🧭 高德导航</button></div>`;
+            if (task.publisherPhone) {
+                detailHtml += `<div style="margin:8px 16px;"><button class="btn-phone" id="callPublisherBtn">📞 联系发布者 (${task.publisherPhone})</button></div>`;
+            }
+            if (task.locationAddress) {
+                detailHtml += `<div style="margin:8px 16px;"><button class="btn-nav" id="navigateBtn">🧭 高德导航</button></div>`;
+            }
             if (task.travelStatus === 'idle') {
-                detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
+                detailHtml += `
+                    <div class="slide-action" id="slideStartWrapper">
+                        <div class="slide-track">
+                            <div class="slide-thumb">→</div>
+                            <div class="slide-text">🚗 滑动出发 🚗</div>
+                        </div>
+                    </div>
+                `;
             } else if (task.travelStatus === 'traveling') {
                 const remaining = Math.max(0, (task.estimatedMinutes * 60) - ((Date.now() - task.travelStartTime) / 1000));
                 const mins = Math.floor(remaining / 60);
                 const secs = Math.floor(remaining % 60);
                 detailHtml += `<div id="countdownDisplay" class="countdown-timer">⏰ 预计剩余: ${mins}分${secs.toString().padStart(2,'0')}秒</div>`;
-                detailHtml += `<div class="slide-action" id="slideArriveWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📍 滑动到达目的地 📍</div></div></div>`;
+                detailHtml += `
+                    <div class="slide-action" id="slideArriveWrapper">
+                        <div class="slide-track">
+                            <div class="slide-thumb">→</div>
+                            <div class="slide-text">📍 滑动到达目的地 📍</div>
+                        </div>
+                    </div>
+                `;
             } else if (task.travelStatus === 'arrived' && !task.takerCompleted) {
-                detailHtml += `<div class="slide-action" id="slideCompleteWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">✅ 滑动完成任务 ✅</div></div></div>`;
+                detailHtml += `
+                    <div class="slide-action" id="slideCompleteWrapper">
+                        <div class="slide-track">
+                            <div class="slide-thumb">→</div>
+                            <div class="slide-text">✅ 滑动完成任务 ✅</div>
+                        </div>
+                    </div>
+                `;
             }
             detailHtml += `<div style="margin:8px 16px 20px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取（扣5信用分）</button></div>`;
         }
@@ -733,34 +812,87 @@
         document.getElementById('detailContainer').innerHTML = detailHtml;
         
         // 绑定事件
-        document.getElementById('publisherName')?.addEventListener('click', () => {
-            const modal = document.createElement('div');
-            modal.className = 'modal-mask';
-            modal.innerHTML = `<div class="modal-content"><h3>👤 发布者资料</h3><div><strong>昵称</strong>: ${escapeHtml(publisherInfo.nickname || task.publisherName)}</div><div><strong>信用分</strong>: ${publisherInfo.credit || '60'}</div><div><strong>家乡</strong>: ${escapeHtml(publisherInfo.hometown || '未填写')}</div><div><strong>签名</strong>: ${escapeHtml(publisherInfo.signature || '这个人很懒')}</div><button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button></div>`;
-            document.body.appendChild(modal);
-        });
+        const pubNameEl = document.getElementById('publisherName');
+        if (pubNameEl) {
+            pubNameEl.onclick = () => {
+                const modal = document.createElement('div');
+                modal.className = 'modal-mask';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <h3>👤 发布者资料</h3>
+                        <div><strong>昵称</strong>: ${escapeHtml(publisherInfo.nickname || task.publisherName)}</div>
+                        <div><strong>信用分</strong>: ${publisherInfo.credit || '60'}</div>
+                        <div><strong>家乡</strong>: ${publisherInfo.hometown || '未填写'}</div>
+                        <div><strong>签名</strong>: ${publisherInfo.signature || '这个人很懒'}</div>
+                        <button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            };
+        }
         
-        document.getElementById('takerInfoRow')?.addEventListener('click', () => showTakerProfile(task.takerId, task.takenAt));
-        document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(task._id, task.publisherId, task.publisherName, task.reward, task.title));
-        document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(task._id, task.takerId, task.takerName, task.reward, task.title));
-        document.getElementById('callTakerBtn')?.addEventListener('click', () => window.location.href = `tel:${task.takerPhone}`);
-        document.getElementById('contactPublisherBtn')?.addEventListener('click', () => openChat(task._id, task.publisherId, task.publisherName, task.reward, task.title));
-        document.getElementById('callPublisherBtn')?.addEventListener('click', () => window.location.href = `tel:${task.publisherPhone}`);
-        document.getElementById('navigateBtn')?.addEventListener('click', () => {
-            const coords = getTaskCoords(task.locationAddress);
-            window.open(`https://uri.amap.com/navigation?to=${coords.lng},${coords.lat},${encodeURIComponent(task.locationAddress)}&mode=car`, '_blank');
-        });
+        const takerInfoRow = document.getElementById('takerInfoRow');
+        if (takerInfoRow && task.takerId) {
+            takerInfoRow.onclick = () => {
+                showTakerProfile(task.takerId, task.takenAt);
+            };
+        }
+        
+        const contactBeforeBtn = document.getElementById('contactPublisherBeforeAcceptBtn');
+        if (contactBeforeBtn) {
+            contactBeforeBtn.onclick = () => {
+                openChat(task._id, task.publisherId, task.publisherName, task.reward, task.title);
+            };
+        }
+        
+        const contactTakerBtn = document.getElementById('contactTakerBtn');
+        if (contactTakerBtn && task.takerId) {
+            contactTakerBtn.onclick = () => {
+                openChat(task._id, task.takerId, task.takerName, task.reward, task.title);
+            };
+        }
+        const callTakerBtn = document.getElementById('callTakerBtn');
+        if (callTakerBtn && task.takerPhone) {
+            callTakerBtn.onclick = () => {
+                window.location.href = `tel:${task.takerPhone}`;
+            };
+        }
+        const contactPublisherBtn = document.getElementById('contactPublisherBtn');
+        if (contactPublisherBtn) {
+            contactPublisherBtn.onclick = () => {
+                openChat(task._id, task.publisherId, task.publisherName, task.reward, task.title);
+            };
+        }
+        const callPublisherBtn = document.getElementById('callPublisherBtn');
+        if (callPublisherBtn && task.publisherPhone) {
+            callPublisherBtn.onclick = () => window.location.href = `tel:${task.publisherPhone}`;
+        }
+        
+        const navBtn = document.getElementById('navigateBtn');
+        if (navBtn && task.locationAddress) {
+            navBtn.onclick = () => {
+                const coords = getTaskCoords(task.locationAddress);
+                const url = `https://uri.amap.com/navigation?to=${coords.lng},${coords.lat},${encodeURIComponent(task.locationAddress)}&mode=car&policy=1&src=mypage&coordinate=gaode&callnative=1`;
+                window.open(url, '_blank');
+            };
+        }
         
         const slideAccept = document.getElementById('slideAcceptWrapper');
         if (slideAccept) {
             initSlide(slideAccept, async () => {
-                const acceptRes = await callApi(`/tasks/${taskId}/accept`, { method: 'PUT', body: JSON.stringify({ takerId: currentUser.id, takerName: currentUser.nickname, takerPhone: currentUser.phone }) });
+                const acceptRes = await callApi(`/tasks/${taskId}/accept`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ takerId: currentUser.id, takerName: currentUser.nickname, takerPhone: currentUser.phone })
+                });
                 if (acceptRes.success) {
                     alert('接取成功！');
                     refreshTaskList();
                     loadProfile();
+                    await renderMessageList();   // 刷新消息列表
                     setTimeout(() => viewTask(taskId), 300);
-                } else alert(acceptRes.error || '接取失败');
+                } else {
+                    alert(acceptRes.error || '接取失败');
+                }
             });
         }
         
@@ -768,17 +900,36 @@
         if (startWrapper) {
             initSlide(startWrapper, async () => {
                 const minutes = getTravelTimeMinutes(task.locationAddress);
-                const result = await callApi(`/tasks/${taskId}/status`, { method: 'PUT', body: JSON.stringify({ travelStatus: 'traveling', estimatedMinutes: minutes, travelStartTime: Date.now() }) });
-                if (result.success) { alert('出发！'); viewTask(taskId); } else alert('操作失败');
+                const result = await callApi(`/tasks/${taskId}/status`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ travelStatus: 'traveling', estimatedMinutes: minutes, travelStartTime: Date.now() })
+                });
+                if (result.success) {
+                    alert('出发！');
+                    viewTask(taskId);
+                } else {
+                    alert('操作失败');
+                }
             });
         }
         
         const arriveWrapper = document.getElementById('slideArriveWrapper');
         if (arriveWrapper) {
-            if (task.travelStartTime && task.estimatedMinutes) startCountdown(task.estimatedMinutes, task.travelStartTime);
+            if (task.travelStartTime && task.estimatedMinutes) {
+                startCountdown(task.estimatedMinutes, task.travelStartTime);
+            }
             initSlide(arriveWrapper, async () => {
-                const result = await callApi(`/tasks/${taskId}/status`, { method: 'PUT', body: JSON.stringify({ travelStatus: 'arrived' }) });
-                if (result.success) { if (countdownTimer) clearInterval(countdownTimer); alert('已到达目的地！'); viewTask(taskId); } else alert('操作失败');
+                const result = await callApi(`/tasks/${taskId}/status`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ travelStatus: 'arrived' })
+                });
+                if (result.success) {
+                    if (countdownTimer) clearInterval(countdownTimer);
+                    alert('已到达目的地！');
+                    viewTask(taskId);
+                } else {
+                    alert('操作失败');
+                }
             });
         }
         
@@ -786,7 +937,14 @@
         if (completeWrapper) {
             initSlide(completeWrapper, async () => {
                 const result = await callApi(`/tasks/${taskId}/complete`, { method: 'POST' });
-                if (result.success) { alert('任务完成，等待发布者确认结算'); refreshTaskList(); loadProfile(); viewTask(taskId); } else alert('操作失败');
+                if (result.success) {
+                    alert('任务完成，等待发布者确认结算');
+                    refreshTaskList();
+                    loadProfile();
+                    viewTask(taskId);
+                } else {
+                    alert('操作失败');
+                }
             });
         }
         
@@ -795,7 +953,14 @@
             cancelBtn.onclick = async () => {
                 if (confirm('确定取消接取吗？将扣除5信用分！')) {
                     const result = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT', body: JSON.stringify({ userId: currentUser.id }) });
-                    if (result.success) { alert('已取消接取，信用-5'); await loadProfile(); refreshTaskList(); switchPage('home'); } else alert(result.error || '取消失败');
+                    if (result.success) {
+                        alert('已取消接取，信用-5');
+                        await loadProfile();
+                        refreshTaskList();
+                        switchPage('home');
+                    } else {
+                        alert(result.error || '取消失败');
+                    }
                 }
             };
         }
@@ -805,16 +970,35 @@
     async function confirmPayment(taskId) {
         if (confirm('确认支付赏金？此操作不可撤销')) {
             const result = await callApi(`/tasks/${taskId}/confirm-payment`, { method: 'POST' });
-            if (result.success) { alert('结算成功，赏金已发放'); refreshTaskList(); loadProfile(); if (document.getElementById('detailPage').classList.contains('active')) viewTask(taskId); }
-            else alert(result.error || '结算失败');
+            if (result.success) {
+                alert('结算成功，赏金已发放');
+                refreshTaskList();
+                loadProfile();
+                if (document.getElementById('detailPage').classList.contains('active')) {
+                    viewTask(taskId);
+                }
+            } else {
+                alert(result.error || '结算失败');
+            }
         }
     }
     
     // ==================== 消息相关（增强版） ====================
     async function sendMessage(taskId, senderId, senderName, text, isNego = false) {
-        const payload = { taskId, senderId, senderName, text, isNego, time: new Date().toLocaleTimeString(), createdAt: new Date().toISOString() };
+        const payload = {
+            taskId,
+            senderId,
+            senderName,
+            text,
+            isNego,
+            time: new Date().toLocaleTimeString(),
+            createdAt: new Date().toISOString()
+        };
         const result = await callApi('/messages', { method: 'POST', body: JSON.stringify(payload) });
-        if (result.error) { alert('发送失败：' + result.error); return false; }
+        if (result.error) {
+            alert('发送失败：' + result.error);
+            return false;
+        }
         return true;
     }
     
@@ -831,9 +1015,19 @@
             const isNego = m.text && m.text.includes('💰议价请求:');
             const priceMatch = m.text.match(/¥(\d+)/);
             const negoPrice = priceMatch ? parseInt(priceMatch[1]) : null;
-            html += `<div class="chat-bubble ${isMine ? 'chat-bubble-mine' : 'chat-bubble-other'}"><div class="bubble-text">${escapeHtml(m.text)}</div><div class="bubble-time">${m.time || new Date(m.createdAt).toLocaleTimeString()}</div></div>`;
+            html += `
+                <div class="chat-bubble ${isMine ? 'chat-bubble-mine' : 'chat-bubble-other'}">
+                    <div class="bubble-text">${escapeHtml(m.text)}</div>
+                    <div class="bubble-time">${m.time || new Date(m.createdAt).toLocaleTimeString()}</div>
+                </div>
+            `;
             if (!isMine && isNego && negoPrice && m.senderId !== 'system') {
-                html += `<div style="display:flex; gap:8px; margin:4px 0 8px 16px;"><button class="btn-primary" style="padding:6px 12px; font-size:0.75rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:6px 12px; font-size:0.75rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
+                html += `
+                    <div style="display:flex; gap:8px; margin:4px 0 8px 16px;">
+                        <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button>
+                        <button class="btn-secondary" style="padding:6px 12px; font-size:0.75rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button>
+                    </div>
+                `;
             }
         }
         chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
@@ -844,22 +1038,83 @@
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('messagePage').classList.add('active');
         const container = document.getElementById('messageContainer');
-        const taskCard = `<div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span style="font-size:12px;">👉 点击查看详情</span></div>`;
-        container.innerHTML = `<div class="chat-container"><div class="chat-header-bar"><button class="chat-back-btn" id="chatBackBtn">←</button><span class="chat-header-name">${escapeHtml(chatState.otherName)}</span><button id="manualRefreshBtn" style="background:#eef2ff; border:none; border-radius:20px; padding:6px 12px; font-size:0.7rem;">🔄 刷新</button></div>${taskCard}<div class="chat-messages-area" id="chatMsgsArea">加载中...</div><div class="chat-input-wrapper"><div class="flex-row"><input type="number" id="negoPriceInput" class="nego-input" placeholder="💰议价 (当前¥${chatState.reward})" step="1"><button class="nego-send-btn" id="sendNegoBtn">发起议价</button></div><div class="chat-action-row"><input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息..."><button class="send-btn" id="sendChatBtn">发送</button></div></div></div>`;
+        const taskCard = `
+            <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}')">
+                <div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div>
+                <span style="font-size:12px;">👉 点击查看详情</span>
+            </div>
+        `;
+        container.innerHTML = `
+            <div class="chat-container">
+                <div class="chat-header-bar">
+                    <button class="chat-back-btn" id="chatBackBtn">←</button>
+                    <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
+                    <button id="manualRefreshBtn" style="background:#eef2ff; border:none; border-radius:20px; padding:6px 12px; font-size:0.7rem;">🔄 刷新</button>
+                </div>
+                ${taskCard}
+                <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
+                <div class="chat-input-wrapper">
+                    <div class="flex-row">
+                        <input type="number" id="negoPriceInput" class="nego-input" placeholder="💰议价 (当前¥${chatState.reward})" step="1">
+                        <button class="nego-send-btn" id="sendNegoBtn">发起议价</button>
+                    </div>
+                    <div class="chat-action-row">
+                        <input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息...">
+                        <button class="send-btn" id="sendChatBtn">发送</button>
+                    </div>
+                </div>
+            </div>
+        `;
         chatState.messagesArea = document.getElementById('chatMsgsArea');
         chatState.lastMessageCount = 0;
-        document.getElementById('chatBackBtn').onclick = () => { closeChat(); document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('messagePage').classList.add('active'); renderMessageList(); };
-        document.getElementById('manualRefreshBtn').onclick = async () => { await refreshMessagesOnly(); alert('已刷新消息'); };
-        document.getElementById('sendChatBtn').onclick = async () => { const txt = document.getElementById('chatInput').value.trim(); if (!txt) return; const success = await sendMessage(chatState.taskId, currentUser.id, currentUser.nickname, txt, false); if (success) { document.getElementById('chatInput').value = ''; await refreshMessagesOnly(); } };
-        document.getElementById('sendNegoBtn').onclick = async () => { const price = parseFloat(document.getElementById('negoPriceInput').value); if (isNaN(price) || price <= 0) return alert('输入有效价格'); const success = await sendMessage(chatState.taskId, currentUser.id, currentUser.nickname, `💰议价请求:¥${price}`, true); if (success) { alert('议价请求已发送'); document.getElementById('negoPriceInput').value = ''; await refreshMessagesOnly(); } };
+        document.getElementById('chatBackBtn').onclick = () => {
+            closeChat();
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('messagePage').classList.add('active');
+            renderMessageList();
+        };
+        document.getElementById('manualRefreshBtn').onclick = async () => {
+            await refreshMessagesOnly();
+            alert('已刷新消息');
+        };
+        document.getElementById('sendChatBtn').onclick = async () => {
+            const txt = document.getElementById('chatInput').value.trim();
+            if (!txt) return;
+            const success = await sendMessage(chatState.taskId, currentUser.id, currentUser.nickname, txt, false);
+            if (success) {
+                document.getElementById('chatInput').value = '';
+                await refreshMessagesOnly();
+                await renderMessageList();   // 刷新消息列表页
+            }
+        };
+        document.getElementById('sendNegoBtn').onclick = async () => {
+            const price = parseFloat(document.getElementById('negoPriceInput').value);
+            if (isNaN(price) || price <= 0) return alert('输入有效价格');
+            const success = await sendMessage(chatState.taskId, currentUser.id, currentUser.nickname, `💰议价请求:¥${price}`, true);
+            if (success) {
+                alert('议价请求已发送');
+                document.getElementById('negoPriceInput').value = '';
+                await refreshMessagesOnly();
+                await renderMessageList();   // 刷新消息列表页
+            }
+        };
         refreshMessagesOnly();
         if (chatState.pollInterval) clearInterval(chatState.pollInterval);
-        chatState.pollInterval = setInterval(async () => { if (chatState.active && chatState.taskId) await refreshMessagesOnly(); }, 3000);
+        chatState.pollInterval = setInterval(async () => {
+            if (chatState.active && chatState.taskId) {
+                await refreshMessagesOnly();
+            }
+        }, 3000);
     }
     
     async function openChat(taskId, otherId, otherName, reward, title) {
         if (chatState.pollInterval) clearInterval(chatState.pollInterval);
-        chatState.active = true; chatState.taskId = taskId; chatState.otherId = otherId; chatState.otherName = otherName; chatState.reward = reward; chatState.title = title;
+        chatState.active = true;
+        chatState.taskId = taskId;
+        chatState.otherId = otherId;
+        chatState.otherName = otherName;
+        chatState.reward = reward;
+        chatState.title = title;
         showChatView();
     }
     
@@ -868,41 +1123,62 @@
         if (task.status !== 'available') { alert('任务已被接取，无法议价'); return; }
         if (isAccept) {
             const updateResult = await callApi(`/tasks/${taskId}/status`, { method: 'PUT', body: JSON.stringify({ reward: price }) });
-            if (updateResult.error) { alert('更新价格失败：' + updateResult.error); return; }
+            if (updateResult.error) {
+                alert('更新价格失败：' + updateResult.error);
+                return;
+            }
             await sendMessage(taskId, 'system', '系统', `✅ ${currentUser.nickname} 同意了议价，任务价格调整为 ¥${price}`, false);
             alert(`已同意议价，任务价格更新为 ¥${price}`);
             if (chatState.taskId === taskId) chatState.reward = price;
             refreshTaskList();
+            await renderMessageList();   // 刷新消息列表页
         } else {
             await sendMessage(taskId, 'system', '系统', `❌ ${currentUser.nickname} 拒绝了议价，价格仍为 ¥${task.reward}`, false);
             alert('已拒绝议价');
+            await renderMessageList();   // 刷新消息列表页
         }
         await refreshMessagesOnly();
     };
     
     function closeChat() {
         if (chatState.pollInterval) clearInterval(chatState.pollInterval);
-        chatState.active = false; chatState.taskId = null; chatState.messagesArea = null;
+        chatState.active = false;
+        chatState.taskId = null;
+        chatState.messagesArea = null;
     }
     
     async function renderMessageList() {
         const convs = await callApi(`/user/${currentUser.id}/conversations`);
         const container = document.getElementById('messageContainer');
-        if (!convs || convs.length === 0) { container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>'; return; }
+        if (!convs || convs.length === 0) {
+            container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
+            return;
+        }
         let html = `<div class="card"><strong>📬 消息记录</strong></div>`;
         for (let c of convs) {
-            html += `<div class="card task-card" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}"><div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}</span><span class="reward-badge">¥${c.reward}</span></div><div class="task-desc">${escapeHtml((c.lastMsg || '暂无消息').substring(0,50))}</div></div>`;
+            html += `
+                <div class="card task-card" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
+                    <div class="flex-between">
+                        <span>💬 ${escapeHtml(c.otherName)}</span>
+                        <span class="reward-badge">¥${c.reward}</span>
+                    </div>
+                    <div class="task-desc">${escapeHtml((c.lastMsg || '暂无消息').substring(0,50))}</div>
+                </div>
+            `;
         }
         container.innerHTML = html;
         document.querySelectorAll('#messageContainer .task-card').forEach(card => {
             card.addEventListener('click', (e) => {
-                const taskId = card.getAttribute('data-taskid'); const otherId = card.getAttribute('data-otherid'); const otherName = card.getAttribute('data-othername'); const reward = parseInt(card.getAttribute('data-reward')); const title = card.getAttribute('data-title');
+                const taskId = card.getAttribute('data-taskid');
+                const otherId = card.getAttribute('data-otherid');
+                const otherName = card.getAttribute('data-othername');
+                const reward = parseInt(card.getAttribute('data-reward'));
+                const title = card.getAttribute('data-title');
                 openChat(taskId, otherId, otherName, reward, title);
             });
         });
     }
     
-    // ==================== 用户主页、发布、个人资料等 ====================
     function resetPublishForm() {
         document.getElementById('pubTitle').value = '';
         document.getElementById('pubDesc').value = '';
@@ -923,23 +1199,63 @@
         if (reward > currentUser.balance) return alert('余额不足');
         const locationAddress = document.getElementById('pubAddress').value.trim() || '未知';
         const mediaList = pendingMedia.map(m => ({ type: m.type, url: m.dataURL }));
-        const result = await callApi('/tasks', { method: 'POST', body: JSON.stringify({ title, description: document.getElementById('pubDesc').value, reward, publisherId: currentUser.id, publisherName: currentUser.nickname, publisherPhone: currentUser.phone, locationAddress, mediaList, category }) });
-        if (result._id) { alert('发布成功'); resetPublishForm(); await loadProfile(); refreshTaskList(); switchPage('home'); } else alert('发布失败');
+        const result = await callApi('/tasks', {
+            method: 'POST',
+            body: JSON.stringify({
+                title, description: document.getElementById('pubDesc').value, reward,
+                publisherId: currentUser.id, publisherName: currentUser.nickname,
+                publisherPhone: currentUser.phone,
+                locationAddress, mediaList, category
+            })
+        });
+        if (result._id) {
+            alert('发布成功');
+            resetPublishForm();
+            await loadProfile();
+            refreshTaskList();
+            switchPage('home');
+        } else { alert('发布失败'); }
     }
     
     async function showRealNameAuth() {
-        if (currentUser.idCardVerified) { alert('您已经实名认证过了'); return; }
+        if (currentUser.idCardVerified) {
+            alert('您已经实名认证过了');
+            return;
+        }
         const modal = document.createElement('div');
         modal.className = 'modal-mask';
-        modal.innerHTML = `<div class="modal-content"><h3>🆔 实名认证</h3><div class="form-group"><label>真实姓名</label><input id="realNameInput" class="form-input" placeholder="请输入真实姓名"></div><div class="form-group"><label>身份证号</label><input id="idCardInput" class="form-input" placeholder="请输入身份证号"></div><div class="double-btn-row" style="display:flex; gap:8px;"><button class="btn-primary" id="submitAuthBtn">提交认证</button><button class="btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button></div></div>`;
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>🆔 实名认证</h3>
+                <div class="form-group"><label>真实姓名</label><input id="realNameInput" class="form-input" placeholder="请输入真实姓名"></div>
+                <div class="form-group"><label>身份证号</label><input id="idCardInput" class="form-input" placeholder="请输入身份证号"></div>
+                <div class="double-btn-row" style="display:flex; gap:8px;">
+                    <button class="btn-primary" id="submitAuthBtn">提交认证</button>
+                    <button class="btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+                </div>
+            </div>
+        `;
         document.body.appendChild(modal);
         modal.querySelector('#submitAuthBtn').onclick = async () => {
             const realName = modal.querySelector('#realNameInput').value.trim();
             const idCard = modal.querySelector('#idCardInput').value.trim();
-            if (!realName || idCard.length < 15) { alert('请填写正确的姓名和身份证号'); return; }
-            const result = await callApi('/verify-id', { method: 'POST', body: JSON.stringify({ userId: currentUser.id, realName, idCard }) });
-            if (result.success) { alert('实名认证成功'); currentUser.idCardVerified = true; localStorage.setItem('user', JSON.stringify(currentUser)); modal.remove(); loadProfile(); }
-            else alert(result.error || '认证失败，请稍后重试');
+            if (!realName || idCard.length < 15) {
+                alert('请填写正确的姓名和身份证号');
+                return;
+            }
+            const result = await callApi('/verify-id', {
+                method: 'POST',
+                body: JSON.stringify({ userId: currentUser.id, realName, idCard })
+            });
+            if (result.success) {
+                alert('实名认证成功');
+                currentUser.idCardVerified = true;
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                modal.remove();
+                loadProfile();
+            } else {
+                alert(result.error || '认证失败，请稍后重试');
+            }
         };
     }
     
@@ -947,24 +1263,118 @@
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
         const user = await callApi(`/user/${currentUser.id}`);
-        if (user && user._id) { currentUser = { ...currentUser, ...user }; localStorage.setItem('user', JSON.stringify(currentUser)); document.getElementById('headerBalance').innerHTML = `余额: ¥${(currentUser.balance || 0).toFixed(2)}`; }
+        if (user && user._id) {
+            currentUser = { ...currentUser, ...user };
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            document.getElementById('headerBalance').innerHTML = `余额: ¥${(currentUser.balance || 0).toFixed(2)}`;
+        }
         const allTasks = await callApi('/tasks/all');
         const myPub = (allTasks || []).filter(t => t.publisherId === currentUser.id);
         const myAcc = (allTasks || []).filter(t => t.takerId === currentUser.id && t.status !== 'completed');
         const myCompleted = (allTasks || []).filter(t => t.takerId === currentUser.id && t.status === 'completed');
         
-        const pubHtml = myPub.map(t => { let progressText = ''; if (t.status === 'ongoing' && t.takerName) { let step = t.travelStatus === 'idle' ? '待出发' : (t.travelStatus === 'traveling' ? '行程中' : '已到达，待确认'); progressText = `<div class="progress-text">接取者: ${escapeHtml(t.takerName)} | 状态: ${step}</div>`; } return `<div class="profile-task-item"><div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div><span class="profile-task-status ${t.status === 'available' ? 'available' : (t.status === 'ongoing' ? 'ongoing' : 'completed')}">${t.status === 'available' ? '悬赏中' : (t.status === 'ongoing' ? '进行中' : '已完成')}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div>${progressText}${t.status === 'ongoing' && t.takerCompleted ? `<div class="task-actions"><button class="btn-success" onclick="confirmPayment('${t._id}')">确认结算</button></div>` : ''}</div>`; }).join('') || '<div class="empty-state">暂无</div>';
-        const accHtml = myAcc.map(t => `<div class="profile-task-item"><div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div><span class="profile-task-status ongoing">${t.travelStatus === 'idle' ? '待出发' : (t.travelStatus === 'traveling' ? '行程中' : '已到达')}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div><div class="task-actions"><button class="btn-danger" onclick="cancelAcceptedTask('${t._id}')">取消接取</button></div></div>`).join('') || '<div class="empty-state">暂无</div>';
-        const completedHtml = myCompleted.map(t => `<div class="profile-task-item"><div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div><span class="profile-task-status completed">已完成</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div></div>`).join('') || '<div class="empty-state">暂无</div>';
+        const pubHtml = myPub.map(t => {
+            let progressText = '';
+            if (t.status === 'ongoing') {
+                if (t.takerName) {
+                    let step = '';
+                    if (t.travelStatus === 'idle') step = '待出发';
+                    else if (t.travelStatus === 'traveling') step = '行程中';
+                    else if (t.travelStatus === 'arrived') step = '已到达，待确认';
+                    progressText = `<div class="progress-text">接取者: ${escapeHtml(t.takerName)} | 状态: ${step}</div>`;
+                } else {
+                    progressText = `<div class="progress-text">暂无接取者</div>`;
+                }
+            }
+            return `
+                <div class="profile-task-item">
+                    <div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div>
+                            <span class="profile-task-status ${t.status === 'available' ? 'available' : (t.status === 'ongoing' ? 'ongoing' : 'completed')}">${t.status === 'available' ? '悬赏中' : (t.status === 'ongoing' ? '进行中' : '已完成')}</span>
+                        </div>
+                        <div class="profile-task-amount">💰 ${t.reward}元</div>
+                    </div>
+                    ${progressText}
+                    ${t.status === 'ongoing' && t.takerCompleted ? `<div class="task-actions"><button class="btn-success" onclick="confirmPayment('${t._id}')">确认结算</button></div>` : ''}
+                </div>
+            `;
+        }).join('') || '<div class="empty-state">暂无</div>';
         
-        container.innerHTML = `<div class="profile-header" onclick="showEditProfileModal()"><div class="profile-avatar" id="profileAvatar">${currentUser.avatar ? `<img src="${currentUser.avatar}">` : `<span>${(currentUser.nickname || currentUser.username).charAt(0)}</span>`}</div><div><div class="profile-name">${escapeHtml(currentUser.nickname || currentUser.username)}</div><div class="profile-signature">${currentUser.signature || '点击编辑'}</div></div><span>✏️</span></div><div class="stats-row"><div class="stat-item" onclick="showWalletDetail()"><div class="stat-number">💰</div><div class="stat-label">钱包</div></div><div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit || 60}</div><div class="stat-label">信用</div></div><div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified ? '已实名' : '未实名'}</div></div></div><div class="profile-collapse"><div class="collapse-header" data-target="pub"><div class="collapse-title">📤 我发布 <span style="font-size:0.8rem; color:#64748b;">(${myPub.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-pub">${pubHtml}</div></div><div class="profile-collapse"><div class="collapse-header" data-target="acc"><div class="collapse-title">📥 我接取 <span style="font-size:0.8rem; color:#64748b;">(${myAcc.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-acc">${accHtml}</div></div><div class="profile-collapse"><div class="collapse-header" data-target="completed"><div class="collapse-title">✅ 已完成 <span style="font-size:0.8rem; color:#64748b;">(${myCompleted.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-completed">${completedHtml}</div></div><button class="logout-btn" onclick="logout()">退出登录</button>`;
+        const accHtml = myAcc.map(t => `
+            <div class="profile-task-item">
+                <div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div>
+                        <span class="profile-task-status ongoing">${t.travelStatus === 'idle' ? '待出发' : (t.travelStatus === 'traveling' ? '行程中' : '已到达')}</span>
+                    </div>
+                    <div class="profile-task-amount">💰 ${t.reward}元</div>
+                </div>
+                <div class="task-actions"><button class="btn-danger" onclick="cancelAcceptedTask('${t._id}')">取消接取</button></div>
+            </div>
+        `).join('') || '<div class="empty-state">暂无</div>';
+        
+        const completedHtml = myCompleted.map(t => `
+            <div class="profile-task-item">
+                <div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div>
+                        <span class="profile-task-status completed">已完成</span>
+                    </div>
+                    <div class="profile-task-amount">💰 ${t.reward}元</div>
+                </div>
+            </div>
+        `).join('') || '<div class="empty-state">暂无</div>';
+        
+        container.innerHTML = `
+            <div class="profile-header" onclick="showEditProfileModal()">
+                <div class="profile-avatar" id="profileAvatar">
+                    ${currentUser.avatar ? `<img src="${currentUser.avatar}">` : `<span>${(currentUser.nickname || currentUser.username).charAt(0)}</span>`}
+                </div>
+                <div><div class="profile-name">${escapeHtml(currentUser.nickname || currentUser.username)}</div><div class="profile-signature">${currentUser.signature || '点击编辑'}</div></div>
+                <span>✏️</span>
+            </div>
+            <div class="stats-row">
+                <div class="stat-item" onclick="showWalletDetail()"><div class="stat-number">💰</div><div class="stat-label">钱包</div></div>
+                <div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit || 60}</div><div class="stat-label">信用</div></div>
+                <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified ? '已实名' : '未实名'}</div></div>
+            </div>
+            <div class="profile-collapse">
+                <div class="collapse-header" data-target="pub">
+                    <div class="collapse-title">📤 我发布 <span style="font-size:0.8rem; color:#64748b;">(${myPub.length})</span></div>
+                    <span class="collapse-icon">▶</span>
+                </div>
+                <div class="collapse-content" id="collapse-pub">${pubHtml}</div>
+            </div>
+            <div class="profile-collapse">
+                <div class="collapse-header" data-target="acc">
+                    <div class="collapse-title">📥 我接取 <span style="font-size:0.8rem; color:#64748b;">(${myAcc.length})</span></div>
+                    <span class="collapse-icon">▶</span>
+                </div>
+                <div class="collapse-content" id="collapse-acc">${accHtml}</div>
+            </div>
+            <div class="profile-collapse">
+                <div class="collapse-header" data-target="completed">
+                    <div class="collapse-title">✅ 已完成 <span style="font-size:0.8rem; color:#64748b;">(${myCompleted.length})</span></div>
+                    <span class="collapse-icon">▶</span>
+                </div>
+                <div class="collapse-content" id="collapse-completed">${completedHtml}</div>
+            </div>
+            <button class="logout-btn" onclick="logout()">退出登录</button>
+        `;
         
         document.querySelectorAll('.collapse-header').forEach(header => {
             header.addEventListener('click', () => {
                 const targetId = header.getAttribute('data-target');
                 const content = document.getElementById(`collapse-${targetId}`);
                 const icon = header.querySelector('.collapse-icon');
-                if (content.classList.contains('show')) { content.classList.remove('show'); icon.classList.remove('open'); } else { content.classList.add('show'); icon.classList.add('open'); }
+                if (content.classList.contains('show')) {
+                    content.classList.remove('show');
+                    icon.classList.remove('open');
+                } else {
+                    content.classList.add('show');
+                    icon.classList.add('open');
+                }
             });
         });
     }
@@ -973,62 +1383,176 @@
         const bills = await callApi(`/bills/${currentUser.id}`);
         const modal = document.createElement('div');
         modal.className = 'modal-mask';
-        modal.innerHTML = `<div class="modal-content"><h3>💰 钱包明细</h3><div style="background:#eef2ff; padding:12px; border-radius:20px; margin-bottom:16px;"><div>当前余额</div><div style="font-size:1.8rem;">¥${(currentUser.balance || 0).toFixed(2)}</div></div><div><strong>提现</strong></div><button class="btn-primary" id="withdrawBtn" style="margin:8px 0;">💸 提现</button><div><strong>账单明细</strong></div><div style="max-height:200px; overflow:auto;">${bills.map(b => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${b.desc}</div><div>${b.amount > 0 ? `+${b.amount}` : b.amount}元</div><div style="font-size:0.7rem;">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}</div><button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button></div>`;
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>💰 钱包明细</h3>
+                <div style="background:#eef2ff; padding:12px; border-radius:20px; margin-bottom:16px;">
+                    <div>当前余额</div>
+                    <div style="font-size:1.8rem;">¥${(currentUser.balance || 0).toFixed(2)}</div>
+                </div>
+                <div><strong>提现</strong></div>
+                <button class="btn-primary" id="withdrawBtn" style="margin:8px 0;">💸 提现</button>
+                <div><strong>账单明细</strong></div>
+                <div style="max-height:200px; overflow:auto;">
+                    ${bills.map(b => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${b.desc}</div><div>${b.amount > 0 ? `+${b.amount}` : b.amount}元</div><div style="font-size:0.7rem;">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}
+                </div>
+                <button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button>
+            </div>
+        `;
         document.body.appendChild(modal);
-        modal.querySelector('#withdrawBtn').onclick = () => { alert('提现功能演示（需对接支付接口）'); modal.remove(); };
+        modal.querySelector('#withdrawBtn').onclick = () => {
+            const chooseModal = document.createElement('div');
+            chooseModal.className = 'modal-mask';
+            chooseModal.innerHTML = `
+                <div class="modal-content">
+                    <h3>选择提现方式</h3>
+                    <button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button>
+                    <button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button>
+                    <button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">取消</button>
+                </div>
+            `;
+            document.body.appendChild(chooseModal);
+            chooseModal.querySelector('#withdrawWechatBtn').onclick = () => {
+                alert('提现到微信（演示模式，实际需对接支付接口）');
+                chooseModal.remove();
+                modal.remove();
+            };
+            chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => {
+                alert('提现到支付宝（演示模式，实际需对接支付接口）');
+                chooseModal.remove();
+                modal.remove();
+            };
+        };
     }
     
     async function showCreditDetail() {
         let logs = await callApi(`/credit-logs/${currentUser.id}`);
-        if (!logs || logs.error) logs = [{ reason: '注册奖励', change: 60, time: new Date().toLocaleString() }];
+        if (!logs || logs.error) {
+            logs = [
+                { reason: '注册奖励', change: 60, time: new Date().toLocaleString() },
+                { reason: '完成测试任务', change: 5, time: new Date().toLocaleString() }
+            ];
+        }
         const modal = document.createElement('div');
         modal.className = 'modal-mask';
-        modal.innerHTML = `<div class="modal-content"><h3>⭐ 信用明细</h3><div style="max-height:300px; overflow:auto;">${logs.map(l => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${l.reason}</div><div>${l.change > 0 ? `+${l.change}` : l.change} 分</div><div style="font-size:0.7rem;">${l.time || new Date(l.createdAt).toLocaleString()}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}</div><button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button></div>`;
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>⭐ 信用明细</h3>
+                <div style="max-height:300px; overflow:auto;">
+                    ${logs.map(l => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${l.reason}</div><div>${l.change > 0 ? `+${l.change}` : l.change} 分</div><div style="font-size:0.7rem;">${l.time || new Date(l.createdAt).toLocaleString()}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}
+                </div>
+                <button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button>
+            </div>
+        `;
         document.body.appendChild(modal);
     }
     
     window.cancelAcceptedTask = async function(taskId) {
         if (confirm('取消接取将扣除5信用分，确定吗？')) {
             const result = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT', body: JSON.stringify({ userId: currentUser.id }) });
-            if (result.success) { alert('已取消接取'); loadProfile(); refreshTaskList(); } else alert(result.error || '取消失败');
+            if (result.success) {
+                alert('已取消接取');
+                loadProfile();
+                refreshTaskList();
+            } else {
+                alert(result.error || '取消失败');
+            }
         }
     };
     
     function showEditProfileModal() {
         const modal = document.createElement('div');
         modal.className = 'modal-mask';
-        modal.innerHTML = `<div class="modal-content"><h3>编辑资料</h3><div class="form-group"><div class="form-label">头像</div><div id="avatarPreview" style="width:80px;height:80px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">${currentUser.avatar ? `<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${(currentUser.nickname || currentUser.username).charAt(0)}</span>`}</div><input type="file" id="avatarInput" accept="image/*" style="display:none;"><button class="btn-secondary" id="uploadAvatarBtn">更换头像</button></div><div class="form-group"><label>昵称</label><input type="text" id="editNickname" class="form-input" value="${escapeHtml(currentUser.nickname || '')}"></div><div class="form-group"><label>个性签名</label><textarea id="editSignature" class="form-textarea" rows="2">${escapeHtml(currentUser.signature || '')}</textarea></div><div class="form-group"><label>家乡</label><input type="text" id="editHometown" class="form-input" value="${escapeHtml(currentUser.hometown || '')}"></div><div class="double-btn-row" style="display:flex; gap:8px;"><button class="btn-primary" id="saveProfileBtn">保存</button><button class="btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button></div></div>`;
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>编辑资料</h3>
+                <div class="form-group">
+                    <div class="form-label">头像</div>
+                    <div id="avatarPreview" style="width:80px;height:80px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">
+                        ${currentUser.avatar ? `<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${(currentUser.nickname || currentUser.username).charAt(0)}</span>`}
+                    </div>
+                    <input type="file" id="avatarInput" accept="image/*" style="display:none;">
+                    <button class="btn-secondary" id="uploadAvatarBtn">更换头像</button>
+                </div>
+                <div class="form-group"><label>昵称</label><input type="text" id="editNickname" class="form-input" value="${escapeHtml(currentUser.nickname || '')}"></div>
+                <div class="form-group"><label>个性签名</label><textarea id="editSignature" class="form-textarea" rows="2">${escapeHtml(currentUser.signature || '')}</textarea></div>
+                <div class="form-group"><label>家乡</label><input type="text" id="editHometown" class="form-input" value="${escapeHtml(currentUser.hometown || '')}"></div>
+                <div class="double-btn-row" style="display:flex; gap:8px;">
+                    <button class="btn-primary" id="saveProfileBtn">保存</button>
+                    <button class="btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button>
+                </div>
+            </div>
+        `;
         document.body.appendChild(modal);
         const avatarInput = modal.querySelector('#avatarInput');
         const avatarPreview = modal.querySelector('#avatarPreview');
         modal.querySelector('#uploadAvatarBtn').onclick = () => avatarInput.click();
         avatarInput.onchange = (e) => {
             const file = e.target.files[0];
-            if (file) { const reader = new FileReader(); reader.onload = (ev) => { avatarPreview.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`; currentUser.avatar = ev.target.result; }; reader.readAsDataURL(file); }
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    avatarPreview.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+                    currentUser.avatar = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
         };
         modal.querySelector('#saveProfileBtn').onclick = async () => {
-            const updates = { nickname: modal.querySelector('#editNickname').value.trim() || currentUser.username, signature: modal.querySelector('#editSignature').value, hometown: modal.querySelector('#editHometown').value, avatar: currentUser.avatar || '' };
+            const updates = {
+                nickname: modal.querySelector('#editNickname').value.trim() || currentUser.username,
+                signature: modal.querySelector('#editSignature').value,
+                hometown: modal.querySelector('#editHometown').value,
+                avatar: currentUser.avatar || ''
+            };
             const result = await callApi(`/user/${currentUser.id}`, { method: 'PUT', body: JSON.stringify(updates) });
-            if (result.success !== false) { currentUser = { ...currentUser, ...updates }; localStorage.setItem('user', JSON.stringify(currentUser)); loadProfile(); alert('保存成功'); modal.remove(); } else alert('保存失败');
+            if (result.success !== false) {
+                currentUser = { ...currentUser, ...updates };
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                loadProfile();
+                alert('保存成功');
+                modal.remove();
+            } else {
+                alert('保存失败');
+            }
         };
     }
     
     function logout() {
-        if (confirm('退出登录？')) { localStorage.removeItem('user'); currentUser = null; document.getElementById('mainApp').style.display = 'none'; document.getElementById('loginPage').classList.add('active'); if (countdownTimer) clearInterval(countdownTimer); if (chatState.pollInterval) clearInterval(chatState.pollInterval); }
+        if (confirm('退出登录？')) {
+            localStorage.removeItem('user');
+            currentUser = null;
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('loginPage').classList.add('active');
+            if (countdownTimer) clearInterval(countdownTimer);
+            if (chatState.pollInterval) clearInterval(chatState.pollInterval);
+        }
     }
     
     function switchPage(page) {
-        if (page === 'message') { if (chatState.active) closeChat(); document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('messagePage').classList.add('active'); renderMessageList(); return; }
-        if (page === 'publish') resetPublishForm();
+        if (page === 'message') {
+            if (chatState.active) {
+                closeChat();
+            }
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('messagePage').classList.add('active');
+            renderMessageList();
+            return;
+        }
+        if (page === 'publish') {
+            resetPublishForm();
+        }
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(`${page}Page`).classList.add('active');
         if (page === 'home') refreshTaskList();
         if (page === 'profile') loadProfile();
     }
     
-    async function initData() { const result = await callApi('/init', { method: 'POST' }); alert(result.success ? '初始化成功！\n测试账号：xiaoming/123456' : '初始化失败'); }
+    async function initData() {
+        const result = await callApi('/init', { method: 'POST' });
+        alert(result.success ? '初始化成功！\n测试账号：xiaoming/123456' : '初始化失败');
+    }
     
-    // 事件绑定
     document.getElementById('doLoginBtn').onclick = doLogin;
     document.getElementById('doRegisterBtn').onclick = async () => {
         const username = document.getElementById('regUsername').value.trim();
@@ -1040,7 +1564,8 @@
         if (!username || !password) { errorDiv.innerText = '请填写用户名和密码'; return; }
         if (password !== confirm) { errorDiv.innerText = '两次密码不一致'; return; }
         const result = await callApi('/register', { method: 'POST', body: JSON.stringify({ username, password, nickname, phone }) });
-        if (result.success) { alert('注册成功，请登录'); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); } else errorDiv.innerText = result.error || '注册失败';
+        if (result.success) { alert('注册成功，请登录'); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); }
+        else { errorDiv.innerText = result.error || '注册失败'; }
     };
     document.getElementById('doPublishBtn').onclick = publishTask;
     document.getElementById('initDataBtn').onclick = initData;
@@ -1055,9 +1580,20 @@
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('loginPage').classList.remove('active');
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(pos => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; refreshTaskList(); }, () => refreshTaskList());
-        } else refreshTaskList();
-        loadProfile(); initPullToRefresh(); initFiltersAndCategories(); renderMessageList();
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    refreshTaskList();
+                },
+                () => refreshTaskList()
+            );
+        } else {
+            refreshTaskList();
+        }
+        loadProfile();
+        initPullToRefresh();
+        initFiltersAndCategories();
+        renderMessageList();
     }
 </script>
 </body>
