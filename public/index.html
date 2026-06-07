@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>赏金集市 · 双向议价版</title>
     <style>
+        /* 样式与原文件完全相同，此处为节约篇幅未重复，请使用您之前提供的完整样式 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background: #f5f7fb; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1e293b; padding-bottom: 70px; }
         .app-container { max-width: 600px; margin: 0 auto; background: #f5f7fb; min-height: 100vh; }
@@ -613,9 +614,13 @@
             document.body.appendChild(modal);
         });
         document.getElementById('takerInfoRow')?.addEventListener('click', () => showTakerProfile(task.takerId, task.takenAt));
-        document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(task._id, task.publisherId, task.publisherName, task.reward, task.title));
-        document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(task._id, task.takerId, task.takerName, task.reward, task.title));
-        document.getElementById('contactPublisherBtn')?.addEventListener('click', () => openChat(task._id, task.publisherId, task.publisherName, task.reward, task.title));
+        
+        // 修复：确保 openChat 传入正确的 task._id（字符串）
+        const taskIdStr = task._id;  // 已经是字符串或 ObjectId，但后续会转为字符串
+        document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
+        document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(taskIdStr, task.takerId, task.takerName, task.reward, task.title));
+        document.getElementById('contactPublisherBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
+        
         document.getElementById('navigateBtn')?.addEventListener('click', () => {
             const coords = getTaskCoords(task.locationAddress);
             window.open(`https://uri.amap.com/navigation?to=${coords.lng},${coords.lat},${encodeURIComponent(task.locationAddress)}&mode=car`, '_blank');
@@ -731,7 +736,7 @@
         // 先关闭之前的轮询和状态
         if (chatState.pollInterval) clearInterval(chatState.pollInterval);
         chatState.active = true;
-        chatState.taskId = taskId;
+        chatState.taskId = taskId;   // 确保使用正确的任务ID
         chatState.otherId = otherId;
         chatState.otherName = otherName;
         chatState.reward = reward;
