@@ -29,7 +29,7 @@ const TaskSchema = new mongoose.Schema({
   title: String,
   description: String,
   reward: Number,
-  status: { type: String, default: 'available' },
+  status: { type: String, default: 'available' }, // available, ongoing, completed, cancelled
   publisherId: String,
   publisherName: String,
   publisherPhone: String,
@@ -68,7 +68,6 @@ const BillSchema = new mongoose.Schema({
 });
 const Bill = mongoose.model('Bill', BillSchema);
 
-// 信用日志模型
 const CreditLogSchema = new mongoose.Schema({
   userId: String,
   reason: String,
@@ -105,7 +104,6 @@ app.post('/api/register', async (req, res) => {
   if (exist) return res.status(400).json({ error: '用户名已存在' });
   const user = new User({ username, password, nickname: nickname || username, phone });
   await user.save();
-  // 注册奖励信用分
   await CreditLog.create({ userId: user._id, reason: '注册奖励', change: 60 });
   res.json({ success: true });
 });
@@ -132,6 +130,22 @@ app.post('/api/tasks', async (req, res) => {
   await User.findByIdAndUpdate(task.publisherId, { $inc: { balance: -task.reward } });
   await new Bill({ userId: task.publisherId, type: 'expense', amount: -task.reward, desc: `发布任务：${task.title}` }).save();
   res.json(task);
+});
+
+// 取消任务（仅发布者且任务状态为available）
+app.put('/api/tasks/:id/cancel', async (req, res) => {
+  const { userId } = req.body;
+  const task = await Task.findById(req.params.id);
+  if (!task) return res.status(404).json({ error: '任务不存在' });
+  if (task.publisherId !== userId) return res.status(403).json({ error: '无权取消此任务' });
+  if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成，无法取消' });
+  task.status = 'cancelled';
+  task.updatedAt = new Date();
+  await task.save();
+  // 退还赏金给发布者
+  await User.findByIdAndUpdate(task.publisherId, { $inc: { balance: task.reward } });
+  await new Bill({ userId: task.publisherId, type: 'income', amount: task.reward, desc: `取消任务退款：${task.title}` }).save();
+  res.json({ success: true });
 });
 
 app.put('/api/tasks/:id/accept', async (req, res) => {
@@ -186,7 +200,6 @@ app.post('/api/tasks/:id/complete', async (req, res) => {
   task.status = 'completed';
   task.updatedAt = new Date();
   await task.save();
-  // 完成任务奖励信用分（示例+5）
   await CreditLog.create({ userId: task.takerId, reason: `完成任务“${task.title}”`, change: 5 });
   await User.findByIdAndUpdate(task.takerId, { $inc: { credit: 5 } });
   res.json({ success: true });
@@ -223,23 +236,18 @@ app.get('/api/bills/:userId', async (req, res) => {
   res.json(bills);
 });
 
-// ==================== 会话列表接口（含未读计数） ====================
 app.get('/api/user/:userId/conversations', async (req, res) => {
   const userId = req.params.userId;
-  
   const tasksFromRelation = await Task.find({
-    $or: [{ publisherId: userId }, { takerId: userId }]
+    $or: [{ publisherId: userId }, { takerId: userId }],
+    status: { $ne: 'cancelled' } // 取消的任务不显示在会话列表
   });
-  
   const taskIdsFromMessages = await Message.distinct('taskId', { senderId: userId });
-  
   const allTaskIds = new Set([
     ...tasksFromRelation.map(t => t._id.toString()),
     ...taskIdsFromMessages
   ]);
-  
-  const tasks = await Task.find({ _id: { $in: Array.from(allTaskIds) } }).sort({ updatedAt: -1 });
-  
+  const tasks = await Task.find({ _id: { $in: Array.from(allTaskIds) }, status: { $ne: 'cancelled' } }).sort({ updatedAt: -1 });
   const conversations = [];
   for (const task of tasks) {
     const lastMsg = await Message.findOne({ taskId: task._id.toString() }).sort({ createdAt: -1 });
@@ -248,7 +256,6 @@ app.get('/api/user/:userId/conversations', async (req, res) => {
       senderId: { $ne: userId },
       read: false
     });
-    
     let otherId = task.publisherId === userId ? task.takerId : task.publisherId;
     let otherName = task.publisherId === userId ? task.takerName : task.publisherName;
     if (!otherId && lastMsg) {
@@ -298,7 +305,6 @@ app.post('/api/verify-id', async (req, res) => {
   }
 });
 
-// 信用明细接口（真实数据）
 app.get('/api/credit-logs/:userId', async (req, res) => {
   const logs = await CreditLog.find({ userId: req.params.userId }).sort({ createdAt: -1 });
   res.json(logs);
@@ -311,7 +317,6 @@ app.post('/api/init', async (req, res) => {
   const user2 = await User.create({ username: 'hong', password: '123456', nickname: '小红', phone: '13800000002', balance: 95, credit: 72, idCardVerified: false, signature: '前端开发', hometown: '北京' });
   await Task.create({ title: '帮忙取快递', description: '西门驿站取件送到3栋', reward: 12, publisherId: user1._id, publisherName: '小明', locationAddress: '上海交大闵行', category: '取件' });
   await Task.create({ title: '前端页面调试', description: 'CSS样式错位，远程15分钟搞定', reward: 45, publisherId: user2._id, publisherName: '小红', locationAddress: '徐家汇', category: '调试' });
-  // 添加初始信用日志
   await CreditLog.create({ userId: user1._id, reason: '注册奖励', change: 60 });
   await CreditLog.create({ userId: user2._id, reason: '注册奖励', change: 60 });
   res.json({ success: true });
