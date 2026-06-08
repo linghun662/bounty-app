@@ -690,15 +690,19 @@
         return result;
     }
     
+    // 取消任务（修复：取消后立即刷新个人主页和首页）
     async function cancelTask(taskId) {
         if (!confirm('确定取消该任务吗？取消后赏金将退还到您的账户。')) return;
         const result = await callApi(`/tasks/${taskId}/cancel`, { method: 'PUT', body: JSON.stringify({ userId: currentUser.id }) });
         if (result.success) {
             alert('任务已取消，赏金已退还');
+            // 强制刷新数据
             await loadProfile();
-            refreshTaskList();
-            renderMessageList();
-            updateUnreadBadge();
+            await refreshTaskList();
+            // 跳转到个人主页并刷新显示
+            switchPage('profile');
+            // 再次调用 loadProfile 确保最新
+            await loadProfile();
         } else {
             alert(result.error || '取消失败');
         }
@@ -767,7 +771,7 @@
         });
     }
     
-    // 任务详情页
+    // 任务详情页（保持原有完整功能）
     window.viewTask = async function(taskId) {
         if (countdownTimer) clearInterval(countdownTimer);
         const task = await callApi(`/tasks/${taskId}`);
@@ -943,7 +947,7 @@
         switchPage('detail');
     };
     
-    // ==================== 消息相关 ====================
+    // ==================== 消息相关（保持完整） ====================
     async function sendMessage(taskId, text, isNego = false) {
         await callApi('/messages', {
             method: 'POST',
@@ -1159,6 +1163,7 @@
                     } else progressText = `<div class="progress-text">暂无接取者</div>`;
                 }
                 let cancelBtn = '';
+                // 只有 available 状态的任务才显示取消按钮
                 if (t.status === 'available') {
                     cancelBtn = `<div class="task-actions"><button class="btn-danger" onclick="cancelTask('${t._id}')">取消任务</button></div>`;
                 }
