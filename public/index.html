@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>赏金集市 · 双向议价版</title>
     <style>
+        /* 样式代码保持不变，因篇幅省略，请使用之前提供的完整样式 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background: #f5f7fb; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1e293b; padding-bottom: 70px; }
         .app-container { max-width: 600px; margin: 0 auto; background: #f5f7fb; min-height: 100vh; }
@@ -68,7 +69,7 @@
         .distance-badge { background: #e6f7e6; color: #2b6e2f; padding: 2px 10px; border-radius: 20px; font-weight: 500; font-size: 0.7rem; }
         .slide-confirm, .slide-action { margin: 12px 0; user-select: none; }
         .slide-track { position: relative; width: 100%; height: 56px; background: #eef2ff; border-radius: 60px; overflow: hidden; border: 1px solid #cbd5e1; cursor: grab; touch-action: none; }
-        .slide-thumb { position: absolute; left: 0; top: 0; width: 80px; height: 56px; background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 60px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; cursor: grab; touch-action: none; transition: none; }
+        .slide-thumb { position: absolute; left: 0; top: 0; width: 80px; height: 56px; background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 60px; display: flex; align-items: center; justify-content; center; color: white; font-size: 1.8rem; cursor: grab; touch-action: none; transition: none; }
         .slide-text { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1e4a6b; pointer-events: none; font-size: 0.95rem; gap: 12px; z-index: 1; }
         .slide-confirm.completed .slide-track, .slide-action.completed .slide-track { background: #d1fae5; border-color: #059669; }
         .countdown-timer { background: #fef3c7; border-radius: 40px; padding: 10px 16px; text-align: center; margin: 12px 0; font-weight: 700; color: #b45309; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem; }
@@ -78,7 +79,7 @@
         .modal-content { background: white; border-radius: 32px; width: 85%; max-width: 340px; padding: 24px; max-height: 80vh; overflow-y: auto; }
         .chat-container { display: flex; flex-direction: column; height: calc(100vh - 120px); background: #f5f7fb; }
         .chat-header-bar { background: white; padding: 12px 16px; border-bottom: 1px solid #eef2f8; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
-        .chat-back-btn { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
+        .chat-back-btn { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content; center; font-size: 1.2rem; cursor: pointer; }
         .chat-header-name { font-weight: 700; font-size: 1.1rem; color: #1e293b; flex: 1; }
         .chat-messages-area { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
         .chat-bubble { max-width: 80%; display: flex; flex-direction: column; }
@@ -370,7 +371,6 @@
         });
     }
     
-    // ==================== 登录（每次打开都显示首页） ====================
     async function doLogin() {
         const username = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
@@ -393,7 +393,6 @@
             initFiltersAndCategories();
             renderMessageList();
             updateUnreadBadge();
-            // 强制显示首页
             switchPage('home');
         } else errorDiv.innerText = result.error || '登录失败';
     }
@@ -606,7 +605,17 @@
         if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
         if (task.status === 'ongoing' && isTaker) {
             if (task.publisherPhone) detailHtml += `<div style="margin:8px 16px;"><button class="btn-phone" id="callPublisherBtn">📞 联系发布者</button></div>`;
-            if (task.locationAddress) detailHtml += `<div style="margin:8px 16px;"><button class="btn-nav" id="navigateBtn">🧭 导航</button></div>`;
+            if (task.locationAddress) {
+                // 优化导航：添加用户当前位置作为起点
+                let navUrl = '';
+                if (userLocation && userLocation.lat && userLocation.lng) {
+                    navUrl = `https://uri.amap.com/navigation?from=${userLocation.lng},${userLocation.lat}&to=${coords.lng},${coords.lat}&mode=car&callnative=1`;
+                } else {
+                    const coords = getTaskCoords(task.locationAddress);
+                    navUrl = `https://uri.amap.com/navigation?to=${coords.lng},${coords.lat},${encodeURIComponent(task.locationAddress)}&mode=car&callnative=1`;
+                }
+                detailHtml += `<div style="margin:8px 16px;"><button class="btn-nav" id="navigateBtn" data-url="${navUrl}">🧭 高德导航</button></div>`;
+            }
             if (task.travelStatus === 'idle') detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
             else if (task.travelStatus === 'traveling') {
                 detailHtml += `<div id="countdownDisplay" class="countdown-timer">⏰ 计算中...</div>`;
@@ -627,10 +636,14 @@
         document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
         document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(taskIdStr, task.takerId, task.takerName, task.reward, task.title));
         document.getElementById('contactPublisherBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
-        document.getElementById('navigateBtn')?.addEventListener('click', () => {
-            const coords = getTaskCoords(task.locationAddress);
-            window.open(`https://uri.amap.com/navigation?to=${coords.lng},${coords.lat},${encodeURIComponent(task.locationAddress)}&mode=car`, '_blank');
-        });
+        const navBtn = document.getElementById('navigateBtn');
+        if (navBtn) {
+            navBtn.addEventListener('click', () => {
+                const url = navBtn.getAttribute('data-url');
+                if (url) window.open(url, '_blank');
+                else alert('无法获取导航地址');
+            });
+        }
         const slideAccept = document.getElementById('slideAcceptWrapper');
         if (slideAccept) initSlide(slideAccept, async () => {
             const res = await callApi(`/tasks/${taskId}/accept`, { method: 'PUT', body: JSON.stringify({ takerId: currentUser.id, takerName: currentUser.nickname }) });
@@ -738,7 +751,6 @@
     
     async function openChat(taskId, otherId, otherName, reward, title) {
         if (chatState.pollInterval) clearInterval(chatState.pollInterval);
-        // 标记已读
         await callApi(`/messages/read/${taskId}/${currentUser.id}`, { method: 'PUT' });
         chatState.active = true;
         chatState.taskId = taskId;
@@ -746,7 +758,7 @@
         chatState.otherName = otherName;
         chatState.reward = reward;
         chatState.title = title;
-        showChatView();  // 直接显示聊天视图，不额外调用 renderMessageList 避免闪退
+        showChatView();
         updateUnreadBadge();
     }
     
@@ -842,7 +854,7 @@
         }
     }
     
-    // ==================== 个人主页、发布等辅助函数 ====================
+    // ==================== 辅助函数 ====================
     function resetPublishForm() {
         document.getElementById('pubTitle').value = '';
         document.getElementById('pubDesc').value = '';
@@ -1075,14 +1087,21 @@
     }
     
     async function showCreditDetail() {
-        let logs = await callApi(`/credit-logs/${currentUser.id}`);
-        if (!logs || logs.error) logs = [{ reason: '注册奖励', change: 60, time: new Date().toLocaleString() }];
+        const logs = await callApi(`/credit-logs/${currentUser.id}`);
         const modal = document.createElement('div');
         modal.className = 'modal-mask';
         modal.innerHTML = `
             <div class="modal-content">
                 <h3>⭐ 信用明细</h3>
-                <div style="max-height:300px; overflow:auto;">${logs.map(l => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${l.reason}</div><div>${l.change > 0 ? `+${l.change}` : l.change} 分</div><div style="font-size:0.7rem;">${l.time || new Date(l.createdAt).toLocaleString()}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}</div>
+                <div style="max-height:300px; overflow:auto;">
+                    ${logs.map(l => `
+                        <div style="padding:8px 0; border-bottom:1px solid #eef2f8;">
+                            <div>${l.reason}</div>
+                            <div>${l.change > 0 ? `+${l.change}` : l.change} 分</div>
+                            <div style="font-size:0.7rem;">${new Date(l.createdAt).toLocaleString()}</div>
+                        </div>
+                    `).join('') || '<div class="empty-state">暂无记录</div>'}
+                </div>
                 <button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button>
             </div>
         `;
@@ -1096,7 +1115,6 @@
         }
     };
     
-    // 编辑资料（完整实现）
     function showEditProfileModal() {
         if (!currentUser) return;
         const modal = document.createElement('div');
@@ -1231,7 +1249,6 @@
         initFiltersAndCategories();
         renderMessageList();
         updateUnreadBadge();
-        // 每次刷新页面都强制显示首页
         switchPage('home');
     }
 </script>

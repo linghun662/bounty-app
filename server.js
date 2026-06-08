@@ -68,6 +68,15 @@ const BillSchema = new mongoose.Schema({
 });
 const Bill = mongoose.model('Bill', BillSchema);
 
+// 信用日志模型
+const CreditLogSchema = new mongoose.Schema({
+  userId: String,
+  reason: String,
+  change: Number,
+  createdAt: { type: Date, default: Date.now }
+});
+const CreditLog = mongoose.model('CreditLog', CreditLogSchema);
+
 // ==================== API 路由 ====================
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
@@ -96,6 +105,8 @@ app.post('/api/register', async (req, res) => {
   if (exist) return res.status(400).json({ error: '用户名已存在' });
   const user = new User({ username, password, nickname: nickname || username, phone });
   await user.save();
+  // 注册奖励信用分
+  await CreditLog.create({ userId: user._id, reason: '注册奖励', change: 60 });
   res.json({ success: true });
 });
 
@@ -152,8 +163,11 @@ app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
   await task.save();
   const user = await User.findById(userId);
   if (user) {
-    user.credit = Math.max(0, user.credit - 5);
+    const newCredit = Math.max(0, user.credit - 5);
+    const change = -5;
+    user.credit = newCredit;
     await user.save();
+    await CreditLog.create({ userId, reason: '取消接取任务', change });
   }
   res.json({ success: true });
 });
@@ -172,6 +186,9 @@ app.post('/api/tasks/:id/complete', async (req, res) => {
   task.status = 'completed';
   task.updatedAt = new Date();
   await task.save();
+  // 完成任务奖励信用分（示例+5）
+  await CreditLog.create({ userId: task.takerId, reason: `完成任务“${task.title}”`, change: 5 });
+  await User.findByIdAndUpdate(task.takerId, { $inc: { credit: 5 } });
   res.json({ success: true });
 });
 
@@ -184,6 +201,8 @@ app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
   task.status = 'completed';
   task.updatedAt = new Date();
   await task.save();
+  await CreditLog.create({ userId: task.takerId, reason: `完成任务“${task.title}”`, change: 5 });
+  await User.findByIdAndUpdate(task.takerId, { $inc: { credit: 5 } });
   res.json({ success: true });
 });
 
@@ -204,7 +223,7 @@ app.get('/api/bills/:userId', async (req, res) => {
   res.json(bills);
 });
 
-// ==================== 修复后的会话列表接口（每个任务独立对话 + 未读计数） ====================
+// ==================== 会话列表接口（含未读计数） ====================
 app.get('/api/user/:userId/conversations', async (req, res) => {
   const userId = req.params.userId;
   
@@ -279,8 +298,10 @@ app.post('/api/verify-id', async (req, res) => {
   }
 });
 
+// 信用明细接口（真实数据）
 app.get('/api/credit-logs/:userId', async (req, res) => {
-  res.json([{ reason: '注册奖励', change: 60, time: new Date().toLocaleString() }]);
+  const logs = await CreditLog.find({ userId: req.params.userId }).sort({ createdAt: -1 });
+  res.json(logs);
 });
 
 app.post('/api/init', async (req, res) => {
@@ -290,10 +311,12 @@ app.post('/api/init', async (req, res) => {
   const user2 = await User.create({ username: 'hong', password: '123456', nickname: '小红', phone: '13800000002', balance: 95, credit: 72, idCardVerified: false, signature: '前端开发', hometown: '北京' });
   await Task.create({ title: '帮忙取快递', description: '西门驿站取件送到3栋', reward: 12, publisherId: user1._id, publisherName: '小明', locationAddress: '上海交大闵行', category: '取件' });
   await Task.create({ title: '前端页面调试', description: 'CSS样式错位，远程15分钟搞定', reward: 45, publisherId: user2._id, publisherName: '小红', locationAddress: '徐家汇', category: '调试' });
+  // 添加初始信用日志
+  await CreditLog.create({ userId: user1._id, reason: '注册奖励', change: 60 });
+  await CreditLog.create({ userId: user2._id, reason: '注册奖励', change: 60 });
   res.json({ success: true });
 });
 
-// ==================== 单页应用路由 ====================
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
