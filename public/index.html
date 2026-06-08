@@ -69,12 +69,12 @@
         .slide-confirm, .slide-action { margin: 12px 0; user-select: none; }
         .slide-track { position: relative; width: 100%; height: 56px; background: #eef2ff; border-radius: 60px; overflow: hidden; border: 1px solid #cbd5e1; cursor: grab; touch-action: none; }
         .slide-thumb { position: absolute; left: 0; top: 0; width: 80px; height: 56px; background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 60px; display: flex; align-items: center; justify-content; center; color: white; font-size: 1.8rem; cursor: grab; touch-action: none; transition: none; }
-        .slide-text { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1e4a6b; pointer-events: none; font-size: 0.95rem; gap: 12px; z-index: 1; }
+        .slide-text { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content; center; font-weight: 700; color: #1e4a6b; pointer-events: none; font-size: 0.95rem; gap: 12px; z-index: 1; }
         .slide-confirm.completed .slide-track, .slide-action.completed .slide-track { background: #d1fae5; border-color: #059669; }
         .countdown-timer { background: #fef3c7; border-radius: 40px; padding: 10px 16px; text-align: center; margin: 12px 0; font-weight: 700; color: #b45309; display: flex; align-items: center; justify-content; center; gap: 8px; font-size: 1rem; }
         .countdown-timer.warning { background: #fee2e2; color: #dc2626; animation: pulse 1s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+        .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content; center; z-index: 1000; backdrop-filter: blur(4px); }
         .modal-content { background: white; border-radius: 32px; width: 85%; max-width: 340px; padding: 24px; max-height: 80vh; overflow-y: auto; }
         .chat-container { display: flex; flex-direction: column; height: calc(100vh - 120px); background: #f5f7fb; }
         .chat-header-bar { background: white; padding: 12px 16px; border-bottom: 1px solid #eef2f8; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
@@ -243,7 +243,6 @@
 </div>
 
 <script>
-    // ==================== 配置 ====================
     const API_BASE = '/api';
     
     let currentUser = null;
@@ -641,7 +640,6 @@
         return result;
     }
     
-    // 取消任务函数
     async function cancelTask(taskId) {
         if (!confirm('确定取消该任务吗？取消后赏金将退还到您的账户。')) return;
         const result = await callApi(`/tasks/${taskId}/cancel`, {
@@ -684,18 +682,23 @@
         detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description || '')}</p></div></div>`;
         
         if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
-        if (task.status === 'ongoing') {
-            if (isMine && task.takerId) detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
-            else if (isTaker) {
-                detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBtn">💬 联系发布者 / 议价</button></div>`;
-                if (task.publisherPhone) {
-                    detailHtml += `<div style="margin:8px 16px;"><button class="btn-phone" id="callPublisherPhoneBtn">📞 拨打发布者电话 (${task.publisherPhone})</button></div>`;
-                } else {
-                    detailHtml += `<div style="margin:8px 16px;"><button class="btn-phone" id="callPublisherPhoneBtn" disabled style="opacity:0.6;">📞 发布者未绑定手机</button></div>`;
-                }
-            }
+        
+        // 接取者操作按钮区域（并排）
+        if (task.status === 'ongoing' && isTaker) {
+            detailHtml += `
+                <div style="display: flex; gap: 12px; margin: 8px 16px;">
+                    <button class="btn-primary" id="contactPublisherBtn" style="flex:1; background:#3b82f6;">💬 联系发布者</button>
+                    ${task.publisherPhone ? `<button class="btn-phone" id="callPublisherPhoneBtn" style="flex:1;">📞 拨打电话</button>` : `<button class="btn-phone" disabled style="flex:1; opacity:0.6;">📞 无手机号</button>`}
+                </div>
+            `;
         }
+        
+        if (task.status === 'ongoing' && isMine && task.takerId) {
+            detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
+        }
+        
         if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
+        
         if (task.status === 'ongoing' && isTaker) {
             if (task.locationAddress) {
                 const coords = getTaskCoords(task.locationAddress);
