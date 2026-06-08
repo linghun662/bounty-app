@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>赏金集市 · 双向议价版</title>
     <style>
-        /* 样式保持不变，此处省略以节省篇幅，请使用您之前完整的样式 */
+        /* 样式保持不变，省略以节省篇幅，请使用您之前完整的样式 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background: #f5f7fb; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1e293b; padding-bottom: 70px; }
         .app-container { max-width: 600px; margin: 0 auto; background: #f5f7fb; min-height: 100vh; }
@@ -47,7 +47,7 @@
         .image-preview-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
         .preview-img-wrapper { position: relative; width: 85px; height: 85px; border-radius: 20px; overflow: hidden; background: #f1f5f9; border: 2px solid #e2e8f0; }
         .preview-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-        .remove-img-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .remove-img-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content; center; cursor: pointer; }
         .upload-btn { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 20px; padding: 12px; text-align: center; cursor: pointer; margin-top: 8px; }
         .profile-header { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 28px; margin: 16px; padding: 20px; color: white; display: flex; align-items: center; gap: 16px; cursor: pointer; }
         .profile-avatar { width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 600; overflow: hidden; }
@@ -565,7 +565,7 @@
         document.body.appendChild(modal);
     }
     
-    // ==================== 完整的 viewTask 函数（已修复） ====================
+    // ==================== 完整的 viewTask 函数 ====================
     window.viewTask = async function(taskId) {
         if (countdownTimer) clearInterval(countdownTimer);
         const task = await callApi(`/tasks/${taskId}`);
@@ -608,34 +608,26 @@
         }
         document.getElementById('detailContainer').innerHTML = detailHtml;
         
-        // 绑定事件（关键修复：将 task._id 转为字符串）
         const taskIdStr = task._id.toString();
-        
         document.getElementById('publisherName')?.addEventListener('click', () => {
             const modal = document.createElement('div');
             modal.className = 'modal-mask';
             modal.innerHTML = `<div class="modal-content"><h3>发布者资料</h3><div>昵称: ${escapeHtml(publisherInfo.nickname)}</div><div>信用: ${publisherInfo.credit}</div><div>家乡: ${publisherInfo.hometown || '未填写'}</div><div>签名: ${publisherInfo.signature || '无'}</div><button onclick="this.closest('.modal-mask').remove()">关闭</button></div>`;
             document.body.appendChild(modal);
         });
-        
         document.getElementById('takerInfoRow')?.addEventListener('click', () => showTakerProfile(task.takerId, task.takenAt));
-        
-        // 使用转换后的字符串 ID
         document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
         document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(taskIdStr, task.takerId, task.takerName, task.reward, task.title));
         document.getElementById('contactPublisherBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
-        
         document.getElementById('navigateBtn')?.addEventListener('click', () => {
             const coords = getTaskCoords(task.locationAddress);
             window.open(`https://uri.amap.com/navigation?to=${coords.lng},${coords.lat},${encodeURIComponent(task.locationAddress)}&mode=car`, '_blank');
         });
-        
         const slideAccept = document.getElementById('slideAcceptWrapper');
         if (slideAccept) initSlide(slideAccept, async () => {
             const res = await callApi(`/tasks/${taskId}/accept`, { method: 'PUT', body: JSON.stringify({ takerId: currentUser.id, takerName: currentUser.nickname }) });
             if (res.success) { alert('接取成功'); refreshTaskList(); loadProfile(); viewTask(taskId); } else alert(res.error);
         });
-        
         const cancelBtn = document.getElementById('cancelAcceptBtn');
         if (cancelBtn) cancelBtn.onclick = async () => {
             if (confirm('取消接取将扣除5信用分')) {
@@ -646,7 +638,7 @@
         switchPage('detail');
     };
     
-    // ==================== 消息相关 ====================
+    // ==================== 消息相关（修复发送后跳转问题） ====================
     async function sendMessage(taskId, senderId, senderName, text, isNego = false) {
         try {
             const response = await fetch(API_BASE + '/messages', {
@@ -706,16 +698,20 @@
             renderMessageList();
         };
         document.getElementById('manualRefreshBtn').onclick = async () => { await refreshMessagesOnly(); alert('已刷新'); };
+        
+        // 修复：发送普通消息后只刷新聊天内容，不刷新消息列表（避免跳转）
         document.getElementById('sendChatBtn').onclick = async () => {
             const txt = document.getElementById('chatInput').value.trim();
             if (!txt) return;
             const success = await sendMessage(chatState.taskId, currentUser.id, currentUser.nickname, txt, false);
             if (success) {
                 document.getElementById('chatInput').value = '';
-                await refreshMessagesOnly();
-                await renderMessageList();
+                await refreshMessagesOnly();  // 只刷新聊天消息
+                // 不再调用 renderMessageList()，避免跳转到消息列表
             }
         };
+        
+        // 修复：发送议价后同样只刷新聊天内容
         document.getElementById('sendNegoBtn').onclick = async () => {
             const price = parseFloat(document.getElementById('negoPriceInput').value);
             if (isNaN(price) || price <= 0) return alert('输入有效价格');
@@ -724,9 +720,10 @@
                 alert('议价请求已发送');
                 document.getElementById('negoPriceInput').value = '';
                 await refreshMessagesOnly();
-                await renderMessageList();
+                // 不再调用 renderMessageList()
             }
         };
+        
         refreshMessagesOnly();
         if (chatState.pollInterval) clearInterval(chatState.pollInterval);
         chatState.pollInterval = setInterval(async () => { if (chatState.active && chatState.taskId) await refreshMessagesOnly(); }, 3000);
@@ -752,6 +749,7 @@
             alert(`已同意议价，新价格 ¥${price}`);
             if (chatState.taskId === taskId) chatState.reward = price;
             refreshTaskList();
+            // 刷新消息列表数据但不跳转（用户仍在聊天窗口）
             await renderMessageList();
         } else {
             await sendMessage(taskId, 'system', '系统', `❌ ${currentUser.nickname} 拒绝了议价`, false);
