@@ -4,8 +4,11 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
+
+// ==================== 增加请求体大小限制（支持图片/视频上传） ====================
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty');
@@ -39,8 +42,8 @@ const TaskSchema = new mongoose.Schema({
   takenAt: { type: Date, default: null },
   travelStatus: { type: String, default: 'idle' },
   takerCompleted: { type: Boolean, default: false },
-  mediaList: Array,
-  proofMedia: Array,
+  mediaList: Array,      // 发布时上传的图片/视频（Base64）
+  proofMedia: Array,     // 完成任务时上传的凭证
   category: String,
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -236,11 +239,12 @@ app.get('/api/bills/:userId', async (req, res) => {
   res.json(bills);
 });
 
+// 会话列表接口（含未读计数）
 app.get('/api/user/:userId/conversations', async (req, res) => {
   const userId = req.params.userId;
   const tasksFromRelation = await Task.find({
     $or: [{ publisherId: userId }, { takerId: userId }],
-    status: { $ne: 'cancelled' } // 取消的任务不显示在会话列表
+    status: { $ne: 'cancelled' }
   });
   const taskIdsFromMessages = await Message.distinct('taskId', { senderId: userId });
   const allTaskIds = new Set([
@@ -322,6 +326,7 @@ app.post('/api/init', async (req, res) => {
   res.json({ success: true });
 });
 
+// ==================== 单页应用路由 ====================
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
