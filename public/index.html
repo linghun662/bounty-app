@@ -47,7 +47,7 @@
         .image-preview-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
         .preview-img-wrapper { position: relative; width: 85px; height: 85px; border-radius: 20px; overflow: hidden; background: #f1f5f9; border: 2px solid #e2e8f0; }
         .preview-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-        .remove-img-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .remove-img-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content; center; cursor: pointer; }
         .upload-btn { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 20px; padding: 12px; text-align: center; cursor: pointer; margin-top: 8px; }
         .profile-header { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 28px; margin: 16px; padding: 20px; color: white; display: flex; align-items: center; gap: 16px; cursor: pointer; }
         .profile-avatar { width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 600; overflow: hidden; }
@@ -68,8 +68,8 @@
         .distance-badge { background: #e6f7e6; color: #2b6e2f; padding: 2px 10px; border-radius: 20px; font-weight: 500; font-size: 0.7rem; }
         .slide-confirm, .slide-action { margin: 12px 0; user-select: none; }
         .slide-track { position: relative; width: 100%; height: 56px; background: #eef2ff; border-radius: 60px; overflow: hidden; border: 1px solid #cbd5e1; cursor: grab; touch-action: none; }
-        .slide-thumb { position: absolute; left: 0; top: 0; width: 80px; height: 56px; background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 60px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; cursor: grab; touch-action: none; transition: none; }
-        .slide-text { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1e4a6b; pointer-events: none; font-size: 0.95rem; gap: 12px; z-index: 1; }
+        .slide-thumb { position: absolute; left: 0; top: 0; width: 80px; height: 56px; background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 60px; display: flex; align-items: center; justify-content; center; color: white; font-size: 1.8rem; cursor: grab; touch-action: none; transition: none; }
+        .slide-text { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content; center; font-weight: 700; color: #1e4a6b; pointer-events: none; font-size: 0.95rem; gap: 12px; z-index: 1; }
         .slide-confirm.completed .slide-track, .slide-action.completed .slide-track { background: #d1fae5; border-color: #059669; }
         .countdown-timer { background: #fef3c7; border-radius: 40px; padding: 10px 16px; text-align: center; margin: 12px 0; font-weight: 700; color: #b45309; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem; }
         .countdown-timer.warning { background: #fee2e2; color: #dc2626; animation: pulse 1s infinite; }
@@ -78,7 +78,7 @@
         .modal-content { background: white; border-radius: 32px; width: 85%; max-width: 340px; padding: 24px; max-height: 80vh; overflow-y: auto; }
         .chat-container { display: flex; flex-direction: column; height: calc(100vh - 120px); background: #f5f7fb; }
         .chat-header-bar { background: white; padding: 12px 16px; border-bottom: 1px solid #eef2f8; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
-        .chat-back-btn { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
+        .chat-back-btn { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content; center; font-size: 1.2rem; cursor: pointer; }
         .chat-header-name { font-weight: 700; font-size: 1.1rem; color: #1e293b; flex: 1; }
         .chat-messages-area { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
         .chat-bubble { max-width: 80%; display: flex; flex-direction: column; }
@@ -324,9 +324,8 @@
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
                     const { latitude, longitude } = pos.coords;
-                    // 使用高德逆地理编码（需要Key，演示用备用API）
+                    // 使用 BigDataCloud 逆地理编码（可返回街道、门牌号）
                     try {
-                        // 备用：BigDataCloud 可以返回街道信息
                         const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=zh`);
                         const geoData = await geoRes.json();
                         if (geoData && (geoData.city || geoData.locality)) {
@@ -334,6 +333,7 @@
                             if (geoData.principalSubdivision) address = geoData.principalSubdivision + (address ? ' ' + address : '');
                             if (geoData.street) address += (address ? ' ' : '') + geoData.street;
                             if (geoData.houseNumber) address += (address ? ' ' : '') + geoData.houseNumber;
+                            if (geoData.postcode) address += (address ? ' ' : '') + geoData.postcode;
                             if (address) {
                                 resolve(address);
                                 return;
@@ -467,22 +467,34 @@
         `).join('');
     }
     
+    // 修复下拉刷新
     function initPullToRefresh() {
         const homePage = document.getElementById('homePage');
-        let startY = 0, isRefreshing = false;
+        let startY = 0;
+        let isRefreshing = false;
         const indicator = document.getElementById('refreshIndicator');
-        homePage.addEventListener('touchstart', (e) => { if (homePage.scrollTop === 0) startY = e.touches[0].clientY; });
+        homePage.addEventListener('touchstart', (e) => {
+            if (homePage.scrollTop === 0) startY = e.touches[0].clientY;
+        });
         homePage.addEventListener('touchmove', (e) => {
             if (isRefreshing || homePage.scrollTop > 0) return;
             const diff = e.touches[0].clientY - startY;
-            if (diff > 30) { e.preventDefault(); indicator.style.display = 'block'; indicator.style.transform = `translateY(${Math.min(diff, 60)}px)`; }
+            if (diff > 30) {
+                e.preventDefault();
+                indicator.style.display = 'block';
+                indicator.style.transform = `translateY(${Math.min(diff, 60)}px)`;
+            }
         });
         homePage.addEventListener('touchend', async () => {
             if (indicator.style.display === 'block') {
-                indicator.style.transform = ''; indicator.style.display = 'none';
-                isRefreshing = true; indicator.innerText = '刷新中...'; indicator.style.display = 'block';
+                indicator.style.transform = '';
+                indicator.style.display = 'none';
+                isRefreshing = true;
+                indicator.innerText = '刷新中...';
+                indicator.style.display = 'block';
                 await refreshTaskList();
-                isRefreshing = false; indicator.style.display = 'none';
+                isRefreshing = false;
+                indicator.style.display = 'none';
             }
         });
     }
@@ -502,6 +514,7 @@
         });
     }
     
+    // 修复滑动模块（确保触摸响应正常）
     function initSlide(container, onComplete) {
         const track = container.querySelector('.slide-track');
         const thumb = container.querySelector('.slide-thumb');
@@ -515,28 +528,42 @@
             let newLeft = startLeft + (clientX - startX);
             newLeft = Math.min(maxLeft, Math.max(0, newLeft));
             thumb.style.left = newLeft + 'px';
-            if (newLeft >= maxLeft - 2) {
-                isDragging = false; container.classList.add('completed'); thumb.style.left = maxLeft + 'px';
-                document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp);
-                document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onUp);
+            if (newLeft >= maxLeft - 5) {
+                isDragging = false;
+                container.classList.add('completed');
+                thumb.style.left = maxLeft + 'px';
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('touchend', onUp);
                 if (onComplete) onComplete();
             }
         };
         const onUp = () => {
-            if (isDragging) { thumb.style.left = '0px'; isDragging = false; container.classList.remove('completed'); }
-            document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp);
-            document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onUp);
+            if (isDragging) {
+                thumb.style.left = '0px';
+                isDragging = false;
+                container.classList.remove('completed');
+            }
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.removeEventListener('touchmove', onMove);
+            document.removeEventListener('touchend', onUp);
         };
         const onStart = (e) => {
             e.preventDefault();
             startX = e.touches ? e.touches[0].clientX : e.clientX;
             startLeft = parseInt(thumb.style.left, 10) || 0;
             isDragging = true;
-            document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
-            document.addEventListener('touchmove', onMove); document.addEventListener('touchend', onUp);
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            document.addEventListener('touchmove', onMove);
+            document.addEventListener('touchend', onUp);
         };
-        thumb.addEventListener('mousedown', onStart); thumb.addEventListener('touchstart', onStart);
-        container.classList.remove('completed'); thumb.style.left = '0px';
+        thumb.addEventListener('mousedown', onStart);
+        thumb.addEventListener('touchstart', onStart);
+        container.classList.remove('completed');
+        thumb.style.left = '0px';
     }
     
     function startCountdown(estimatedMinutes, startTimestamp) {
@@ -594,7 +621,7 @@
         document.body.appendChild(modal);
     }
     
-    // 修复后的 viewTask，添加拨打发布者手机按钮，修复导航未定义变量
+    // 修复后的 viewTask，添加拨打发布者手机按钮，修复滑动模块
     window.viewTask = async function(taskId) {
         if (countdownTimer) clearInterval(countdownTimer);
         const task = await callApi(`/tasks/${taskId}`);
@@ -680,6 +707,27 @@
             const res = await callApi(`/tasks/${taskId}/accept`, { method: 'PUT', body: JSON.stringify({ takerId: currentUser.id, takerName: currentUser.nickname }) });
             if (res.success) { alert('接取成功'); refreshTaskList(); loadProfile(); viewTask(taskId); } else alert(res.error);
         });
+        const slideStart = document.getElementById('slideStartWrapper');
+        if (slideStart) initSlide(slideStart, async () => {
+            const minutes = getTravelTimeMinutes(task.locationAddress);
+            const result = await callApi(`/tasks/${taskId}/status`, { method: 'PUT', body: JSON.stringify({ travelStatus: 'traveling', estimatedMinutes: minutes, travelStartTime: Date.now() }) });
+            if (result.success) { alert('出发！'); viewTask(taskId); } else alert('操作失败');
+        });
+        const slideArrive = document.getElementById('slideArriveWrapper');
+        if (slideArrive) {
+            if (task.travelStartTime && task.estimatedMinutes) startCountdown(task.estimatedMinutes, task.travelStartTime);
+            initSlide(slideArrive, async () => {
+                const result = await callApi(`/tasks/${taskId}/status`, { method: 'PUT', body: JSON.stringify({ travelStatus: 'arrived' }) });
+                if (result.success) { if (countdownTimer) clearInterval(countdownTimer); alert('已到达目的地！'); viewTask(taskId); } else alert('操作失败');
+            });
+        }
+        const slideComplete = document.getElementById('slideCompleteWrapper');
+        if (slideComplete) {
+            initSlide(slideComplete, async () => {
+                const result = await callApi(`/tasks/${taskId}/complete`, { method: 'POST' });
+                if (result.success) { alert('任务完成，等待发布者确认结算'); refreshTaskList(); loadProfile(); viewTask(taskId); } else alert('操作失败');
+            });
+        }
         const cancelBtn = document.getElementById('cancelAcceptBtn');
         if (cancelBtn) cancelBtn.onclick = async () => {
             if (confirm('取消接取将扣除5信用分')) {
@@ -885,7 +933,7 @@
         }
     }
     
-    // ==================== 辅助函数 ====================
+    // ==================== 辅助函数（发布、个人资料等） ====================
     function resetPublishForm() {
         document.getElementById('pubTitle').value = '';
         document.getElementById('pubDesc').value = '';
