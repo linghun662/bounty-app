@@ -245,7 +245,6 @@
 <script>
     // ==================== 配置 ====================
     const API_BASE = '/api';
-    let authToken = localStorage.getItem('token');
     let currentUser = null;
     let pendingMedia = [];
     let userLocation = null; // {lat, lng}
@@ -299,25 +298,18 @@
         return Math.min(60, Math.max(5, Math.round(dist * 2)));
     }
     
-    // 增强版API调用（支持JWT）
+    // API 调用（兼容原有接口）
     async function callApi(url, options = {}) {
         try {
-            const headers = {
-                'Content-Type': 'application/json',
-                ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
-                ...options.headers
-            };
             const res = await fetch(API_BASE + url, {
-                ...options,
-                headers
+                headers: { 'Content-Type': 'application/json' },
+                ...options
             });
-            if (res.status === 401) {
-                logout();
-                throw new Error('登录已过期，请重新登录');
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || `HTTP ${res.status}`);
             }
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || '请求失败');
-            return data;
+            return await res.json();
         } catch (err) {
             console.error('API错误:', err);
             throw err;
@@ -400,7 +392,7 @@
         });
     }
     
-    // 高精度定位（用于发布）
+    // 高精度定位
     async function getPreciseLocation() {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
@@ -459,8 +451,6 @@
         try {
             const result = await callApi('/login', { method: 'POST', body: JSON.stringify({ username, password }) });
             if (result.success) {
-                authToken = result.token;
-                localStorage.setItem('token', authToken);
                 currentUser = result.user;
                 localStorage.setItem('user', JSON.stringify(currentUser));
                 document.getElementById('mainApp').style.display = 'block';
@@ -681,6 +671,7 @@
         return html;
     }
     
+    // 接取者提交凭证（新接口）
     async function submitProof(taskId, proofFiles) {
         const proofMedia = [];
         for (let file of proofFiles) {
@@ -693,14 +684,14 @@
         }
         const result = await callApi(`/tasks/${taskId}/submit-proof`, {
             method: 'POST',
-            body: JSON.stringify({ proofMedia })
+            body: JSON.stringify({ userId: currentUser.id, proofMedia })
         });
         return result;
     }
     
     async function cancelTask(taskId) {
         if (!confirm('确定取消该任务吗？取消后赏金将退还到您的账户。')) return;
-        const result = await callApi(`/tasks/${taskId}/cancel`, { method: 'PUT' });
+        const result = await callApi(`/tasks/${taskId}/cancel`, { method: 'PUT', body: JSON.stringify({ userId: currentUser.id }) });
         if (result.success) {
             alert('任务已取消，赏金已退还');
             await loadProfile();
@@ -732,6 +723,8 @@
                 method: 'POST',
                 body: JSON.stringify({
                     title, description: document.getElementById('pubDesc').value, reward,
+                    publisherId: currentUser.id, publisherName: currentUser.nickname,
+                    publisherPhone: currentUser.phone,
                     locationAddress, mediaList, category: document.getElementById('pubCategory').value
                 })
             });
@@ -830,7 +823,7 @@
             detailHtml += `<div style="margin:8px 12px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
         }
         
-        // 发布者确认完成按钮（当接取者已提交凭证且任务未完成时）
+        // 发布者确认完成按钮
         if (task.status === 'ongoing' && task.takerCompleted && isMine) {
             detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="confirmCompleteBtn">✅ 确认完成并支付赏金</button></div>`;
         }
@@ -885,7 +878,7 @@
         
         const slideAccept = document.getElementById('slideAcceptWrapper');
         if (slideAccept) initSlide(slideAccept, async () => {
-            const res = await callApi(`/tasks/${taskId}/accept`, { method: 'PUT' });
+            const res = await callApi(`/tasks/${taskId}/accept`, { method: 'PUT', body: JSON.stringify({ takerId: currentUser.id, takerName: currentUser.nickname }) });
             if (res.success) { alert('接取成功'); refreshTaskList(); loadProfile(); viewTask(taskId); } else alert(res.error);
         });
         const slideStart = document.getElementById('slideStartWrapper');
@@ -928,7 +921,7 @@
         const cancelAcceptBtn = document.getElementById('cancelAcceptBtn');
         if (cancelAcceptBtn) cancelAcceptBtn.onclick = async () => {
             if (confirm('取消接取将扣除5信用分')) {
-                const res = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT' });
+                const res = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT', body: JSON.stringify({ userId: currentUser.id }) });
                 if (res.success) { alert('已取消'); loadProfile(); refreshTaskList(); switchPage('home'); } else alert(res.error);
             }
         };
@@ -936,7 +929,7 @@
         if (confirmCompleteBtn) {
             confirmCompleteBtn.onclick = async () => {
                 if (confirm('确认任务已完成？赏金将支付给接取者。')) {
-                    const res = await callApi(`/tasks/${taskId}/confirm-payment`, { method: 'POST' });
+                    const res = await callApi(`/tasks/${taskId}/confirm-payment`, { method: 'POST', body: JSON.stringify({ userId: currentUser.id }) });
                     if (res.success) {
                         alert('结算成功');
                         viewTask(taskId);
@@ -953,7 +946,7 @@
     async function sendMessage(taskId, text, isNego = false) {
         await callApi('/messages', {
             method: 'POST',
-            body: JSON.stringify({ taskId, text, isNego })
+            body: JSON.stringify({ taskId, senderId: currentUser.id, senderName: currentUser.nickname, text, isNego })
         });
     }
     
@@ -1031,7 +1024,7 @@
     
     async function openChat(taskId, otherId, otherName, reward, title) {
         if (chatState.pollInterval) clearInterval(chatState.pollInterval);
-        await callApi(`/messages/read/${taskId}`, { method: 'PUT' });
+        await callApi(`/messages/read/${taskId}/${currentUser.id}`, { method: 'PUT' });
         chatState.active = true;
         chatState.taskId = taskId;
         chatState.otherId = otherId;
@@ -1046,21 +1039,23 @@
         const task = await callApi(`/tasks/${taskId}`);
         if (task.status !== 'available') { alert('任务已被接取'); return; }
         if (isAccept) {
-            await callApi(`/tasks/${taskId}/reward`, { method: 'PUT', body: JSON.stringify({ reward: price }) });
+            await callApi(`/tasks/${taskId}/reward`, {
+                method: 'PUT',
+                body: JSON.stringify({ userId: currentUser.id, reward: price })
+            });
             await sendMessage(taskId, `✅ 同意议价，价格调整为 ¥${price}`, false);
             alert(`已同意议价，新价格 ¥${price}`);
             if (chatState.taskId === taskId) chatState.reward = price;
             refreshTaskList();
-            // 如果当前在详情页，刷新显示
             if (document.getElementById('detailPage').classList.contains('active')) {
                 viewTask(taskId);
             }
-            await renderMessageList();
+            renderMessageList();
             updateUnreadBadge();
         } else {
             await sendMessage(taskId, `❌ 拒绝了议价`, false);
             alert('已拒绝议价');
-            await renderMessageList();
+            renderMessageList();
             updateUnreadBadge();
         }
         await refreshMessagesOnly();
@@ -1080,7 +1075,7 @@
             updateUnreadBadge();
             return;
         }
-        const convs = await callApi('/user/conversations');
+        const convs = await callApi(`/user/${currentUser.id}/conversations`);
         const container = document.getElementById('messageContainer');
         if (!convs || convs.length === 0) {
             container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
@@ -1124,7 +1119,7 @@
     
     async function updateUnreadBadge() {
         if (!currentUser) return;
-        const convs = await callApi('/user/conversations');
+        const convs = await callApi(`/user/${currentUser.id}/conversations`);
         const totalUnread = convs.reduce((sum, c) => sum + (c.unread || 0), 0);
         const badge = document.getElementById('msgBadge');
         if (badge) {
@@ -1142,7 +1137,7 @@
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
         try {
-            const user = await callApi('/me');
+            const user = await callApi(`/user/${currentUser.id}`);
             currentUser = { ...currentUser, ...user };
             localStorage.setItem('user', JSON.stringify(currentUser));
             document.getElementById('headerBalance').innerHTML = `余额: ¥${(currentUser.balance || 0).toFixed(2)}`;
@@ -1253,7 +1248,7 @@
     }
     
     async function showWalletDetail() {
-        const bills = await callApi('/bills');
+        const bills = await callApi(`/bills/${currentUser.id}`);
         const modal = document.createElement('div');
         modal.className = 'modal-mask';
         modal.innerHTML = `
@@ -1324,7 +1319,7 @@
     }
     
     async function showCreditDetail() {
-        const logs = await callApi('/credit-logs');
+        const logs = await callApi(`/credit-logs/${currentUser.id}`);
         const modal = document.createElement('div');
         modal.className = 'modal-mask';
         modal.innerHTML = `
@@ -1347,7 +1342,7 @@
     
     window.cancelAcceptedTask = async function(taskId) {
         if (confirm('取消接取将扣除5信用分，确定吗？')) {
-            const result = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT' });
+            const result = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT', body: JSON.stringify({ userId: currentUser.id }) });
             if (result.success) { alert('已取消接取'); loadProfile(); refreshTaskList(); } else alert(result.error || '取消失败');
         }
     };
@@ -1398,7 +1393,7 @@
                 hometown: modal.querySelector('#editHometown').value,
                 avatar: currentUser.avatar || ''
             };
-            const result = await callApi('/user', { method: 'PUT', body: JSON.stringify(updates) });
+            const result = await callApi(`/user/${currentUser.id}`, { method: 'PUT', body: JSON.stringify(updates) });
             if (result.success !== false) {
                 currentUser = { ...currentUser, ...updates };
                 localStorage.setItem('user', JSON.stringify(currentUser));
@@ -1431,7 +1426,7 @@
             const realName = modal.querySelector('#realNameInput').value.trim();
             const idCard = modal.querySelector('#idCardInput').value.trim();
             if (!realName || idCard.length < 15) { alert('请填写正确的姓名和身份证号'); return; }
-            const result = await callApi('/verify-id', { method: 'POST', body: JSON.stringify({ realName, idCard }) });
+            const result = await callApi('/verify-id', { method: 'POST', body: JSON.stringify({ userId: currentUser.id, realName, idCard }) });
             if (result.success) { alert('实名认证成功'); currentUser.idCardVerified = true; localStorage.setItem('user', JSON.stringify(currentUser)); modal.remove(); loadProfile(); }
             else alert(result.error || '认证失败');
         };
@@ -1439,9 +1434,7 @@
     
     function logout() {
         if (confirm('退出登录？')) {
-            localStorage.removeItem('token');
             localStorage.removeItem('user');
-            authToken = null;
             currentUser = null;
             document.getElementById('mainApp').style.display = 'none';
             document.getElementById('loginPage').classList.add('active');
@@ -1496,9 +1489,7 @@
     document.getElementById('mediaInput')?.addEventListener('change', (e) => { if (e.target.files.length) handleMediaFiles(e.target.files); });
     
     const savedUser = localStorage.getItem('user');
-    const savedToken = localStorage.getItem('token');
-    if (savedUser && savedToken) {
-        authToken = savedToken;
+    if (savedUser) {
         currentUser = JSON.parse(savedUser);
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('loginPage').classList.remove('active');
