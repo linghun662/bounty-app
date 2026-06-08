@@ -204,34 +204,34 @@ app.get('/api/bills/:userId', async (req, res) => {
   res.json(bills);
 });
 
-// ==================== 修复后的会话列表接口（每个任务独立对话） ====================
+// ==================== 会话列表接口（含未读计数） ====================
 app.get('/api/user/:userId/conversations', async (req, res) => {
   const userId = req.params.userId;
   
-  // 1. 用户作为发布者或接取者的任务
   const tasksFromRelation = await Task.find({
     $or: [{ publisherId: userId }, { takerId: userId }]
   });
   
-  // 2. 用户发送过消息的任务ID
   const taskIdsFromMessages = await Message.distinct('taskId', { senderId: userId });
   
-  // 3. 合并所有任务ID（去重）
   const allTaskIds = new Set([
     ...tasksFromRelation.map(t => t._id.toString()),
     ...taskIdsFromMessages
   ]);
   
-  // 4. 查询这些任务的详细信息
   const tasks = await Task.find({ _id: { $in: Array.from(allTaskIds) } }).sort({ updatedAt: -1 });
   
   const conversations = [];
   for (const task of tasks) {
     const lastMsg = await Message.findOne({ taskId: task._id.toString() }).sort({ createdAt: -1 });
-    // 确定对方用户：如果是发布者且不是当前用户，则对方是发布者；否则是接取者
+    const unreadCount = await Message.countDocuments({
+      taskId: task._id.toString(),
+      senderId: { $ne: userId },
+      read: false
+    });
+    
     let otherId = task.publisherId === userId ? task.takerId : task.publisherId;
     let otherName = task.publisherId === userId ? task.takerName : task.publisherName;
-    // 如果对方为空（例如任务无人接取且用户不是发布者），则从最后一条消息中获取对方ID
     if (!otherId && lastMsg) {
       otherId = lastMsg.senderId === userId ? null : lastMsg.senderId;
       otherName = lastMsg.senderId === userId ? null : lastMsg.senderName;
@@ -244,7 +244,7 @@ app.get('/api/user/:userId/conversations', async (req, res) => {
         lastMsg: lastMsg?.text || '暂无消息',
         reward: task.reward,
         taskTitle: task.title,
-        unread: 0,
+        unread: unreadCount,
         takenAt: task.takenAt
       });
     }
@@ -293,7 +293,6 @@ app.post('/api/init', async (req, res) => {
   res.json({ success: true });
 });
 
-// ==================== 单页应用路由 ====================
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
