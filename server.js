@@ -204,7 +204,7 @@ app.get('/api/bills/:userId', async (req, res) => {
   res.json(bills);
 });
 
-// ==================== 会话列表接口（含未读计数） ====================
+// ==================== 修复后的会话列表接口（每个任务独立对话 + 未读计数） ====================
 app.get('/api/user/:userId/conversations', async (req, res) => {
   const userId = req.params.userId;
   
@@ -293,6 +293,7 @@ app.post('/api/init', async (req, res) => {
   res.json({ success: true });
 });
 
+// ==================== 单页应用路由 ====================
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
