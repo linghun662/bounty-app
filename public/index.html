@@ -46,7 +46,7 @@
         .image-preview-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
         .preview-img-wrapper { position: relative; width: 70px; height: 70px; border-radius: 16px; overflow: hidden; background: #f1f5f9; border: 1px solid #e2e8f0; }
         .preview-img-wrapper img, .preview-img-wrapper video { width: 100%; height: 100%; object-fit: cover; }
-        .remove-img-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .remove-img-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content; center; cursor: pointer; }
         .upload-btn { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 16px; padding: 10px; text-align: center; cursor: pointer; margin-top: 8px; font-size: 0.8rem; }
         .profile-header { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 20px; margin: 12px; padding: 16px; color: white; display: flex; align-items: center; gap: 12px; cursor: pointer; }
         .profile-avatar { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 600; overflow: hidden; }
@@ -124,7 +124,7 @@
         .progress-steps { display: flex; justify-content: space-between; margin: 16px; position: relative; }
         .progress-steps::before { content: ''; position: absolute; top: 24px; left: 10%; right: 10%; height: 2px; background: #e2e8f0; z-index: 0; }
         .step { text-align: center; flex: 1; position: relative; z-index: 1; background: #fff; border-radius: 30px; padding: 6px 2px; }
-        .step-dot { width: 32px; height: 32px; background: white; border: 2px solid #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 1rem; background: #f1f5f9; }
+        .step-dot { width: 32px; height: 32px; background: white; border: 2px solid #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content; center; margin: 0 auto 6px; font-size: 1rem; background: #f1f5f9; }
         .step.active .step-dot { background: #1e4a6b; border-color: #1e4a6b; color: white; }
         .step.completed .step-dot { background: #059669; border-color: #059669; color: white; }
         .step-label { font-size: 0.6rem; color: #64748b; }
@@ -247,7 +247,7 @@
     
     let currentUser = null;
     let pendingMedia = [];
-    let userLocation = null;
+    let userLocation = null; // 当前用户位置 {lat, lng}
     let allTasks = [];
     let currentCategory = 'all';
     let currentSort = 'time';
@@ -289,11 +289,13 @@
         return locationCoords['默认'];
     }
     
+    // 根据地址计算预计分钟数
     function getTravelTimeMinutes(address) {
         if (!userLocation) return 15;
         const coords = getTaskCoords(address);
         const dist = parseFloat(calculateDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng));
         if (isNaN(dist)) return 15;
+        // 假设时速30km/h，每公里2分钟
         return Math.min(60, Math.max(5, Math.round(dist * 2)));
     }
     
@@ -314,7 +316,26 @@
         }
     }
     
-    // 高精度定位（使用BigDataCloud）
+    // 高精度定位（用于导航）
+    async function getCurrentUserLocation() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject('浏览器不支持定位');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                },
+                (err) => {
+                    if (err.code === 1) reject('用户拒绝定位权限');
+                    else reject(err.message);
+                }
+            );
+        });
+    }
+    
+    // 高精度定位（用于发布任务地址）
     async function getPreciseLocation() {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
@@ -355,7 +376,6 @@
     
     function getCurrentLocation() {
         if (!navigator.geolocation) { alert('浏览器不支持定位'); return; }
-        // 显示提示，引导用户
         alert('定位需要您授权位置权限，请点击“允许”');
         getPreciseLocation().then(address => {
             document.getElementById('pubAddress').value = address;
@@ -412,6 +432,7 @@
             localStorage.setItem('user', JSON.stringify(currentUser));
             document.getElementById('mainApp').style.display = 'block';
             document.getElementById('loginPage').classList.remove('active');
+            // 获取用户当前位置（用于距离计算和导航）
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; refreshTaskList(); },
@@ -419,7 +440,7 @@
                 );
             } else refreshTaskList();
             loadProfile();
-            initPullToRefresh();
+            initPullToRefresh();   // 重写了下拉刷新
             initFiltersAndCategories();
             renderMessageList();
             updateUnreadBadge();
@@ -476,11 +497,13 @@
         `).join('');
     }
     
+    // ==================== 重写下拉刷新 ====================
     function initPullToRefresh() {
         const homePage = document.getElementById('homePage');
         let startY = 0;
         let isRefreshing = false;
         const indicator = document.getElementById('refreshIndicator');
+        
         homePage.addEventListener('touchstart', (e) => {
             if (homePage.scrollTop === 0) startY = e.touches[0].clientY;
         });
@@ -522,7 +545,7 @@
         });
     }
     
-    // ==================== 全新滑动模块（重写） ====================
+    // ==================== 滑动模块（重写） ====================
     function initSlide(container, onComplete) {
         const track = container.querySelector('.slide-track');
         const thumb = container.querySelector('.slide-thumb');
@@ -574,6 +597,7 @@
         thumb.style.left = '0px';
     }
     
+    // ==================== 倒计时（根据距离） ====================
     function startCountdown(estimatedMinutes, startTimestamp) {
         if (countdownTimer) clearInterval(countdownTimer);
         const countdownDiv = document.getElementById('countdownDisplay');
@@ -665,7 +689,7 @@
         }
     }
     
-    // ==================== 任务详情（完整版） ====================
+    // ==================== 任务详情（含高德导航、倒计时修复） ====================
     window.viewTask = async function(taskId) {
         if (countdownTimer) clearInterval(countdownTimer);
         const task = await callApi(`/tasks/${taskId}`);
@@ -708,15 +732,11 @@
         if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
         
         if (task.status === 'ongoing' && isTaker) {
+            // 高德导航按钮（使用当前位置）
             if (task.locationAddress) {
                 const coords = getTaskCoords(task.locationAddress);
-                let navUrl = '';
-                if (userLocation && userLocation.lat && userLocation.lng) {
-                    navUrl = `https://uri.amap.com/navigation?from=${userLocation.lng},${userLocation.lat}&to=${coords.lng},${coords.lat}&mode=car&callnative=1`;
-                } else {
-                    navUrl = `https://uri.amap.com/navigation?to=${coords.lng},${coords.lat},${encodeURIComponent(task.locationAddress)}&mode=car&callnative=1`;
-                }
-                detailHtml += `<div style="margin:8px 12px;"><button class="btn-nav" id="navigateBtn" data-url="${navUrl}">🧭 高德导航</button></div>`;
+                // 注意：导航链接将在点击时动态获取用户最新位置，以保证准确性
+                detailHtml += `<div style="margin:8px 12px;"><button class="btn-nav" id="navigateBtn" data-task-lat="${coords.lat}" data-task-lng="${coords.lng}" data-task-addr="${escapeHtml(task.locationAddress)}">🧭 高德导航</button></div>`;
             }
             if (task.travelStatus === 'idle') detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
             else if (task.travelStatus === 'traveling') {
@@ -746,14 +766,25 @@
                 window.location.href = `tel:${task.publisherPhone}`;
             };
         }
+        
+        // 高德导航：获取用户当前位置并打开高德地图
         const navBtn = document.getElementById('navigateBtn');
         if (navBtn) {
-            navBtn.onclick = () => {
-                const url = navBtn.getAttribute('data-url');
-                if (url) window.open(url, '_blank');
-                else alert('无法获取导航地址');
+            navBtn.onclick = async () => {
+                try {
+                    const currentPos = await getCurrentUserLocation();
+                    const destLat = parseFloat(navBtn.getAttribute('data-task-lat'));
+                    const destLng = parseFloat(navBtn.getAttribute('data-task-lng'));
+                    const destAddr = navBtn.getAttribute('data-task-addr');
+                    // 高德地图 URI 格式：https://uri.amap.com/navigation?from=经度,纬度&to=经度,纬度&mode=car&callnative=1
+                    const url = `https://uri.amap.com/navigation?from=${currentPos.lng},${currentPos.lat}&to=${destLng},${destLat},${encodeURIComponent(destAddr)}&mode=car&callnative=1`;
+                    window.open(url, '_blank');
+                } catch (err) {
+                    alert('无法获取您的位置：' + err);
+                }
             };
         }
+        
         const slideAccept = document.getElementById('slideAcceptWrapper');
         if (slideAccept) initSlide(slideAccept, async () => {
             const res = await callApi(`/tasks/${taskId}/accept`, { method: 'PUT', body: JSON.stringify({ takerId: currentUser.id, takerName: currentUser.nickname }) });
