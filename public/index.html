@@ -11,125 +11,123 @@
         .page { display: none; animation: fadeIn 0.25s ease; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-        .nav-header { background: rgba(255,255,255,0.98); backdrop-filter: blur(20px); padding: 14px 20px; border-bottom: 1px solid rgba(226,232,240,0.8); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 20; }
-        .logo { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, #0f2b3d, #1e4a6b); background-clip: text; -webkit-background-clip: text; color: transparent; }
-        .header-balance { background: #eef2ff; padding: 6px 14px; border-radius: 40px; font-size: 0.8rem; font-weight: 600; color: #1e4a6b; cursor: pointer; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; background: rgba(255,255,255,0.96); backdrop-filter: blur(20px); display: flex; justify-content: space-around; padding: 8px 20px 20px; border-top: 1px solid rgba(226,232,240,0.8); z-index: 20; }
-        .nav-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 0.7rem; color: #94a3b8; cursor: pointer; }
+        .nav-header { background: rgba(255,255,255,0.98); backdrop-filter: blur(20px); padding: 12px 16px; border-bottom: 1px solid rgba(226,232,240,0.8); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 20; }
+        .logo { font-size: 1.3rem; font-weight: 700; background: linear-gradient(135deg, #0f2b3d, #1e4a6b); background-clip: text; -webkit-background-clip: text; color: transparent; }
+        .header-balance { background: #eef2ff; padding: 4px 10px; border-radius: 40px; font-size: 0.75rem; font-weight: 600; color: #1e4a6b; cursor: pointer; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; background: rgba(255,255,255,0.96); backdrop-filter: blur(20px); display: flex; justify-content: space-around; padding: 6px 20px 16px; border-top: 1px solid rgba(226,232,240,0.8); z-index: 20; }
+        .nav-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.7rem; color: #94a3b8; cursor: pointer; }
         .nav-item.active { color: #1e4a6b; transform: translateY(-2px); font-weight: 500; }
-        .nav-icon { font-size: 1.6rem; }
+        .nav-icon { font-size: 1.4rem; }
         .msg-badge { position: absolute; top: -5px; right: -10px; background: #ef4444; color: white; border-radius: 20px; padding: 2px 6px; font-size: 0.6rem; min-width: 18px; text-align: center; display: none; }
-        .card { background: #fff; border-radius: 28px; padding: 20px; margin: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.04); border: 1px solid #eef2f8; cursor: pointer; transition: transform 0.1s ease; }
+        .card { background: #fff; border-radius: 20px; padding: 16px; margin: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eef2f8; cursor: pointer; transition: transform 0.1s ease; }
         .task-card:active { transform: scale(0.98); }
-        .detail-hero { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 28px; margin: 16px 16px 0 16px; padding: 24px 20px; color: white; position: relative; overflow: hidden; }
-        .detail-hero::before { content: "💰"; position: absolute; right: -20px; bottom: -20px; font-size: 100px; opacity: 0.1; }
-        .detail-reward { font-size: 2rem; font-weight: 800; margin-top: 8px; }
-        .detail-status { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; font-weight: 600; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); margin-bottom: 12px; }
-        .info-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #eef2f8; }
-        .info-icon { width: 32px; font-size: 1.2rem; text-align: center; }
+        .detail-hero { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 20px; margin: 12px 12px 0 12px; padding: 20px 16px; color: white; position: relative; overflow: hidden; }
+        .detail-hero::before { content: "💰"; position: absolute; right: -20px; bottom: -20px; font-size: 80px; opacity: 0.1; }
+        .detail-reward { font-size: 1.6rem; font-weight: 800; margin-top: 6px; }
+        .detail-status { display: inline-block; padding: 3px 10px; border-radius: 40px; font-size: 0.65rem; font-weight: 600; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); margin-bottom: 8px; }
+        .info-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eef2f8; }
+        .info-icon { width: 28px; font-size: 1rem; text-align: center; }
         .info-content { flex: 1; }
-        .info-label { font-size: 0.7rem; color: #64748b; margin-bottom: 2px; }
+        .info-label { font-size: 0.65rem; color: #64748b; margin-bottom: 2px; }
         .info-value { font-weight: 600; color: #1e293b; cursor: pointer; }
-        .desc-section { background: #f8fafc; border-radius: 24px; padding: 16px; margin-top: 12px; }
-        .form-group { margin-bottom: 18px; }
+        .desc-section { background: #f8fafc; border-radius: 20px; padding: 12px; margin-top: 12px; }
+        .form-group { margin-bottom: 16px; }
         .form-label { font-size: 0.85rem; font-weight: 600; color: #1e293b; margin-bottom: 6px; display: block; }
-        .form-input, .form-textarea { width: 100%; padding: 12px 16px; border-radius: 24px; border: 1px solid #e2e8f0; font-size: 0.95rem; outline: none; background: white; }
-        .form-textarea { min-height: 100px; }
-        .btn-primary { background: linear-gradient(95deg, #059669, #047857); border: none; border-radius: 60px; padding: 14px; font-weight: 600; color: white; width: 100%; text-align: center; cursor: pointer; font-size: 1rem; }
-        .btn-secondary { background: #f1f5f9; color: #1e4a6b; border-radius: 60px; padding: 12px; font-weight: 600; border: none; width: 100%; cursor: pointer; }
-        .btn-danger { background: #fee2e2; color: #b91c1c; border-radius: 60px; padding: 8px 16px; font-weight: 600; border: none; cursor: pointer; }
+        .form-input, .form-textarea { width: 100%; padding: 10px 14px; border-radius: 20px; border: 1px solid #e2e8f0; font-size: 0.9rem; outline: none; background: white; }
+        .form-textarea { min-height: 80px; }
+        .btn-primary { background: linear-gradient(95deg, #059669, #047857); border: none; border-radius: 60px; padding: 12px; font-weight: 600; color: white; width: 100%; text-align: center; cursor: pointer; font-size: 0.95rem; }
+        .btn-secondary { background: #f1f5f9; color: #1e4a6b; border-radius: 60px; padding: 10px; font-weight: 600; border: none; width: 100%; cursor: pointer; }
+        .btn-danger { background: #fee2e2; color: #b91c1c; border-radius: 60px; padding: 6px 12px; font-weight: 600; border: none; cursor: pointer; }
         .btn-success { background: #10b981; color: white; border-radius: 60px; padding: 6px 12px; font-weight: 600; border: none; cursor: pointer; }
-        .btn-phone { background: #10b981; color: white; border-radius: 60px; padding: 10px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
-        .btn-nav { background: #3b82f6; color: white; border-radius: 60px; padding: 10px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
-        .btn-location { background: #eef2ff; color: #1e4a6b; border-radius: 40px; padding: 8px 16px; font-weight: 500; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-phone { background: #10b981; color: white; border-radius: 60px; padding: 8px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+        .btn-nav { background: #3b82f6; color: white; border-radius: 60px; padding: 8px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+        .btn-location { background: #eef2ff; color: #1e4a6b; border-radius: 40px; padding: 6px 12px; font-weight: 500; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
         .location-row { display: flex; gap: 8px; align-items: center; }
-        .upload-area { margin-top: 12px; }
-        .image-preview-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
-        .preview-img-wrapper { position: relative; width: 85px; height: 85px; border-radius: 20px; overflow: hidden; background: #f1f5f9; border: 2px solid #e2e8f0; }
-        .preview-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-        .remove-img-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content; center; cursor: pointer; }
-        .upload-btn { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 20px; padding: 12px; text-align: center; cursor: pointer; margin-top: 8px; }
-        .profile-header { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 28px; margin: 16px; padding: 20px; color: white; display: flex; align-items: center; gap: 16px; cursor: pointer; }
-        .profile-avatar { width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 600; overflow: hidden; }
-        .stats-row { display: flex; background: #fff; margin: 0 16px 16px; border-radius: 24px; padding: 16px; justify-content: space-around; }
+        .image-preview-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .preview-img-wrapper { position: relative; width: 70px; height: 70px; border-radius: 16px; overflow: hidden; background: #f1f5f9; border: 1px solid #e2e8f0; }
+        .preview-img-wrapper img, .preview-img-wrapper video { width: 100%; height: 100%; object-fit: cover; }
+        .remove-img-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .upload-btn { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 16px; padding: 10px; text-align: center; cursor: pointer; margin-top: 8px; font-size: 0.8rem; }
+        .profile-header { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 20px; margin: 12px; padding: 16px; color: white; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .profile-avatar { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 600; overflow: hidden; }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .stats-row { display: flex; background: #fff; margin: 0 12px 12px; border-radius: 20px; padding: 12px; justify-content: space-around; }
         .stat-item { text-align: center; flex: 1; cursor: pointer; }
-        .stat-number { font-size: 1.3rem; font-weight: 800; color: #1e4a6b; }
-        .stat-label { font-size: 0.7rem; color: #64748b; margin-top: 4px; }
+        .stat-number { font-size: 1.2rem; font-weight: 800; color: #1e4a6b; }
+        .stat-label { font-size: 0.65rem; color: #64748b; margin-top: 2px; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
         .text-center { text-align: center; }
         .mt-2 { margin-top: 8px; }
-        .empty-state { text-align: center; padding: 40px 20px; color: #94a3b8; }
-        .loading { text-align: center; padding: 40px; color: #94a3b8; }
-        .reward-badge { background: linear-gradient(135deg, #fef3c7, #fde68a); padding: 4px 14px; border-radius: 40px; font-weight: 700; font-size: 0.85rem; color: #b45309; }
-        .task-meta { display: flex; gap: 12px; font-size: 0.7rem; color: #6c7a91; margin-top: 8px; flex-wrap: wrap; }
-        .task-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
-        .task-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
-        .task-desc { font-size: 0.9rem; color: #475569; margin-bottom: 8px; }
-        .distance-badge { background: #e6f7e6; color: #2b6e2f; padding: 2px 10px; border-radius: 20px; font-weight: 500; font-size: 0.7rem; }
+        .empty-state { text-align: center; padding: 30px 20px; color: #94a3b8; }
+        .loading { text-align: center; padding: 30px; color: #94a3b8; }
+        .reward-badge { background: linear-gradient(135deg, #fef3c7, #fde68a); padding: 3px 10px; border-radius: 40px; font-weight: 700; font-size: 0.75rem; color: #b45309; }
+        .task-meta { display: flex; gap: 10px; font-size: 0.65rem; color: #6c7a91; margin-top: 6px; flex-wrap: wrap; }
+        .task-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
+        .task-title { font-size: 1rem; font-weight: 700; color: #0f172a; }
+        .task-desc { font-size: 0.85rem; color: #475569; margin-bottom: 6px; }
+        .distance-badge { background: #e6f7e6; color: #2b6e2f; padding: 2px 8px; border-radius: 20px; font-weight: 500; font-size: 0.65rem; }
         .slide-confirm, .slide-action { margin: 12px 0; user-select: none; }
-        .slide-track { position: relative; width: 100%; height: 56px; background: #eef2ff; border-radius: 60px; overflow: hidden; border: 1px solid #cbd5e1; cursor: grab; touch-action: none; }
-        .slide-thumb { position: absolute; left: 0; top: 0; width: 80px; height: 56px; background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 60px; display: flex; align-items: center; justify-content; center; color: white; font-size: 1.8rem; cursor: grab; touch-action: none; transition: none; }
-        .slide-text { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content; center; font-weight: 700; color: #1e4a6b; pointer-events: none; font-size: 0.95rem; gap: 12px; z-index: 1; }
+        .slide-track { position: relative; width: 100%; height: 50px; background: #eef2ff; border-radius: 50px; overflow: hidden; border: 1px solid #cbd5e1; touch-action: none; }
+        .slide-thumb { position: absolute; left: 0; top: 0; width: 70px; height: 50px; background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 50px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.6rem; touch-action: none; transition: none; }
+        .slide-text { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1e4a6b; pointer-events: none; font-size: 0.85rem; gap: 8px; z-index: 1; }
         .slide-confirm.completed .slide-track, .slide-action.completed .slide-track { background: #d1fae5; border-color: #059669; }
-        .countdown-timer { background: #fef3c7; border-radius: 40px; padding: 10px 16px; text-align: center; margin: 12px 0; font-weight: 700; color: #b45309; display: flex; align-items: center; justify-content; center; gap: 8px; font-size: 1rem; }
+        .countdown-timer { background: #fef3c7; border-radius: 40px; padding: 8px 12px; text-align: center; margin: 12px 0; font-weight: 700; color: #b45309; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.9rem; }
         .countdown-timer.warning { background: #fee2e2; color: #dc2626; animation: pulse 1s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content; center; z-index: 1000; backdrop-filter: blur(4px); }
-        .modal-content { background: white; border-radius: 32px; width: 85%; max-width: 340px; padding: 24px; max-height: 80vh; overflow-y: auto; }
+        .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+        .modal-content { background: white; border-radius: 28px; width: 85%; max-width: 340px; padding: 20px; max-height: 80vh; overflow-y: auto; margin: 0 auto; }
         .chat-container { display: flex; flex-direction: column; height: calc(100vh - 120px); background: #f5f7fb; }
-        .chat-header-bar { background: white; padding: 12px 16px; border-bottom: 1px solid #eef2f8; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
-        .chat-back-btn { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content; center; font-size: 1.2rem; cursor: pointer; }
-        .chat-header-name { font-weight: 700; font-size: 1.1rem; color: #1e293b; flex: 1; }
-        .chat-messages-area { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .chat-header-bar { background: white; padding: 12px; border-bottom: 1px solid #eef2f8; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; }
+        .chat-back-btn { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
+        .chat-header-name { font-weight: 700; font-size: 1rem; color: #1e293b; flex: 1; }
+        .chat-messages-area { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         .chat-bubble { max-width: 80%; display: flex; flex-direction: column; }
         .chat-bubble-mine { align-self: flex-end; }
         .chat-bubble-other { align-self: flex-start; }
-        .bubble-text { padding: 12px 16px; border-radius: 24px; font-size: 0.9rem; line-height: 1.4; word-break: break-word; background: white; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; }
+        .bubble-text { padding: 10px 14px; border-radius: 20px; font-size: 0.85rem; line-height: 1.4; word-break: break-word; background: white; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; }
         .chat-bubble-mine .bubble-text { background: #1e4a6b; color: white; border-bottom-right-radius: 4px; border: none; }
-        .bubble-time { font-size: 0.6rem; color: #94a3b8; margin-top: 4px; margin-left: 12px; margin-right: 12px; }
+        .bubble-time { font-size: 0.6rem; color: #94a3b8; margin-top: 2px; margin-left: 8px; margin-right: 8px; }
         .chat-bubble-mine .bubble-time { text-align: right; }
-        .chat-input-wrapper { background: white; border-top: 1px solid #eef2f8; padding: 12px 16px; border-radius: 28px 28px 0 0; }
-        .flex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-        .nego-input { flex: 1; min-width: 120px; padding: 10px 14px; border-radius: 30px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; }
-        .nego-send-btn { background: #f59e0b; border: none; border-radius: 30px; padding: 8px 18px; font-weight: 600; color: white; cursor: pointer; }
-        .chat-action-row { display: flex; gap: 10px; align-items: center; }
-        .chat-message-input { flex: 1; padding: 10px 14px; border-radius: 30px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; }
-        .send-btn { background: #1e4a6b; border: none; border-radius: 30px; padding: 10px 20px; font-weight: 600; color: white; cursor: pointer; }
-        .task-card-in-chat { background: #f8fafc; border-radius: 20px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #e2e8f0; }
-        .refresh-container { text-align: center; padding: 10px 0; font-size: 0.8rem; color: #94a3b8; transition: transform 0.2s; }
-        .category-bar, .sort-bar { display: flex; gap: 12px; padding: 8px 16px; background: white; border-bottom: 1px solid #eef2f8; overflow-x: auto; white-space: nowrap; }
-        .category-chip, .sort-chip { background: #f1f5f9; padding: 6px 12px; border-radius: 40px; font-size: 0.75rem; color: #1e4a6b; cursor: pointer; display: inline-block; }
+        .chat-input-wrapper { background: white; border-top: 1px solid #eef2f8; padding: 10px 12px; border-radius: 24px 24px 0 0; }
+        .flex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .nego-input { flex: 1; min-width: 100px; padding: 8px 12px; border-radius: 30px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; }
+        .nego-send-btn { background: #f59e0b; border: none; border-radius: 30px; padding: 6px 12px; font-weight: 600; color: white; cursor: pointer; font-size: 0.8rem; }
+        .chat-action-row { display: flex; gap: 8px; align-items: center; }
+        .chat-message-input { flex: 1; padding: 8px 12px; border-radius: 30px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-size: 0.9rem; }
+        .send-btn { background: #1e4a6b; border: none; border-radius: 30px; padding: 8px 16px; font-weight: 600; color: white; cursor: pointer; font-size: 0.85rem; }
+        .task-card-in-chat { background: #f8fafc; border-radius: 16px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #e2e8f0; }
+        .category-bar, .sort-bar { display: flex; gap: 10px; padding: 8px 12px; background: white; border-bottom: 1px solid #eef2f8; overflow-x: auto; white-space: nowrap; }
+        .category-chip, .sort-chip { background: #f1f5f9; padding: 4px 10px; border-radius: 40px; font-size: 0.7rem; color: #1e4a6b; cursor: pointer; display: inline-block; }
         .category-chip.active, .sort-chip.active { background: #1e4a6b; color: white; }
-        .profile-collapse { background: #fff; border-radius: 24px; margin: 12px 16px; overflow: hidden; border: 1px solid #eef2f8; }
-        .collapse-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; cursor: pointer; transition: background 0.2s; }
+        .profile-collapse { background: #fff; border-radius: 20px; margin: 12px; overflow: hidden; border: 1px solid #eef2f8; }
+        .collapse-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #fff; cursor: pointer; }
         .collapse-header:active { background: #f8fafc; }
-        .collapse-title { font-weight: 700; font-size: 1rem; color: #1e293b; display: flex; align-items: center; gap: 8px; }
-        .collapse-icon { font-size: 1.2rem; transition: transform 0.2s; }
+        .collapse-title { font-weight: 700; font-size: 0.9rem; color: #1e293b; display: flex; align-items: center; gap: 6px; }
+        .collapse-icon { font-size: 1rem; transition: transform 0.2s; }
         .collapse-icon.open { transform: rotate(90deg); }
-        .collapse-content { display: none; padding: 0 16px 16px 16px; background: #fff; border-top: 1px solid #eef2f8; }
+        .collapse-content { display: none; padding: 0 16px 12px 16px; background: #fff; border-top: 1px solid #eef2f8; }
         .collapse-content.show { display: block; }
-        .profile-task-item { padding: 12px 0; border-bottom: 1px solid #eef2f8; }
+        .profile-task-item { padding: 10px 0; border-bottom: 1px solid #eef2f8; }
         .profile-task-item:last-child { border-bottom: none; }
-        .profile-task-title { font-weight: 600; font-size: 0.95rem; color: #0f172a; cursor: pointer; display: inline-block; }
-        .profile-task-status { font-size: 0.7rem; display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 20px; background: #f1f5f9; color: #475569; }
+        .profile-task-title { font-weight: 600; font-size: 0.85rem; color: #0f172a; cursor: pointer; display: inline-block; }
+        .profile-task-status { font-size: 0.65rem; display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 20px; background: #f1f5f9; color: #475569; }
         .profile-task-status.available { background: #d1fae5; color: #065f46; }
         .profile-task-status.ongoing { background: #fed7aa; color: #9a3412; }
         .profile-task-status.completed { background: #e2e8f0; color: #334155; }
         .profile-task-status.cancelled { background: #fee2e2; color: #b91c1c; }
-        .profile-task-amount { font-weight: 700; color: #b45309; font-size: 0.9rem; text-align: right; }
+        .profile-task-amount { font-weight: 700; color: #b45309; font-size: 0.85rem; text-align: right; }
         .task-actions { margin-top: 8px; display: flex; justify-content: flex-end; gap: 8px; }
-        .logout-btn { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 60px; padding: 14px; font-weight: 600; font-size: 1rem; width: calc(100% - 32px); margin: 16px; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; box-shadow: 0 2px 8px rgba(220,38,38,0.2); }
-        .logout-btn:active { transform: scale(0.98); box-shadow: 0 1px 4px rgba(220,38,38,0.2); }
-        .progress-text { font-size: 0.75rem; color: #1e4a6b; margin-top: 4px; }
-        .contact-buttons { display: flex; gap: 12px; margin: 16px 16px 0 16px; }
+        .logout-btn { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 60px; padding: 12px; font-weight: 600; font-size: 0.95rem; width: calc(100% - 24px); margin: 12px; cursor: pointer; }
+        .progress-text { font-size: 0.7rem; color: #1e4a6b; margin-top: 4px; }
+        .contact-buttons { display: flex; gap: 12px; margin: 12px 12px 0 12px; }
         .contact-buttons button { flex: 1; }
-        .progress-steps { display: flex; justify-content: space-between; margin: 20px 16px; position: relative; }
-        .progress-steps::before { content: ''; position: absolute; top: 28px; left: 10%; right: 10%; height: 2px; background: #e2e8f0; z-index: 0; }
-        .step { text-align: center; flex: 1; position: relative; z-index: 1; background: #fff; border-radius: 40px; padding: 8px 4px; }
-        .step-dot { width: 40px; height: 40px; background: white; border: 2px solid #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content; center; margin: 0 auto 8px; font-size: 1.2rem; background: #f1f5f9; }
+        .progress-steps { display: flex; justify-content: space-between; margin: 16px; position: relative; }
+        .progress-steps::before { content: ''; position: absolute; top: 24px; left: 10%; right: 10%; height: 2px; background: #e2e8f0; z-index: 0; }
+        .step { text-align: center; flex: 1; position: relative; z-index: 1; background: #fff; border-radius: 30px; padding: 6px 2px; }
+        .step-dot { width: 32px; height: 32px; background: white; border: 2px solid #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 1rem; background: #f1f5f9; }
         .step.active .step-dot { background: #1e4a6b; border-color: #1e4a6b; color: white; }
         .step.completed .step-dot { background: #059669; border-color: #059669; color: white; }
-        .step-label { font-size: 0.65rem; color: #64748b; }
+        .step-label { font-size: 0.6rem; color: #64748b; }
         .step.active .step-label { color: #1e4a6b; font-weight: 600; }
         .step.completed .step-label { color: #059669; }
     </style>
@@ -142,7 +140,7 @@
             <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
                 <div class="card" style="width:100%; cursor:default;">
                     <div class="text-center">
-                        <div style="font-size:3rem;">💰</div>
+                        <div style="font-size:2.5rem;">💰</div>
                         <h2 style="color:#1e4a6b;">赏金集市 · 双向议价</h2>
                         <p style="color:#64748b;">悬赏任务 · 轻松赚钱</p>
                     </div>
@@ -152,7 +150,7 @@
                     <div class="text-center mt-2"><a href="#" id="showRegisterBtn" style="color:#1e4a6b;">注册账号</a></div>
                     <div class="text-center mt-2" style="font-size:0.7rem;">测试: xiaoming/123456 | hong/123456</div>
                     <div id="loginError" style="color:#ef4444; font-size:0.8rem; text-align:center; margin-top:8px;"></div>
-                    <hr style="margin: 16px 0;">
+                    <hr style="margin: 12px 0;">
                     <button class="btn-primary" id="initDataBtn" style="background:#eef2ff; color:#1e4a6b;">📦 初始化测试数据</button>
                 </div>
             </div>
@@ -196,7 +194,7 @@
                 <div id="refreshIndicator" class="refresh-container" style="display:none;">↓ 下拉刷新</div>
                 <div id="homeContent" class="loading">加载中...</div>
             </div>
-            <div id="detailPage" class="page"><div id="detailContainer"></div><div class="back-button" style="margin:8px 16px 20px;"><button class="btn-secondary" style="margin:0;" onclick="switchPage('home')">← 返回首页</button></div></div>
+            <div id="detailPage" class="page"><div id="detailContainer"></div><div class="back-button" style="margin:8px 12px 20px;"><button class="btn-secondary" style="margin:0;" onclick="switchPage('home')">← 返回首页</button></div></div>
             <div id="publishPage" class="page">
                 <div class="card" style="cursor:default;">
                     <h3>✨ 发布悬赏</h3>
@@ -216,6 +214,7 @@
                             <input type="text" id="pubAddress" class="form-input" placeholder="任务地点">
                             <button class="btn-location" id="getLocationBtn" type="button">📍 定位</button>
                         </div>
+                        <div style="font-size:0.7rem; color:#64748b; margin-top:4px;" id="locationHint">点击定位自动填入街道门牌</div>
                     </div>
                     <div class="form-group">
                         <div class="form-label">📎 图片/视频（最多6个）</div>
@@ -243,6 +242,7 @@
 </div>
 
 <script>
+    // ==================== 配置 ====================
     const API_BASE = '/api';
     
     let currentUser = null;
@@ -314,6 +314,7 @@
         }
     }
     
+    // 高精度定位（使用BigDataCloud）
     async function getPreciseLocation() {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
@@ -343,7 +344,7 @@
                 },
                 (err) => {
                     if (err.code === 1) {
-                        reject('用户拒绝定位权限，请手动输入地址');
+                        reject('用户拒绝定位权限，请在浏览器设置中允许定位，或手动输入地址');
                     } else {
                         reject(err.message);
                     }
@@ -354,8 +355,14 @@
     
     function getCurrentLocation() {
         if (!navigator.geolocation) { alert('浏览器不支持定位'); return; }
+        // 显示提示，引导用户
+        alert('定位需要您授权位置权限，请点击“允许”');
         getPreciseLocation().then(address => {
             document.getElementById('pubAddress').value = address;
+            document.getElementById('locationHint').innerHTML = '✅ 已定位到街道门牌';
+            setTimeout(() => {
+                document.getElementById('locationHint').innerHTML = '点击定位自动填入街道门牌';
+            }, 3000);
         }).catch(err => {
             alert('定位失败：' + err);
         });
@@ -515,6 +522,7 @@
         });
     }
     
+    // ==================== 全新滑动模块（重写） ====================
     function initSlide(container, onComplete) {
         const track = container.querySelector('.slide-track');
         const thumb = container.querySelector('.slide-thumb');
@@ -657,6 +665,7 @@
         }
     }
     
+    // ==================== 任务详情（完整版） ====================
     window.viewTask = async function(taskId) {
         if (countdownTimer) clearInterval(countdownTimer);
         const task = await callApi(`/tasks/${taskId}`);
@@ -681,12 +690,11 @@
         }
         detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description || '')}</p></div></div>`;
         
-        if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
+        if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
         
-        // 接取者操作按钮区域（并排）
         if (task.status === 'ongoing' && isTaker) {
             detailHtml += `
-                <div style="display: flex; gap: 12px; margin: 8px 16px;">
+                <div style="display: flex; gap: 12px; margin: 8px 12px;">
                     <button class="btn-primary" id="contactPublisherBtn" style="flex:1; background:#3b82f6;">💬 联系发布者</button>
                     ${task.publisherPhone ? `<button class="btn-phone" id="callPublisherPhoneBtn" style="flex:1;">📞 拨打电话</button>` : `<button class="btn-phone" disabled style="flex:1; opacity:0.6;">📞 无手机号</button>`}
                 </div>
@@ -697,7 +705,7 @@
             detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
         }
         
-        if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
+        if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
         
         if (task.status === 'ongoing' && isTaker) {
             if (task.locationAddress) {
@@ -708,7 +716,7 @@
                 } else {
                     navUrl = `https://uri.amap.com/navigation?to=${coords.lng},${coords.lat},${encodeURIComponent(task.locationAddress)}&mode=car&callnative=1`;
                 }
-                detailHtml += `<div style="margin:8px 16px;"><button class="btn-nav" id="navigateBtn" data-url="${navUrl}">🧭 高德导航</button></div>`;
+                detailHtml += `<div style="margin:8px 12px;"><button class="btn-nav" id="navigateBtn" data-url="${navUrl}">🧭 高德导航</button></div>`;
             }
             if (task.travelStatus === 'idle') detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
             else if (task.travelStatus === 'traveling') {
@@ -717,7 +725,7 @@
             } else if (task.travelStatus === 'arrived' && !task.takerCompleted) {
                 detailHtml += `<div class="slide-action" id="slideCompleteWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📎 滑动并上传凭证完成 ✅</div></div></div>`;
             }
-            detailHtml += `<div style="margin:8px 16px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
+            detailHtml += `<div style="margin:8px 12px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
         }
         document.getElementById('detailContainer').innerHTML = detailHtml;
         
@@ -798,6 +806,7 @@
         switchPage('detail');
     };
     
+    // ==================== 消息相关 ====================
     async function sendMessage(taskId, senderId, senderName, text, isNego = false) {
         try {
             const response = await fetch(API_BASE + '/messages', {
@@ -826,7 +835,7 @@
             const negoPrice = priceMatch ? parseInt(priceMatch[1]) : null;
             html += `<div class="chat-bubble ${isMine ? 'chat-bubble-mine' : 'chat-bubble-other'}"><div class="bubble-text">${escapeHtml(m.text)}</div><div class="bubble-time">${m.time || new Date(m.createdAt).toLocaleTimeString()}</div></div>`;
             if (!isMine && isNego && negoPrice && m.senderId !== 'system') {
-                html += `<div style="display:flex; gap:8px; margin:4px 0 8px 16px;"><button class="btn-primary" style="padding:6px 12px;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:6px 12px;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
+                html += `<div style="display:flex; gap:8px; margin:4px 0 8px 12px;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
             }
         }
         chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
@@ -839,7 +848,7 @@
         const container = document.getElementById('messageContainer');
         container.innerHTML = `
             <div class="chat-container">
-                <div class="chat-header-bar"><button class="chat-back-btn" id="chatBackBtn">←</button><span class="chat-header-name">${escapeHtml(chatState.otherName)}</span><button id="manualRefreshBtn" style="background:#eef2ff; border:none; border-radius:20px; padding:6px 12px;">🔄 刷新</button></div>
+                <div class="chat-header-bar"><button class="chat-back-btn" id="chatBackBtn">←</button><span class="chat-header-name">${escapeHtml(chatState.otherName)}</span><button id="manualRefreshBtn" style="background:#eef2ff; border:none; border-radius:20px; padding:4px 10px; font-size:0.7rem;">🔄 刷新</button></div>
                 <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div>
                 <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
                 <div class="chat-input-wrapper">
@@ -928,7 +937,6 @@
     }
     
     async function renderMessageList() {
-        console.log('renderMessageList 被调用');
         if (!currentUser || !currentUser.id) {
             const container = document.getElementById('messageContainer');
             if (container) container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">请先登录</div></div>';
@@ -946,7 +954,7 @@
         for (let c of convs) {
             let unreadHtml = '';
             if (c.unread > 0) {
-                unreadHtml = `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 8px; font-size:0.7rem; margin-left:8px;">${c.unread}</span>`;
+                unreadHtml = `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;
             }
             html += `
                 <div class="card task-card" 
@@ -992,6 +1000,7 @@
         }
     }
     
+    // ==================== 个人主页等辅助函数 ====================
     function resetPublishForm() {
         document.getElementById('pubTitle').value = '';
         document.getElementById('pubDesc').value = '';
@@ -1000,6 +1009,7 @@
         document.getElementById('pubCategory').value = '取件';
         pendingMedia = [];
         updateMediaPreview();
+        document.getElementById('locationHint').innerHTML = '点击定位自动填入街道门牌';
     }
     
     async function publishTask() {
@@ -1138,15 +1148,15 @@
                 <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified ? '已实名' : '未实名'}</div></div>
             </div>
             <div class="profile-collapse">
-                <div class="collapse-header" data-target="pub"><div class="collapse-title">📤 我发布 <span style="font-size:0.8rem;">(${myPub.length})</span></div><span class="collapse-icon">▶</span></div>
+                <div class="collapse-header" data-target="pub"><div class="collapse-title">📤 我发布 <span style="font-size:0.7rem;">(${myPub.length})</span></div><span class="collapse-icon">▶</span></div>
                 <div class="collapse-content" id="collapse-pub">${pubHtml}</div>
             </div>
             <div class="profile-collapse">
-                <div class="collapse-header" data-target="acc"><div class="collapse-title">📥 我接取 <span style="font-size:0.8rem;">(${myAcc.length})</span></div><span class="collapse-icon">▶</span></div>
+                <div class="collapse-header" data-target="acc"><div class="collapse-title">📥 我接取 <span style="font-size:0.7rem;">(${myAcc.length})</span></div><span class="collapse-icon">▶</span></div>
                 <div class="collapse-content" id="collapse-acc">${accHtml}</div>
             </div>
             <div class="profile-collapse">
-                <div class="collapse-header" data-target="completed"><div class="collapse-title">✅ 已完成 <span style="font-size:0.8rem;">(${myCompleted.length})</span></div><span class="collapse-icon">▶</span></div>
+                <div class="collapse-header" data-target="completed"><div class="collapse-title">✅ 已完成 <span style="font-size:0.7rem;">(${myCompleted.length})</span></div><span class="collapse-icon">▶</span></div>
                 <div class="collapse-content" id="collapse-completed">${completedHtml}</div>
             </div>
             <button class="logout-btn" onclick="logout()">退出登录</button>
@@ -1170,12 +1180,12 @@
         modal.innerHTML = `
             <div class="modal-content">
                 <h3>💰 钱包明细</h3>
-                <div style="background:#eef2ff; padding:12px; border-radius:20px; margin-bottom:16px;">
+                <div style="background:#eef2ff; padding:12px; border-radius:16px; margin-bottom:12px;">
                     <div>当前余额</div>
-                    <div style="font-size:1.8rem;">¥${(currentUser.balance || 0).toFixed(2)}</div>
+                    <div style="font-size:1.6rem;">¥${(currentUser.balance || 0).toFixed(2)}</div>
                 </div>
                 <div><strong>提现</strong></div>
-                <button class="btn-primary" id="withdrawBtn" style="margin:8px 0;">💸 提现</button>
+                <button class="btn-primary" id="withdrawBtn" style="margin:6px 0;">💸 提现</button>
                 <div><strong>账单明细</strong></div>
                 <button class="btn-secondary" id="showBillDetailBtn" style="margin-bottom:8px;">📋 查看明细</button>
                 <div id="billDetailContainer" style="max-height:200px; overflow:auto; display:none;"></div>
@@ -1197,12 +1207,12 @@
             `;
             document.body.appendChild(chooseModal);
             chooseModal.querySelector('#withdrawWechatBtn').onclick = () => {
-                alert('提现到微信（演示模式，实际需对接支付接口）');
+                alert('提现到微信（演示模式）');
                 chooseModal.remove();
                 modal.remove();
             };
             chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => {
-                alert('提现到支付宝（演示模式，实际需对接支付接口）');
+                alert('提现到支付宝（演示模式）');
                 chooseModal.remove();
                 modal.remove();
             };
@@ -1271,7 +1281,7 @@
                 <h3>编辑资料</h3>
                 <div class="form-group">
                     <div class="form-label">头像</div>
-                    <div id="avatarPreview" style="width:80px;height:80px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">
+                    <div id="avatarPreview" style="width:70px;height:70px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">
                         ${currentUser.avatar ? `<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${(currentUser.nickname || currentUser.username).charAt(0)}</span>`}
                     </div>
                     <input type="file" id="avatarInput" accept="image/*" style="display:none;">
