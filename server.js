@@ -11,14 +11,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty');
 
-// ==================== 数据模型（新增 frozenBalance、proofMedia 等） ====================
+// ==================== 数据模型 ====================
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
   nickname: String,
   phone: String,
-  balance: { type: Number, default: 100 },        // 可用余额
-  frozenBalance: { type: Number, default: 0 },    // 冻结余额（发布任务占用）
+  balance: { type: Number, default: 100 },
+  frozenBalance: { type: Number, default: 0 },
   credit: { type: Number, default: 60 },
   idCardVerified: { type: Boolean, default: false },
   signature: String,
@@ -31,7 +31,7 @@ const TaskSchema = new mongoose.Schema({
   title: String,
   description: String,
   reward: Number,
-  status: { type: String, default: 'available' }, // available, ongoing, completed, cancelled
+  status: { type: String, default: 'available' },
   publisherId: String,
   publisherName: String,
   publisherPhone: String,
@@ -40,8 +40,8 @@ const TaskSchema = new mongoose.Schema({
   takerName: { type: String, default: null },
   takenAt: { type: Date, default: null },
   travelStatus: { type: String, default: 'idle' },
-  takerCompleted: { type: Boolean, default: false },   // 接取者是否已提交凭证
-  proofMedia: { type: Array, default: [] },             // 接取者上传的凭证
+  takerCompleted: { type: Boolean, default: false },
+  proofMedia: { type: Array, default: [] },
   mediaList: Array,
   category: String,
   createdAt: { type: Date, default: Date.now },
@@ -78,22 +78,18 @@ const CreditLogSchema = new mongoose.Schema({
 });
 const CreditLog = mongoose.model('CreditLog', CreditLogSchema);
 
-// ==================== 辅助函数（原子更新余额） ====================
+// ==================== 辅助函数 ====================
 async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
   const user = await User.findById(userId);
   if (!user) throw new Error('用户不存在');
-  if (user.balance + deltaBalance < 0 || user.frozenBalance + deltaFrozen < 0) {
-    throw new Error('余额不足');
-  }
+  if (user.balance + deltaBalance < 0 || user.frozenBalance + deltaFrozen < 0) throw new Error('余额不足');
   user.balance += deltaBalance;
   user.frozenBalance += deltaFrozen;
   await user.save();
   return user;
 }
 
-// ==================== API 路由（完全兼容原前端，增强逻辑） ====================
-
-// 登录（明文密码保持兼容）
+// ==================== API 路由 ====================
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   const user = await User.findOne({ username, password });
@@ -126,30 +122,34 @@ app.post('/api/register', async (req, res) => {
   res.json({ success: true });
 });
 
+// ========== 修复点：列表接口排除媒体字段 ==========
 app.get('/api/tasks', async (req, res) => {
-  const tasks = await Task.find({ status: 'available' }).sort({ createdAt: -1 });
+  const tasks = await Task.find({ status: 'available' })
+    .select('-mediaList -proofMedia')
+    .sort({ createdAt: -1 });
   res.json(tasks);
 });
 
 app.get('/api/tasks/all', async (req, res) => {
-  const tasks = await Task.find().sort({ createdAt: -1 });
+  const tasks = await Task.find()
+    .select('-mediaList -proofMedia')
+    .sort({ createdAt: -1 });
   res.json(tasks);
 });
 
+// 详情接口保留完整媒体字段
 app.get('/api/tasks/:id', async (req, res) => {
   const task = await Task.findById(req.params.id);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   res.json(task);
 });
 
-// 发布任务（冻结赏金）
 app.post('/api/tasks', async (req, res) => {
   const { title, description, reward, publisherId, publisherName, publisherPhone, locationAddress, mediaList, category } = req.body;
   const user = await User.findById(publisherId);
   if (!user) return res.status(404).json({ error: '用户不存在' });
   if (!user.idCardVerified) return res.status(403).json({ error: '请先实名认证' });
   if (reward > user.balance) return res.status(400).json({ error: '余额不足' });
-  // 冻结赏金
   await updateUserBalance(publisherId, -reward, reward);
   const task = new Task({
     title, description, reward, publisherId, publisherName, publisherPhone,
@@ -160,7 +160,6 @@ app.post('/api/tasks', async (req, res) => {
   res.json(task);
 });
 
-// 发布者取消任务（解冻资金）
 app.put('/api/tasks/:id/cancel', async (req, res) => {
   const { userId } = req.body;
   const task = await Task.findById(req.params.id);
@@ -174,7 +173,6 @@ app.put('/api/tasks/:id/cancel', async (req, res) => {
   res.json({ success: true });
 });
 
-// 接取任务（无需操作资金）
 app.put('/api/tasks/:id/accept', async (req, res) => {
   const { takerId, takerName } = req.body;
   const task = await Task.findById(req.params.id);
@@ -188,7 +186,6 @@ app.put('/api/tasks/:id/accept', async (req, res) => {
   res.json({ success: true });
 });
 
-// 接取者取消接取（只扣信用分，不解冻资金）
 app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
   const { userId } = req.body;
   const task = await Task.findById(req.params.id);
@@ -211,7 +208,6 @@ app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
   res.json({ success: true });
 });
 
-// 更新任务进度（出发、到达等）
 app.put('/api/tasks/:id/status', async (req, res) => {
   const { travelStatus, estimatedMinutes, travelStartTime } = req.body;
   const update = { updatedAt: new Date() };
@@ -222,7 +218,6 @@ app.put('/api/tasks/:id/status', async (req, res) => {
   res.json({ success: true });
 });
 
-// 接取者提交凭证（新接口）
 app.post('/api/tasks/:id/submit-proof', async (req, res) => {
   const { userId, proofMedia } = req.body;
   const task = await Task.findById(req.params.id);
@@ -235,7 +230,6 @@ app.post('/api/tasks/:id/submit-proof', async (req, res) => {
   res.json({ success: true });
 });
 
-// 发布者确认完成并支付（解冻资金转给接取者）
 app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
   const { userId } = req.body;
   const task = await Task.findById(req.params.id);
@@ -244,7 +238,6 @@ app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
   if (task.status !== 'ongoing' || !task.takerCompleted) {
     return res.status(400).json({ error: '接取者尚未提交凭证' });
   }
-  // 解冻发布者的冻结资金，并转给接取者
   await updateUserBalance(task.publisherId, 0, -task.reward);
   await updateUserBalance(task.takerId, task.reward, 0);
   task.status = 'completed';
@@ -255,7 +248,6 @@ app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
   res.json({ success: true });
 });
 
-// 修改赏金（议价，仅发布者）
 app.put('/api/tasks/:id/reward', async (req, res) => {
   const { userId, reward: newReward } = req.body;
   const task = await Task.findById(req.params.id);
@@ -264,10 +256,8 @@ app.put('/api/tasks/:id/reward', async (req, res) => {
   if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取，无法修改' });
   const diff = newReward - task.reward;
   if (diff > 0) {
-    // 涨价：需要发布者补差价（增加冻结）
     await updateUserBalance(userId, -diff, diff);
   } else if (diff < 0) {
-    // 降价：退还差价（减少冻结）
     await updateUserBalance(userId, -diff, diff);
   }
   task.reward = newReward;
@@ -275,7 +265,6 @@ app.put('/api/tasks/:id/reward', async (req, res) => {
   res.json({ success: true, reward: newReward });
 });
 
-// 获取用户信息
 app.get('/api/user/:id', async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) return res.status(404).json({ error: '用户不存在' });
@@ -297,7 +286,7 @@ app.get('/api/user/:userId/conversations', async (req, res) => {
   const tasks = await Task.find({
     $or: [{ publisherId: userId }, { takerId: userId }],
     status: { $ne: 'cancelled' }
-  }).sort({ updatedAt: -1 });
+  }).select('-mediaList -proofMedia').sort({ updatedAt: -1 });
   const conversations = [];
   for (const task of tasks) {
     const lastMsg = await Message.findOne({ taskId: task._id.toString() }).sort({ createdAt: -1 });
