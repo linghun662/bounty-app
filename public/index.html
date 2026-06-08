@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>赏金集市 · 双向议价版</title>
     <style>
-        /* 样式代码保持不变，因篇幅省略，请使用之前提供的完整样式 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background: #f5f7fb; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1e293b; padding-bottom: 70px; }
         .app-container { max-width: 600px; margin: 0 auto; background: #f5f7fb; min-height: 100vh; }
@@ -48,7 +47,7 @@
         .image-preview-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
         .preview-img-wrapper { position: relative; width: 85px; height: 85px; border-radius: 20px; overflow: hidden; background: #f1f5f9; border: 2px solid #e2e8f0; }
         .preview-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-        .remove-img-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content; center; cursor: pointer; }
+        .remove-img-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .upload-btn { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 20px; padding: 12px; text-align: center; cursor: pointer; margin-top: 8px; }
         .profile-header { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 28px; margin: 16px; padding: 20px; color: white; display: flex; align-items: center; gap: 16px; cursor: pointer; }
         .profile-avatar { width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 600; overflow: hidden; }
@@ -69,7 +68,7 @@
         .distance-badge { background: #e6f7e6; color: #2b6e2f; padding: 2px 10px; border-radius: 20px; font-weight: 500; font-size: 0.7rem; }
         .slide-confirm, .slide-action { margin: 12px 0; user-select: none; }
         .slide-track { position: relative; width: 100%; height: 56px; background: #eef2ff; border-radius: 60px; overflow: hidden; border: 1px solid #cbd5e1; cursor: grab; touch-action: none; }
-        .slide-thumb { position: absolute; left: 0; top: 0; width: 80px; height: 56px; background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 60px; display: flex; align-items: center; justify-content; center; color: white; font-size: 1.8rem; cursor: grab; touch-action: none; transition: none; }
+        .slide-thumb { position: absolute; left: 0; top: 0; width: 80px; height: 56px; background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 60px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; cursor: grab; touch-action: none; transition: none; }
         .slide-text { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1e4a6b; pointer-events: none; font-size: 0.95rem; gap: 12px; z-index: 1; }
         .slide-confirm.completed .slide-track, .slide-action.completed .slide-track { background: #d1fae5; border-color: #059669; }
         .countdown-timer { background: #fef3c7; border-radius: 40px; padding: 10px 16px; text-align: center; margin: 12px 0; font-weight: 700; color: #b45309; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem; }
@@ -79,7 +78,7 @@
         .modal-content { background: white; border-radius: 32px; width: 85%; max-width: 340px; padding: 24px; max-height: 80vh; overflow-y: auto; }
         .chat-container { display: flex; flex-direction: column; height: calc(100vh - 120px); background: #f5f7fb; }
         .chat-header-bar { background: white; padding: 12px 16px; border-bottom: 1px solid #eef2f8; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
-        .chat-back-btn { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content; center; font-size: 1.2rem; cursor: pointer; }
+        .chat-back-btn { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
         .chat-header-name { font-weight: 700; font-size: 1.1rem; color: #1e293b; flex: 1; }
         .chat-messages-area { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
         .chat-bubble { max-width: 80%; display: flex; flex-direction: column; }
@@ -315,27 +314,49 @@
         }
     }
     
+    // 高精度定位（使用高德地图API，需注册Key，但这里用BigDataCloud备用）
+    async function getPreciseLocation() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject('浏览器不支持定位');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    // 使用高德逆地理编码（需要Key，演示用备用API）
+                    try {
+                        // 备用：BigDataCloud 可以返回街道信息
+                        const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=zh`);
+                        const geoData = await geoRes.json();
+                        if (geoData && (geoData.city || geoData.locality)) {
+                            let address = geoData.city || geoData.locality || '';
+                            if (geoData.principalSubdivision) address = geoData.principalSubdivision + (address ? ' ' + address : '');
+                            if (geoData.street) address += (address ? ' ' : '') + geoData.street;
+                            if (geoData.houseNumber) address += (address ? ' ' : '') + geoData.houseNumber;
+                            if (address) {
+                                resolve(address);
+                                return;
+                            }
+                        }
+                        throw new Error('无法获取详细地址');
+                    } catch (e) {
+                        // 回退到坐标
+                        resolve(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+                    }
+                },
+                (err) => reject(err.message)
+            );
+        });
+    }
+    
     function getCurrentLocation() {
         if (!navigator.geolocation) { alert('浏览器不支持定位'); return; }
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                const lat = pos.coords.latitude, lng = pos.coords.longitude;
-                try {
-                    const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=zh`);
-                    const geoData = await geoRes.json();
-                    if (geoData && geoData.locality) {
-                        let address = geoData.city || geoData.locality || '';
-                        if (geoData.principalSubdivision) address = geoData.principalSubdivision + (address ? ' ' + address : '');
-                        if (address) { document.getElementById('pubAddress').value = address; return; }
-                    }
-                    throw new Error();
-                } catch(e) {
-                    document.getElementById('pubAddress').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                    alert('无法获取具体地址，已填入坐标');
-                }
-            },
-            () => alert('定位失败')
-        );
+        getPreciseLocation().then(address => {
+            document.getElementById('pubAddress').value = address;
+        }).catch(err => {
+            alert('定位失败：' + err);
+        });
     }
     
     function handleMediaFiles(files) {
@@ -573,6 +594,7 @@
         document.body.appendChild(modal);
     }
     
+    // 修复后的 viewTask，添加拨打发布者手机按钮，修复导航未定义变量
     window.viewTask = async function(taskId) {
         if (countdownTimer) clearInterval(countdownTimer);
         const task = await callApi(`/tasks/${taskId}`);
@@ -600,18 +622,21 @@
         if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
         if (task.status === 'ongoing') {
             if (isMine && task.takerId) detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
-            else if (isTaker) detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBtn">💬 联系发布者 / 议价</button></div>`;
+            else if (isTaker) {
+                detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBtn">💬 联系发布者 / 议价</button></div>`;
+                if (task.publisherPhone) {
+                    detailHtml += `<div style="margin:8px 16px;"><button class="btn-phone" id="callPublisherPhoneBtn">📞 拨打发布者电话 (${task.publisherPhone})</button></div>`;
+                }
+            }
         }
         if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
         if (task.status === 'ongoing' && isTaker) {
-            if (task.publisherPhone) detailHtml += `<div style="margin:8px 16px;"><button class="btn-phone" id="callPublisherBtn">📞 联系发布者</button></div>`;
             if (task.locationAddress) {
-                // 优化导航：添加用户当前位置作为起点
+                const coords = getTaskCoords(task.locationAddress);
                 let navUrl = '';
                 if (userLocation && userLocation.lat && userLocation.lng) {
                     navUrl = `https://uri.amap.com/navigation?from=${userLocation.lng},${userLocation.lat}&to=${coords.lng},${coords.lat}&mode=car&callnative=1`;
                 } else {
-                    const coords = getTaskCoords(task.locationAddress);
                     navUrl = `https://uri.amap.com/navigation?to=${coords.lng},${coords.lat},${encodeURIComponent(task.locationAddress)}&mode=car&callnative=1`;
                 }
                 detailHtml += `<div style="margin:8px 16px;"><button class="btn-nav" id="navigateBtn" data-url="${navUrl}">🧭 高德导航</button></div>`;
@@ -636,13 +661,19 @@
         document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
         document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(taskIdStr, task.takerId, task.takerName, task.reward, task.title));
         document.getElementById('contactPublisherBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
+        const callPublisherPhoneBtn = document.getElementById('callPublisherPhoneBtn');
+        if (callPublisherPhoneBtn) {
+            callPublisherPhoneBtn.onclick = () => {
+                window.location.href = `tel:${task.publisherPhone}`;
+            };
+        }
         const navBtn = document.getElementById('navigateBtn');
         if (navBtn) {
-            navBtn.addEventListener('click', () => {
+            navBtn.onclick = () => {
                 const url = navBtn.getAttribute('data-url');
                 if (url) window.open(url, '_blank');
                 else alert('无法获取导航地址');
-            });
+            };
         }
         const slideAccept = document.getElementById('slideAcceptWrapper');
         if (slideAccept) initSlide(slideAccept, async () => {
