@@ -9,7 +9,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty');
+// 连接 MongoDB（增加超时设置）
+mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty', {
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+});
 
 // ==================== 数据模型 ====================
 const UserSchema = new mongoose.Schema({
@@ -122,28 +126,31 @@ app.post('/api/register', async (req, res) => {
   res.json({ success: true });
 });
 
-// ========== 修复点：列表接口排除媒体字段 ==========
+// 列表接口排除媒体字段
 app.get('/api/tasks', async (req, res) => {
   const tasks = await Task.find({ status: 'available' })
     .select('-mediaList -proofMedia')
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean(); // 使用 lean() 提升性能
   res.json(tasks);
 });
 
 app.get('/api/tasks/all', async (req, res) => {
   const tasks = await Task.find()
     .select('-mediaList -proofMedia')
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean();
   res.json(tasks);
 });
 
-// 详情接口保留完整媒体字段
+// 详情接口保留媒体字段（但注意超时风险）
 app.get('/api/tasks/:id', async (req, res) => {
-  const task = await Task.findById(req.params.id);
+  const task = await Task.findById(req.params.id).lean();
   if (!task) return res.status(404).json({ error: '任务不存在' });
   res.json(task);
 });
 
+// 发布任务
 app.post('/api/tasks', async (req, res) => {
   const { title, description, reward, publisherId, publisherName, publisherPhone, locationAddress, mediaList, category } = req.body;
   const user = await User.findById(publisherId);
@@ -160,19 +167,29 @@ app.post('/api/tasks', async (req, res) => {
   res.json(task);
 });
 
+// 取消任务（优化：只更新必要字段，不加载完整文档）
 app.put('/api/tasks/:id/cancel', async (req, res) => {
   const { userId } = req.body;
-  const task = await Task.findById(req.params.id);
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.publisherId !== userId) return res.status(403).json({ error: '无权取消' });
-  if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成' });
-  task.status = 'cancelled';
-  await task.save();
-  await updateUserBalance(userId, task.reward, -task.reward);
-  await new Bill({ userId, type: 'income', amount: task.reward, desc: `取消任务退款：${task.title}` }).save();
-  res.json({ success: true });
+  try {
+    // 使用 updateOne 原子操作，避免加载整个文档
+    const task = await Task.findById(req.params.id).select('status publisherId reward').lean();
+    if (!task) return res.status(404).json({ error: '任务不存在' });
+    if (task.publisherId !== userId) return res.status(403).json({ error: '无权取消' });
+    if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成' });
+    
+    // 原子更新状态
+    await Task.updateOne({ _id: req.params.id }, { $set: { status: 'cancelled', updatedAt: new Date() } });
+    // 解冻资金
+    await updateUserBalance(userId, task.reward, -task.reward);
+    await new Bill({ userId, type: 'income', amount: task.reward, desc: `取消任务退款：${task.title}` }).save();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('取消任务错误:', err);
+    res.status(500).json({ error: '服务器内部错误' });
+  }
 });
 
+// 接取任务
 app.put('/api/tasks/:id/accept', async (req, res) => {
   const { takerId, takerName } = req.body;
   const task = await Task.findById(req.params.id);
@@ -186,6 +203,7 @@ app.put('/api/tasks/:id/accept', async (req, res) => {
   res.json({ success: true });
 });
 
+// 接取者取消接取
 app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
   const { userId } = req.body;
   const task = await Task.findById(req.params.id);
@@ -208,16 +226,18 @@ app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
   res.json({ success: true });
 });
 
+// 更新任务进度
 app.put('/api/tasks/:id/status', async (req, res) => {
   const { travelStatus, estimatedMinutes, travelStartTime } = req.body;
   const update = { updatedAt: new Date() };
   if (travelStatus !== undefined) update.travelStatus = travelStatus;
   if (estimatedMinutes !== undefined) update.estimatedMinutes = estimatedMinutes;
   if (travelStartTime !== undefined) update.travelStartTime = travelStartTime;
-  await Task.findByIdAndUpdate(req.params.id, update);
+  await Task.updateOne({ _id: req.params.id }, { $set: update });
   res.json({ success: true });
 });
 
+// 提交凭证
 app.post('/api/tasks/:id/submit-proof', async (req, res) => {
   const { userId, proofMedia } = req.body;
   const task = await Task.findById(req.params.id);
@@ -230,6 +250,7 @@ app.post('/api/tasks/:id/submit-proof', async (req, res) => {
   res.json({ success: true });
 });
 
+// 发布者确认完成
 app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
   const { userId } = req.body;
   const task = await Task.findById(req.params.id);
@@ -248,6 +269,7 @@ app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
   res.json({ success: true });
 });
 
+// 修改赏金（议价）
 app.put('/api/tasks/:id/reward', async (req, res) => {
   const { userId, reward: newReward } = req.body;
   const task = await Task.findById(req.params.id);
@@ -265,19 +287,20 @@ app.put('/api/tasks/:id/reward', async (req, res) => {
   res.json({ success: true, reward: newReward });
 });
 
+// 用户信息
 app.get('/api/user/:id', async (req, res) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id).lean();
   if (!user) return res.status(404).json({ error: '用户不存在' });
   res.json(user);
 });
 
 app.put('/api/user/:id', async (req, res) => {
-  await User.findByIdAndUpdate(req.params.id, req.body);
+  await User.updateOne({ _id: req.params.id }, { $set: req.body });
   res.json({ success: true });
 });
 
 app.get('/api/bills/:userId', async (req, res) => {
-  const bills = await Bill.find({ userId: req.params.userId }).sort({ createdAt: -1 }).limit(50);
+  const bills = await Bill.find({ userId: req.params.userId }).sort({ createdAt: -1 }).limit(50).lean();
   res.json(bills);
 });
 
@@ -286,10 +309,10 @@ app.get('/api/user/:userId/conversations', async (req, res) => {
   const tasks = await Task.find({
     $or: [{ publisherId: userId }, { takerId: userId }],
     status: { $ne: 'cancelled' }
-  }).select('-mediaList -proofMedia').sort({ updatedAt: -1 });
+  }).select('-mediaList -proofMedia').sort({ updatedAt: -1 }).lean();
   const conversations = [];
   for (const task of tasks) {
-    const lastMsg = await Message.findOne({ taskId: task._id.toString() }).sort({ createdAt: -1 });
+    const lastMsg = await Message.findOne({ taskId: task._id.toString() }).sort({ createdAt: -1 }).lean();
     const unreadCount = await Message.countDocuments({
       taskId: task._id.toString(),
       senderId: { $ne: userId },
@@ -313,7 +336,7 @@ app.get('/api/user/:userId/conversations', async (req, res) => {
 });
 
 app.get('/api/messages/:taskId', async (req, res) => {
-  const messages = await Message.find({ taskId: req.params.taskId }).sort({ createdAt: 1 });
+  const messages = await Message.find({ taskId: req.params.taskId }).sort({ createdAt: 1 }).lean();
   res.json(messages);
 });
 
@@ -326,7 +349,7 @@ app.post('/api/messages', async (req, res) => {
 app.put('/api/messages/read/:taskId/:userId', async (req, res) => {
   await Message.updateMany(
     { taskId: req.params.taskId, senderId: { $ne: req.params.userId }, read: false },
-    { read: true }
+    { $set: { read: true } }
   );
   res.json({ success: true });
 });
@@ -334,7 +357,7 @@ app.put('/api/messages/read/:taskId/:userId', async (req, res) => {
 app.post('/api/verify-id', async (req, res) => {
   const { userId, realName, idCard } = req.body;
   if (realName && idCard.length >= 15) {
-    await User.findByIdAndUpdate(userId, { idCardVerified: true });
+    await User.updateOne({ _id: userId }, { $set: { idCardVerified: true } });
     res.json({ success: true });
   } else {
     res.status(400).json({ error: '认证信息无效' });
@@ -342,7 +365,7 @@ app.post('/api/verify-id', async (req, res) => {
 });
 
 app.get('/api/credit-logs/:userId', async (req, res) => {
-  const logs = await CreditLog.find({ userId: req.params.userId }).sort({ createdAt: -1 });
+  const logs = await CreditLog.find({ userId: req.params.userId }).sort({ createdAt: -1 }).lean();
   res.json(logs);
 });
 
@@ -356,6 +379,7 @@ app.post('/api/init', async (req, res) => {
   res.json({ success: true });
 });
 
+// 前端静态文件
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
