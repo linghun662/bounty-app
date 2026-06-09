@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>赏金集市 · 原生版</title>
     <style>
+        /* 此处省略原有样式，与之前相同，保持不变 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background: #f5f7fb; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1e293b; padding-bottom: 70px; }
         .app-container { width: 100%; background: #f5f7fb; min-height: 100vh; }
@@ -690,7 +691,13 @@
             });
             if (result.success) {
                 alert('任务已取消，赏金已退还');
-                location.reload();
+                // 刷新任务列表和个人主页，使取消的任务不再显示
+                await refreshTaskList();
+                await loadProfile();
+                // 如果当前在详情页且就是取消的任务，返回首页
+                if (document.getElementById('detailPage').classList.contains('active')) {
+                    switchPage('home');
+                }
             } else {
                 alert(result.error || '取消失败');
             }
@@ -784,7 +791,22 @@
             else if (isTaker) detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">您已接取</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
             else detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
         }
-        detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description || '')}</p></div></div>`;
+        detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description || '')}</p></div>`;
+        
+        // 显示媒体附件（修复问题1）
+        if (task.mediaList && task.mediaList.length > 0) {
+            let mediaHtml = `<div class="desc-section"><div class="info-label">📎 附件（${task.mediaList.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;
+            for (let media of task.mediaList) {
+                if (media.type === 'image') {
+                    mediaHtml += `<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="window.open('${media.url}')"></div>`;
+                } else if (media.type === 'video') {
+                    mediaHtml += `<div class="preview-img-wrapper"><video src="${media.url}" controls style="width:100%;height:100%;object-fit:cover;"></video></div>`;
+                }
+            }
+            mediaHtml += `</div></div>`;
+            detailHtml += mediaHtml;
+        }
+        detailHtml += `</div>`;
         
         if (task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
         
@@ -1134,7 +1156,8 @@
             localStorage.setItem('user', JSON.stringify(currentUser));
             document.getElementById('headerBalance').innerHTML = `余额: ¥${(currentUser.balance || 0).toFixed(2)}`;
             const allTasks = await callApi('/tasks/all');
-            const myPub = (allTasks || []).filter(t => t.publisherId === currentUser.id);
+            // 过滤掉已取消的任务（修复问题2）
+            const myPub = (allTasks || []).filter(t => t.publisherId === currentUser.id && t.status !== 'cancelled');
             const myAcc = (allTasks || []).filter(t => t.takerId === currentUser.id && t.status !== 'completed');
             const myCompleted = (allTasks || []).filter(t => t.takerId === currentUser.id && t.status === 'completed');
             
