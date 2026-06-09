@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>赏金集市 · 双向议价版</title>
+    <title>赏金集市 · 原生版</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background: #f5f7fb; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1e293b; padding-bottom: 70px; }
@@ -243,11 +243,13 @@
 </div>
 
 <script>
-    // ==================== 配置 ====================
-    const API_BASE = '/api';
+    // ==================== 配置 API 地址 ====================
+    // 修改为您的 Railway 后端地址
+    const API_BASE = 'https://bounty-app-production.up.railway.app/api';
+    
     let currentUser = null;
     let pendingMedia = [];
-    let userLocation = null; // {lat, lng}
+    let userLocation = null;
     let allTasks = [];
     let currentCategory = 'all';
     let currentSort = 'time';
@@ -265,7 +267,6 @@
         lastMessageCount: 0
     };
     
-    // 简单地点坐标映射（实际应调用地图API，此处简化）
     const locationCoords = {
         '上海交大闵行': { lat: 31.2304, lng: 121.4737 },
         '徐家汇': { lat: 31.1987, lng: 121.4342 },
@@ -298,7 +299,6 @@
         return Math.min(60, Math.max(5, Math.round(dist * 2)));
     }
     
-    // API 调用
     async function callApi(url, options = {}) {
         try {
             const res = await fetch(API_BASE + url, {
@@ -316,7 +316,6 @@
         }
     }
     
-    // 图片压缩（优化：降低质量至0.5，尺寸缩小至600px）
     function compressImage(file, quality = 0.5, maxWidth = 600, maxHeight = 600) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -352,7 +351,6 @@
         });
     }
     
-    // 处理媒体文件（最多3个）
     async function handleMediaFiles(files) {
         let remain = 3 - pendingMedia.length;
         if (files.length > remain) { alert(`最多上传3个，当前已有${pendingMedia.length}个`); files = Array.from(files).slice(0, remain); }
@@ -393,7 +391,6 @@
         });
     }
     
-    // 高精度定位
     async function getPreciseLocation() {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
@@ -443,7 +440,6 @@
         });
     }
     
-    // 登录
     async function doLogin() {
         const username = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
@@ -472,7 +468,6 @@
         }
     }
     
-    // 刷新任务列表
     async function refreshTaskList() {
         const container = document.getElementById('homeContent');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -526,7 +521,6 @@
         `).join('');
     }
     
-    // 下拉刷新
     function initPullToRefresh() {
         const homePage = document.getElementById('homePage');
         let startY = 0;
@@ -573,7 +567,6 @@
         });
     }
     
-    // 滑动组件
     function initSlide(container, onComplete) {
         const track = container.querySelector('.slide-track');
         const thumb = container.querySelector('.slide-thumb');
@@ -672,7 +665,6 @@
         return html;
     }
     
-    // 接取者提交凭证
     async function submitProof(taskId, proofFiles) {
         const proofMedia = [];
         for (let file of proofFiles) {
@@ -690,7 +682,6 @@
         return result;
     }
     
-    // 取消任务（修复：取消成功后强制刷新页面）
     async function cancelTask(taskId) {
         if (!confirm('确定取消该任务吗？取消后赏金将退还到您的账户。')) return;
         try {
@@ -700,7 +691,6 @@
             });
             if (result.success) {
                 alert('任务已取消，赏金已退还');
-                // 强制重新加载整个页面，确保所有数据最新，任务从列表中消失
                 location.reload();
             } else {
                 alert(result.error || '取消失败');
@@ -773,7 +763,6 @@
         });
     }
     
-    // 任务详情页
     window.viewTask = async function(taskId) {
         if (countdownTimer) clearInterval(countdownTimer);
         const task = await callApi(`/tasks/${taskId}`);
@@ -830,7 +819,6 @@
             detailHtml += `<div style="margin:8px 12px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
         }
         
-        // 发布者确认完成按钮
         if (task.status === 'ongoing' && task.takerCompleted && isMine) {
             detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="confirmCompleteBtn">✅ 确认完成并支付赏金</button></div>`;
         }
@@ -949,7 +937,6 @@
         switchPage('detail');
     };
     
-    // ==================== 消息相关 ====================
     async function sendMessage(taskId, text, isNego = false) {
         await callApi('/messages', {
             method: 'POST',
@@ -1139,7 +1126,6 @@
         }
     }
     
-    // ==================== 个人主页 ====================
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';

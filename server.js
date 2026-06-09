@@ -4,7 +4,21 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-app.use(cors());
+
+// ========== 修改后的 CORS 配置 ==========
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'capacitor://localhost',
+    'http://localhost',
+    'https://bounty-app-production.up.railway.app',
+    /\.railway\.app$/,
+    /^http:\/\/192\.168\.\d+\.\d+:\d+$/  // 开发时的局域网地址
+  ],
+  credentials: true
+}));
+// ======================================
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -131,7 +145,7 @@ app.get('/api/tasks', async (req, res) => {
   const tasks = await Task.find({ status: 'available' })
     .select('-mediaList -proofMedia')
     .sort({ createdAt: -1 })
-    .lean(); // 使用 lean() 提升性能
+    .lean();
   res.json(tasks);
 });
 
@@ -143,7 +157,7 @@ app.get('/api/tasks/all', async (req, res) => {
   res.json(tasks);
 });
 
-// 详情接口保留媒体字段（但注意超时风险）
+// 详情接口保留媒体字段
 app.get('/api/tasks/:id', async (req, res) => {
   const task = await Task.findById(req.params.id).lean();
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -167,19 +181,16 @@ app.post('/api/tasks', async (req, res) => {
   res.json(task);
 });
 
-// 取消任务（优化：只更新必要字段，不加载完整文档）
+// 取消任务
 app.put('/api/tasks/:id/cancel', async (req, res) => {
   const { userId } = req.body;
   try {
-    // 使用 updateOne 原子操作，避免加载整个文档
     const task = await Task.findById(req.params.id).select('status publisherId reward').lean();
     if (!task) return res.status(404).json({ error: '任务不存在' });
     if (task.publisherId !== userId) return res.status(403).json({ error: '无权取消' });
     if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成' });
     
-    // 原子更新状态
     await Task.updateOne({ _id: req.params.id }, { $set: { status: 'cancelled', updatedAt: new Date() } });
-    // 解冻资金
     await updateUserBalance(userId, task.reward, -task.reward);
     await new Bill({ userId, type: 'income', amount: task.reward, desc: `取消任务退款：${task.title}` }).save();
     res.json({ success: true });
