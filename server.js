@@ -5,7 +5,7 @@ const path = require('path');
 
 const app = express();
 
-// ========== 修改后的 CORS 配置 ==========
+// CORS 配置（支持 Capacitor 原生应用）
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -13,17 +13,16 @@ app.use(cors({
     'http://localhost',
     'https://bounty-app-production.up.railway.app',
     /\.railway\.app$/,
-    /^http:\/\/192\.168\.\d+\.\d+:\d+$/  // 开发时的局域网地址
+    /^http:\/\/192\.168\.\d+\.\d+:\d+$/
   ],
   credentials: true
 }));
-// ======================================
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 连接 MongoDB（增加超时设置）
+// 连接 MongoDB
 mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty', {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
@@ -99,8 +98,9 @@ const CreditLog = mongoose.model('CreditLog', CreditLogSchema);
 // ==================== 辅助函数 ====================
 async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
   const user = await User.findById(userId);
-  if (!user) throw new Error('用户不存在');
-  if (user.balance + deltaBalance < 0 || user.frozenBalance + deltaFrozen < 0) throw new Error('余额不足');
+  if (!user) throw new Error(`用户不存在: ${userId}`);
+  if (user.balance + deltaBalance < 0) throw new Error(`余额不足，当前余额 ${user.balance}，需扣减 ${-deltaBalance}`);
+  if (user.frozenBalance + deltaFrozen < 0) throw new Error(`冻结余额不足，当前冻结 ${user.frozenBalance}，需解冻 ${-deltaFrozen}`);
   user.balance += deltaBalance;
   user.frozenBalance += deltaFrozen;
   await user.save();
@@ -140,7 +140,6 @@ app.post('/api/register', async (req, res) => {
   res.json({ success: true });
 });
 
-// 列表接口排除媒体字段
 app.get('/api/tasks', async (req, res) => {
   const tasks = await Task.find({ status: 'available' })
     .select('-mediaList -proofMedia')
@@ -157,14 +156,12 @@ app.get('/api/tasks/all', async (req, res) => {
   res.json(tasks);
 });
 
-// 详情接口保留媒体字段
 app.get('/api/tasks/:id', async (req, res) => {
   const task = await Task.findById(req.params.id).lean();
   if (!task) return res.status(404).json({ error: '任务不存在' });
   res.json(task);
 });
 
-// 发布任务
 app.post('/api/tasks', async (req, res) => {
   const { title, description, reward, publisherId, publisherName, publisherPhone, locationAddress, mediaList, category } = req.body;
   const user = await User.findById(publisherId);
@@ -177,26 +174,46 @@ app.post('/api/tasks', async (req, res) => {
     locationAddress, mediaList, category, status: 'available'
   });
   await task.save();
-  await new Bill({ userId: publisherId, type: 'expense', amount: -reward, desc: `发布任务冻结：${title}` }).save();
+  await Bill.create({ userId: publisherId, type: 'expense', amount: -reward, desc: `发布任务冻结：${title}` });
   res.json(task);
 });
 
-// 取消任务
+// 修复后的取消任务接口
 app.put('/api/tasks/:id/cancel', async (req, res) => {
   const { userId } = req.body;
+  if (!userId) {
+    return res.status(400).json({ error: '缺少用户ID' });
+  }
   try {
-    const task = await Task.findById(req.params.id).select('status publisherId reward').lean();
-    if (!task) return res.status(404).json({ error: '任务不存在' });
-    if (task.publisherId !== userId) return res.status(403).json({ error: '无权取消' });
-    if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成' });
-    
-    await Task.updateOne({ _id: req.params.id }, { $set: { status: 'cancelled', updatedAt: new Date() } });
+    const task = await Task.findById(req.params.id).select('status publisherId reward title').lean();
+    if (!task) {
+      return res.status(404).json({ error: '任务不存在' });
+    }
+    if (task.publisherId.toString() !== userId.toString()) {
+      return res.status(403).json({ error: '无权取消' });
+    }
+    if (task.status !== 'available') {
+      return res.status(400).json({ error: '任务已被接取或已完成' });
+    }
+
+    await Task.updateOne(
+      { _id: req.params.id },
+      { $set: { status: 'cancelled', updatedAt: new Date() } }
+    );
+
     await updateUserBalance(userId, task.reward, -task.reward);
-    await new Bill({ userId, type: 'income', amount: task.reward, desc: `取消任务退款：${task.title}` }).save();
+
+    await Bill.create({
+      userId,
+      type: 'income',
+      amount: task.reward,
+      desc: `取消任务退款：${task.title || '未命名任务'}`
+    });
+
     res.json({ success: true });
   } catch (err) {
-    console.error('取消任务错误:', err);
-    res.status(500).json({ error: '服务器内部错误' });
+    console.error('取消任务详细错误:', err);
+    res.status(500).json({ error: `服务器内部错误: ${err.message}` });
   }
 });
 
@@ -274,7 +291,7 @@ app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
   await updateUserBalance(task.takerId, task.reward, 0);
   task.status = 'completed';
   await task.save();
-  await new Bill({ userId: task.takerId, type: 'income', amount: task.reward, desc: `完成任务：${task.title}` }).save();
+  await Bill.create({ userId: task.takerId, type: 'income', amount: task.reward, desc: `完成任务：${task.title}` });
   await CreditLog.create({ userId: task.takerId, reason: `完成任务“${task.title}”`, change: 5 });
   await User.findByIdAndUpdate(task.takerId, { $inc: { credit: 5 } });
   res.json({ success: true });
