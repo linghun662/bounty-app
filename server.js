@@ -107,6 +107,51 @@ async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
   return user;
 }
 
+// ==================== 自动初始化默认数据（仅当数据库为空时） ====================
+async function initDefaultData() {
+  const userCount = await User.countDocuments();
+  if (userCount === 0) {
+    console.log('数据库为空，正在创建默认测试数据...');
+    const user1 = await User.create({
+      username: 'xiaoming',
+      password: '123456',
+      nickname: '小明',
+      phone: '13800000001',
+      balance: 200,
+      credit: 85,
+      idCardVerified: true
+    });
+    const user2 = await User.create({
+      username: 'hong',
+      password: '123456',
+      nickname: '小红',
+      phone: '13800000002',
+      balance: 150,
+      credit: 72,
+      idCardVerified: true
+    });
+    await Task.create({
+      title: '帮忙取快递',
+      description: '西门驿站取件送到3栋',
+      reward: 12,
+      publisherId: user1._id,
+      publisherName: '小明',
+      locationAddress: '上海交大闵行',
+      category: '取件'
+    });
+    await Task.create({
+      title: '前端页面调试',
+      description: 'CSS样式错位',
+      reward: 45,
+      publisherId: user2._id,
+      publisherName: '小红',
+      locationAddress: '徐家汇',
+      category: '调试'
+    });
+    console.log('默认测试数据创建完成');
+  }
+}
+
 // ==================== API 路由 ====================
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
@@ -178,7 +223,7 @@ app.post('/api/tasks', async (req, res) => {
   res.json(task);
 });
 
-// 修复后的取消任务接口
+// 取消任务
 app.put('/api/tasks/:id/cancel', async (req, res) => {
   const { userId } = req.body;
   if (!userId) {
@@ -397,20 +442,13 @@ app.get('/api/credit-logs/:userId', async (req, res) => {
   res.json(logs);
 });
 
-app.post('/api/init', async (req, res) => {
-  const count = await User.countDocuments();
-  if (count > 0) return res.json({ success: true, message: '数据已存在' });
-  const user1 = await User.create({ username: 'xiaoming', password: '123456', nickname: '小明', phone: '13800000001', balance: 200, credit: 85, idCardVerified: true });
-  const user2 = await User.create({ username: 'hong', password: '123456', nickname: '小红', phone: '13800000002', balance: 150, credit: 72, idCardVerified: true });
-  await Task.create({ title: '帮忙取快递', description: '西门驿站取件送到3栋', reward: 12, publisherId: user1._id, publisherName: '小明', locationAddress: '上海交大闵行', category: '取件' });
-  await Task.create({ title: '前端页面调试', description: 'CSS样式错位', reward: 45, publisherId: user2._id, publisherName: '小红', locationAddress: '徐家汇', category: '调试' });
-  res.json({ success: true });
-});
-
 // 前端静态文件
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`);
+  await initDefaultData();
+});
