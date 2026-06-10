@@ -5,7 +5,7 @@ const path = require('path');
 
 const app = express();
 
-// CORS 配置（支持 Capacitor 原生应用）
+// CORS 配置（支持 Capacitor 原生应用和 file 协议）
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -13,7 +13,8 @@ app.use(cors({
     'http://localhost',
     'https://bounty-app-production.up.railway.app',
     /\.railway\.app$/,
-    /^http:\/\/192\.168\.\d+\.\d+:\d+$/
+    /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
+    'file://'   // 关键：允许 Capacitor 的 file 协议
   ],
   credentials: true
 }));
