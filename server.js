@@ -427,6 +427,17 @@ app.put('/api/messages/read/:taskId/:userId', async (req, res) => {
   res.json({ success: true });
 });
 
+// 删除消息（仅发送者本人可删除）
+app.delete('/api/messages/:messageId', async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: '缺少用户ID' });
+  const message = await Message.findById(req.params.messageId);
+  if (!message) return res.status(404).json({ error: '消息不存在' });
+  if (message.senderId !== userId) return res.status(403).json({ error: '无权删除' });
+  await Message.deleteOne({ _id: req.params.messageId });
+  res.json({ success: true });
+});
+
 app.post('/api/verify-id', async (req, res) => {
   const { userId, realName, idCard } = req.body;
   if (realName && idCard.length >= 15) {

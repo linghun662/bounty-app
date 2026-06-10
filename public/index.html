@@ -89,7 +89,8 @@
         .chat-back-btn { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
         .chat-header-name { font-weight: 700; font-size: 1rem; color: #1e293b; flex: 1; }
         .chat-messages-area { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .chat-bubble { max-width: 80%; display: flex; flex-direction: column; }
+        .chat-bubble { max-width: 80%; display: flex; flex-direction: column; cursor: pointer; transition: background 0.2s; }
+        .chat-bubble:active { background: rgba(0,0,0,0.05); }
         .chat-bubble-mine { align-self: flex-end; }
         .chat-bubble-other { align-self: flex-start; }
         .bubble-text { padding: 10px 14px; border-radius: 20px; font-size: 0.85rem; line-height: 1.4; word-break: break-word; background: white; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; }
@@ -138,6 +139,27 @@
         .step-label { font-size: 0.6rem; color: #64748b; }
         .step.active .step-label { color: #1e4a6b; font-weight: 600; }
         .step.completed .step-label { color: #059669; }
+
+        /* 首页下拉刷新指示器居中样式 */
+        .refresh-container {
+            text-align: center;
+            width: 100%;
+            padding: 12px 0;
+            background: transparent;
+            font-size: 0.8rem;
+            color: #64748b;
+            position: relative;
+            transition: transform 0.2s;
+        }
+        /* 聊天下拉刷新指示器 */
+        .chat-refresh-indicator {
+            text-align: center;
+            padding: 10px;
+            font-size: 0.75rem;
+            color: #64748b;
+            background: transparent;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -532,6 +554,7 @@
         }
     }
 
+    // 首页下拉刷新（已居中）
     function initPullToRefresh() {
         const homePage = document.getElementById('homePage');
         let startY = 0, isRefreshing = false;
@@ -545,7 +568,7 @@
             if(diff > 30) {
                 e.preventDefault();
                 indicator.style.display = 'block';
-                indicator.style.transform = `translateY(${Math.min(diff,60)}px)`;
+                indicator.style.transform = `translateY(${Math.min(diff-30,60)}px)`;
             }
         });
         homePage.addEventListener('touchend', async () => {
@@ -558,9 +581,11 @@
                 await refreshTaskList();
                 isRefreshing = false;
                 indicator.style.display = 'none';
+                indicator.innerText = '↓ 下拉刷新';
             }
         });
     }
+
     function initFiltersAndCategories() {
         document.querySelectorAll('.category-chip').forEach(chip => {
             chip.addEventListener('click', () => {
@@ -988,6 +1013,21 @@
     async function sendMessage(taskId, text, isNego = false) {
         await callApi('/messages', {method:'POST', body:JSON.stringify({taskId, senderId: currentUser.id, senderName: currentUser.nickname, text, isNego})});
     }
+    
+    // 删除单条消息
+    async function deleteMessage(messageId) {
+        try {
+            await callApi(`/messages/${messageId}`, {method:'DELETE'});
+            showToast('消息已删除');
+            await refreshMessagesOnly(); // 重新加载消息列表
+            // 同时更新消息列表未读数（如果有影响）
+            await renderMessageList();
+            updateUnreadBadge();
+        } catch(err) {
+            showAlert('删除失败', err.message);
+        }
+    }
+
     async function refreshMessagesOnly() {
         if(!chatState.messagesArea || !chatState.taskId) return;
         const messages = await callApi(`/messages/${chatState.taskId}`);
@@ -1001,14 +1041,100 @@
             const isNego = m.text && m.text.includes('💰议价请求:');
             const priceMatch = m.text.match(/¥(\d+)/);
             const negoPrice = priceMatch ? parseInt(priceMatch[1]) : null;
-            html += `<div class="chat-bubble ${isMine?'chat-bubble-mine':'chat-bubble-other'}"><div class="bubble-text">${escapeHtml(m.text)}</div><div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div></div>`;
+            html += `
+                <div class="chat-bubble ${isMine?'chat-bubble-mine':'chat-bubble-other'}" data-message-id="${m._id}" data-is-mine="${isMine}">
+                    <div class="bubble-text">${escapeHtml(m.text)}</div>
+                    <div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div>
+                </div>`;
             if(!isMine && isNego && negoPrice && m.senderId !== 'system') {
                 html += `<div style="display:flex; gap:8px; margin:4px 0 8px 12px;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
             }
         }
         chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
         if(hasNew) chatState.messagesArea.scrollTop = chatState.messagesArea.scrollHeight;
+        
+        // 绑定长按删除事件（仅自己的消息）
+        document.querySelectorAll('.chat-bubble').forEach(bubble => {
+            const isMine = bubble.getAttribute('data-is-mine') === 'true';
+            if(!isMine) return;
+            const messageId = bubble.getAttribute('data-message-id');
+            if(!messageId) return;
+            let pressTimer = null;
+            bubble.addEventListener('touchstart', (e) => {
+                pressTimer = setTimeout(() => {
+                    showConfirm('删除消息', '确定要删除这条消息吗？', () => {
+                        deleteMessage(messageId);
+                    });
+                }, 500);
+            });
+            bubble.addEventListener('touchend', () => {
+                if(pressTimer) clearTimeout(pressTimer);
+            });
+            bubble.addEventListener('touchmove', () => {
+                if(pressTimer) clearTimeout(pressTimer);
+            });
+            // 鼠标长按（用于调试）
+            bubble.addEventListener('mousedown', (e) => {
+                pressTimer = setTimeout(() => {
+                    showConfirm('删除消息', '确定要删除这条消息吗？', () => {
+                        deleteMessage(messageId);
+                    });
+                }, 500);
+            });
+            bubble.addEventListener('mouseup', () => {
+                if(pressTimer) clearTimeout(pressTimer);
+            });
+            bubble.addEventListener('mouseleave', () => {
+                if(pressTimer) clearTimeout(pressTimer);
+            });
+        });
     }
+
+    // 聊天下拉刷新
+    function initChatPullToRefresh() {
+        const messagesArea = document.getElementById('chatMsgsArea');
+        if(!messagesArea) return;
+        let startY = 0, isRefreshing = false;
+        let indicator = null;
+        const createIndicator = () => {
+            if(document.getElementById('chatRefreshIndicator')) return;
+            const div = document.createElement('div');
+            div.id = 'chatRefreshIndicator';
+            div.className = 'chat-refresh-indicator';
+            div.innerText = '↓ 下拉刷新';
+            messagesArea.parentNode.insertBefore(div, messagesArea);
+            return div;
+        };
+        messagesArea.addEventListener('touchstart', (e) => {
+            if(messagesArea.scrollTop === 0) startY = e.touches[0].clientY;
+        });
+        messagesArea.addEventListener('touchmove', (e) => {
+            if(isRefreshing || messagesArea.scrollTop > 0) return;
+            const diff = e.touches[0].clientY - startY;
+            if(diff > 30) {
+                e.preventDefault();
+                indicator = indicator || createIndicator();
+                if(indicator) {
+                    indicator.style.display = 'block';
+                    indicator.style.transform = `translateY(${Math.min(diff-30,60)}px)`;
+                }
+            }
+        });
+        messagesArea.addEventListener('touchend', async () => {
+            if(indicator && indicator.style.display === 'block') {
+                indicator.style.transform = '';
+                indicator.style.display = 'none';
+                isRefreshing = true;
+                indicator.innerText = '刷新中...';
+                indicator.style.display = 'block';
+                await refreshMessagesOnly();
+                isRefreshing = false;
+                indicator.style.display = 'none';
+                indicator.innerText = '↓ 下拉刷新';
+            }
+        });
+    }
+
     function showChatView() {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('messagePage').classList.add('active');
@@ -1018,7 +1144,6 @@
                 <div class="chat-header-bar">
                     <button class="chat-back-btn" id="chatBackBtn">←</button>
                     <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
-                    <button id="manualRefreshBtn" style="background:#eef2ff; border:none; border-radius:20px; padding:4px 10px; font-size:0.7rem;">🔄 刷新</button>
                 </div>
                 <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')">
                     <div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div>
@@ -1046,10 +1171,6 @@
             renderMessageList();
             updateUnreadBadge();
         };
-        document.getElementById('manualRefreshBtn').onclick = async () => {
-            await refreshMessagesOnly();
-            showToast('已刷新');
-        };
         document.getElementById('sendChatBtn').onclick = async () => {
             const txt = document.getElementById('chatInput').value.trim();
             if(!txt) return;
@@ -1070,11 +1191,13 @@
             updateUnreadBadge();
         };
         refreshMessagesOnly();
+        initChatPullToRefresh(); // 初始化聊天下拉刷新
         if(chatState.pollInterval) clearInterval(chatState.pollInterval);
         chatState.pollInterval = setInterval(async () => {
             if(chatState.active && chatState.taskId) await refreshMessagesOnly();
         }, 3000);
     }
+
     async function openChat(taskId, otherId, otherName, reward, title) {
         if(chatState.pollInterval) clearInterval(chatState.pollInterval);
         await callApi(`/messages/read/${taskId}/${currentUser.id}`, {method:'PUT'});
@@ -1087,6 +1210,7 @@
         showChatView();
         updateUnreadBadge();
     }
+
     window.respondToNego = async function(taskId, price, isAccept) {
         const task = await callApi(`/tasks/${taskId}`);
         if(task.status !== 'available') { showAlert('提示','任务已被接取'); return; }
@@ -1109,12 +1233,14 @@
         }
         await refreshMessagesOnly();
     };
+
     function closeChat() {
         if(chatState.pollInterval) clearInterval(chatState.pollInterval);
         chatState.active = false;
         chatState.taskId = null;
         chatState.messagesArea = null;
     }
+
     async function renderMessageList() {
         if(!currentUser || !currentUser.id) {
             const container = document.getElementById('messageContainer');
@@ -1153,6 +1279,7 @@
         });
         updateUnreadBadge();
     }
+
     async function updateUnreadBadge() {
         if(!currentUser) return;
         const convs = await callApi(`/user/${currentUser.id}/conversations`);
@@ -1239,6 +1366,7 @@
             container.innerHTML = '<div class="empty-state">加载失败</div>';
         }
     }
+
     async function showWalletDetail() {
         const bills = await callApi(`/bills/${currentUser.id}`);
         const modal = document.createElement('div');
@@ -1298,6 +1426,7 @@
             modal.querySelector('#showBillDetailBtn').innerText = '🔽 收起明细';
         };
     }
+
     async function showCreditDetail() {
         const logs = await callApi(`/credit-logs/${currentUser.id}`);
         const modal = document.createElement('div');
@@ -1312,6 +1441,7 @@
         document.body.appendChild(modal);
         modal.querySelector('.confirm-btn').onclick = () => modal.remove();
     }
+
     window.cancelAcceptedTask = async function(taskId) {
         showConfirm('确认取消', '取消接取将扣除5信用分，确定吗？', async () => {
             const result = await callApi(`/tasks/${taskId}/cancel-accept`, {method:'PUT', body:JSON.stringify({userId: currentUser.id})});
@@ -1322,6 +1452,7 @@
             } else showAlert('操作失败', result.error || '取消失败');
         });
     };
+
     function showEditProfileModal() {
         if(!currentUser) return;
         const modal = document.createElement('div');
@@ -1376,6 +1507,7 @@
         };
         modal.querySelector('#cancelEditBtn').onclick = () => modal.remove();
     }
+
     async function showRealNameAuth() {
         if(currentUser.idCardVerified) { showAlert('提示','您已经实名认证过了'); return; }
         const modal = document.createElement('div');
@@ -1404,6 +1536,7 @@
         };
         modal.querySelector('#cancelAuthBtn').onclick = () => modal.remove();
     }
+
     function logout() {
         showConfirm('确认退出', '确定退出登录吗？', () => {
             localStorage.removeItem('user');
@@ -1414,6 +1547,7 @@
             if(chatState.pollInterval) clearInterval(chatState.pollInterval);
         });
     }
+
     function switchPage(page) {
         if(page === 'message') {
             if(chatState.active) closeChat();
