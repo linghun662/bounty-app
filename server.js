@@ -14,7 +14,7 @@ app.use(cors({
     'https://bounty-app-production.up.railway.app',
     /\.railway\.app$/,
     /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
-    'file://'   // 关键：允许 Capacitor 的 file 协议
+    'file://'
   ],
   credentials: true
 }));
@@ -224,38 +224,17 @@ app.post('/api/tasks', async (req, res) => {
   res.json(task);
 });
 
-// 取消任务
 app.put('/api/tasks/:id/cancel', async (req, res) => {
   const { userId } = req.body;
-  if (!userId) {
-    return res.status(400).json({ error: '缺少用户ID' });
-  }
+  if (!userId) return res.status(400).json({ error: '缺少用户ID' });
   try {
     const task = await Task.findById(req.params.id).select('status publisherId reward title').lean();
-    if (!task) {
-      return res.status(404).json({ error: '任务不存在' });
-    }
-    if (task.publisherId.toString() !== userId.toString()) {
-      return res.status(403).json({ error: '无权取消' });
-    }
-    if (task.status !== 'available') {
-      return res.status(400).json({ error: '任务已被接取或已完成' });
-    }
-
-    await Task.updateOne(
-      { _id: req.params.id },
-      { $set: { status: 'cancelled', updatedAt: new Date() } }
-    );
-
+    if (!task) return res.status(404).json({ error: '任务不存在' });
+    if (task.publisherId.toString() !== userId.toString()) return res.status(403).json({ error: '无权取消' });
+    if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成' });
+    await Task.updateOne({ _id: req.params.id }, { $set: { status: 'cancelled', updatedAt: new Date() } });
     await updateUserBalance(userId, task.reward, -task.reward);
-
-    await Bill.create({
-      userId,
-      type: 'income',
-      amount: task.reward,
-      desc: `取消任务退款：${task.title || '未命名任务'}`
-    });
-
+    await Bill.create({ userId, type: 'income', amount: task.reward, desc: `取消任务退款：${task.title || '未命名任务'}` });
     res.json({ success: true });
   } catch (err) {
     console.error('取消任务详细错误:', err);
@@ -263,7 +242,6 @@ app.put('/api/tasks/:id/cancel', async (req, res) => {
   }
 });
 
-// 接取任务
 app.put('/api/tasks/:id/accept', async (req, res) => {
   const { takerId, takerName } = req.body;
   const task = await Task.findById(req.params.id);
@@ -277,7 +255,6 @@ app.put('/api/tasks/:id/accept', async (req, res) => {
   res.json({ success: true });
 });
 
-// 接取者取消接取
 app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
   const { userId } = req.body;
   const task = await Task.findById(req.params.id);
@@ -300,7 +277,6 @@ app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
   res.json({ success: true });
 });
 
-// 更新任务进度
 app.put('/api/tasks/:id/status', async (req, res) => {
   const { travelStatus, estimatedMinutes, travelStartTime } = req.body;
   const update = { updatedAt: new Date() };
@@ -311,7 +287,6 @@ app.put('/api/tasks/:id/status', async (req, res) => {
   res.json({ success: true });
 });
 
-// 提交凭证
 app.post('/api/tasks/:id/submit-proof', async (req, res) => {
   const { userId, proofMedia } = req.body;
   const task = await Task.findById(req.params.id);
@@ -324,7 +299,6 @@ app.post('/api/tasks/:id/submit-proof', async (req, res) => {
   res.json({ success: true });
 });
 
-// 发布者确认完成
 app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
   const { userId } = req.body;
   const task = await Task.findById(req.params.id);
@@ -343,7 +317,6 @@ app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
   res.json({ success: true });
 });
 
-// 修改赏金（议价）
 app.put('/api/tasks/:id/reward', async (req, res) => {
   const { userId, reward: newReward } = req.body;
   const task = await Task.findById(req.params.id);
@@ -361,7 +334,6 @@ app.put('/api/tasks/:id/reward', async (req, res) => {
   res.json({ success: true, reward: newReward });
 });
 
-// 用户信息
 app.get('/api/user/:id', async (req, res) => {
   const user = await User.findById(req.params.id).lean();
   if (!user) return res.status(404).json({ error: '用户不存在' });
@@ -428,7 +400,6 @@ app.put('/api/messages/read/:taskId/:userId', async (req, res) => {
   res.json({ success: true });
 });
 
-// 删除消息（仅发送者本人可删除）
 app.delete('/api/messages/:messageId', async (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: '缺少用户ID' });
@@ -436,6 +407,15 @@ app.delete('/api/messages/:messageId', async (req, res) => {
   if (!message) return res.status(404).json({ error: '消息不存在' });
   if (message.senderId !== userId) return res.status(403).json({ error: '无权删除' });
   await Message.deleteOne({ _id: req.params.messageId });
+  res.json({ success: true });
+});
+
+// 删除整个会话（任务下的所有消息）
+app.delete('/api/conversations/:taskId/:userId', async (req, res) => {
+  const { taskId, userId } = req.params;
+  const { userId: bodyUserId } = req.body;
+  if (!userId || userId !== bodyUserId) return res.status(403).json({ error: '无权操作' });
+  await Message.deleteMany({ taskId });
   res.json({ success: true });
 });
 

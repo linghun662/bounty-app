@@ -141,6 +141,40 @@
         .step.completed .step-label { color: #059669; }
         .refresh-container { text-align: center; width: 100%; padding: 12px 0; background: transparent; font-size: 0.8rem; color: #64748b; position: relative; transition: transform 0.2s; }
         .chat-refresh-indicator { text-align: center; padding: 10px; font-size: 0.75rem; color: #64748b; background: transparent; width: 100%; }
+        .image-preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+        }
+        .image-preview-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            transition: transform 0.2s;
+        }
+        .image-preview-modal .close-preview {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 2rem;
+            background: rgba(0,0,0,0.5);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -207,7 +241,7 @@
     </div>
 </div>
 <script>
-    // ==================== 强制使用公网 API 地址（适配 Capacitor） ====================
+    // ==================== API 地址（原生环境强制公网） ====================
     const getApiBase = () => {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             return 'https://bounty-app-production.up.railway.app/api';
@@ -273,12 +307,10 @@
         return enriched;
     }
 
-    // 统一获取用户位置（适配 Capacitor，自动请求权限）
     async function getNativeUserLocation() {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             try {
                 const { Geolocation } = Capacitor.Plugins;
-                // 请求权限（如果尚未授权）
                 const permission = await Geolocation.requestPermissions();
                 if (permission.location !== 'granted') {
                     console.warn('位置权限未授予');
@@ -362,40 +394,36 @@
         } catch(e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
     }
 
-    // 发布定位（带权限处理）
-    async function getPreciseLocationNative() {
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            try {
-                const { Geolocation } = Capacitor.Plugins;
-                const permission = await Geolocation.requestPermissions();
-                if (permission.location !== 'granted') {
-                    showAlert('定位失败', '请授予位置权限后重试');
-                    return null;
-                }
-                const position = await Geolocation.getCurrentPosition();
-                const { latitude, longitude } = position.coords;
-                const address = await getDetailedAddress(latitude, longitude);
-                return address;
-            } catch(e) {
-                console.error(e);
-                return null;
-            }
-        } else {
-            return new Promise((resolve) => {
-                navigator.geolocation.getCurrentPosition(async (pos) => {
-                    const address = await getDetailedAddress(pos.coords.latitude, pos.coords.longitude);
-                    resolve(address);
-                }, () => resolve(null));
-            });
-        }
-    }
-
     window.getCurrentLocation = async function() {
         if (!navigator.geolocation && !(window.Capacitor && window.Capacitor.isNativePlatform())) {
             showAlert('提示','设备不支持定位'); return;
         }
-        showAlert('定位提示','需要获取您的位置权限，请在弹出的系统提示中点击“允许”');
-        const address = await getPreciseLocationNative();
+        const address = await (async () => {
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                try {
+                    const { Geolocation } = Capacitor.Plugins;
+                    const permission = await Geolocation.requestPermissions();
+                    if (permission.location !== 'granted') {
+                        showAlert('定位失败', '请授予位置权限后重试');
+                        return null;
+                    }
+                    const position = await Geolocation.getCurrentPosition();
+                    const { latitude, longitude } = position.coords;
+                    const addr = await getDetailedAddress(latitude, longitude);
+                    return addr;
+                } catch(e) {
+                    console.error(e);
+                    return null;
+                }
+            } else {
+                return new Promise((resolve) => {
+                    navigator.geolocation.getCurrentPosition(async (pos) => {
+                        const addr = await getDetailedAddress(pos.coords.latitude, pos.coords.longitude);
+                        resolve(addr);
+                    }, () => resolve(null));
+                });
+            }
+        })();
         if (address) {
             document.getElementById('pubAddress').value = address;
             document.getElementById('locationHint').innerHTML = '✅ 已定位到详细地址';
@@ -407,22 +435,57 @@
         }
     };
 
-    // 导航（不再要求起点位置，若获取失败则只打开终点）
     async function navigateTo(lat, lng, address) {
         try {
-            const startLoc = await getNativeUserLocation();
-            let url;
-            if (startLoc) {
-                url = `https://uri.amap.com/navigation?from=${startLoc.lng},${startLoc.lat}&to=${lng},${lat},${encodeURIComponent(address)}&mode=car&callnative=1`;
+            const isAndroid = /android/i.test(navigator.userAgent);
+            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            let url = '';
+            if (isAndroid) {
+                url = `androidintent://navigation?sourceApplication=赏金集市&lat=${lat}&lon=${lng}&dev=0&style=2#Intent;scheme=amap;package=com.autonavi.minimap;end`;
+            } else if (isIOS) {
+                url = `iosamap://navi?sourceApplication=赏金集市&lat=${lat}&lon=${lng}&dev=0&style=2`;
             } else {
-                url = `https://uri.amap.com/search?query=${encodeURIComponent(address)}&callnative=1`;
+                url = `https://uri.amap.com/navigation?to=${lng},${lat},${encodeURIComponent(address)}&mode=car&callnative=1`;
             }
-            window.open(url, '_blank');
+            window.location.href = url;
+            setTimeout(() => {
+                window.location.href = `https://uri.amap.com/search?query=${encodeURIComponent(address)}&callnative=1`;
+            }, 1000);
         } catch(err) {
-            // 最终降级：打开高德地图搜索地点
-            const url = `https://uri.amap.com/search?query=${encodeURIComponent(address)}&callnative=1`;
-            window.open(url, '_blank');
+            const fallbackUrl = `https://uri.amap.com/search?query=${encodeURIComponent(address)}&callnative=1`;
+            window.location.href = fallbackUrl;
         }
+    }
+
+    function showImagePreview(url) {
+        const modal = document.createElement('div');
+        modal.className = 'image-preview-modal';
+        modal.innerHTML = `<div class="close-preview">✕</div><img src="${url}">`;
+        document.body.appendChild(modal);
+        modal.querySelector('.close-preview').onclick = () => modal.remove();
+        modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
+        let img = modal.querySelector('img');
+        let scale = 1;
+        img.ontouchstart = (e) => {
+            if(e.touches.length === 2) {
+                e.preventDefault();
+                let startDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                let onMove = (moveEvent) => {
+                    if(moveEvent.touches.length !== 2) return;
+                    let newDist = Math.hypot(moveEvent.touches[0].clientX - moveEvent.touches[1].clientX, moveEvent.touches[0].clientY - moveEvent.touches[1].clientY);
+                    let newScale = scale * (newDist / startDist);
+                    newScale = Math.min(3, Math.max(0.5, newScale));
+                    img.style.transform = `scale(${newScale})`;
+                };
+                let onEnd = () => {
+                    scale = parseFloat(img.style.transform.replace('scale(', '').replace(')', '')) || 1;
+                    document.removeEventListener('touchmove', onMove);
+                    document.removeEventListener('touchend', onEnd);
+                };
+                document.addEventListener('touchmove', onMove);
+                document.addEventListener('touchend', onEnd);
+            }
+        };
     }
 
     function compressImage(file, quality=0.5, maxWidth=600, maxHeight=600) {
@@ -858,7 +921,7 @@
         if(task.mediaList && task.mediaList.length > 0) {
             let mediaHtml = `<div class="desc-section"><div class="info-label">📎 附件（${task.mediaList.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;
             for(let media of task.mediaList) {
-                if(media.type === 'image') mediaHtml += `<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="window.open('${media.url}')"></div>`;
+                if(media.type === 'image') mediaHtml += `<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="showImagePreview('${media.url}')"></div>`;
                 else if(media.type === 'video') mediaHtml += `<div class="preview-img-wrapper"><video src="${media.url}" controls style="width:100%;height:100%;object-fit:cover;"></video></div>`;
             }
             mediaHtml += `</div></div>`;
@@ -1032,11 +1095,17 @@
     document.addEventListener('click', (e) => {
         if(e.target.id === 'detailBackBtn') {
             if(lastPage === 'profile') switchPage('profile');
-            else switchPage('home');
+            else if(lastPage === 'message') {
+                if(chatState.taskId) {
+                    openChat(chatState.taskId, chatState.otherId, chatState.otherName, chatState.reward, chatState.title);
+                } else {
+                    switchPage('message');
+                }
+            } else switchPage('home');
         }
     });
 
-    // ==================== 聊天功能（长按删除） ====================
+    // ==================== 聊天功能 ====================
     async function sendMessage(taskId, text, isNego = false) {
         await callApi('/messages', {method:'POST', body:JSON.stringify({taskId, senderId: currentUser.id, senderName: currentUser.nickname, text, isNego})});
     }
@@ -1048,6 +1117,21 @@
             await refreshMessagesOnly();
             await renderMessageList();
             updateUnreadBadge();
+        } catch(err) {
+            showAlert('删除失败', err.message);
+        }
+    }
+
+    async function deleteConversation(taskId) {
+        try {
+            await callApi(`/conversations/${taskId}/${currentUser.id}`, {method:'DELETE', body:JSON.stringify({userId: currentUser.id})});
+            showToast('聊天记录已删除');
+            await renderMessageList();
+            updateUnreadBadge();
+            if(chatState.active && chatState.taskId === taskId) {
+                closeChat();
+                switchPage('message');
+            }
         } catch(err) {
             showAlert('删除失败', err.message);
         }
@@ -1078,7 +1162,6 @@
         chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
         if(hasNew) chatState.messagesArea.scrollTop = chatState.messagesArea.scrollHeight;
 
-        // 长按删除（阻止系统菜单）
         document.querySelectorAll('.chat-bubble').forEach(bubble => {
             const isMine = bubble.getAttribute('data-is-mine') === 'true';
             if(!isMine) return;
@@ -1274,21 +1357,46 @@
             if(c.unread > 0) {
                 unreadHtml = `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;
             }
-            html += `<div class="card task-card" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
-                <div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div>
-                <div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div>
-            </div>`;
+            html += `
+                <div class="card task-card" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
+                    <div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div>
+                    <div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div>
+                </div>
+            `;
         }
         container.innerHTML = html;
         document.querySelectorAll('#messageContainer .task-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const taskId = card.getAttribute('data-taskid');
-                const otherId = card.getAttribute('data-otherid');
-                const otherName = card.getAttribute('data-othername');
-                const reward = parseInt(card.getAttribute('data-reward'));
-                const title = card.getAttribute('data-title');
-                openChat(taskId, otherId, otherName, reward, title);
+            card.addEventListener('click', (e) => {
+                if(e.target.closest('.task-card')) {
+                    const taskId = card.getAttribute('data-taskid');
+                    const otherId = card.getAttribute('data-otherid');
+                    const otherName = card.getAttribute('data-othername');
+                    const reward = parseInt(card.getAttribute('data-reward'));
+                    const title = card.getAttribute('data-title');
+                    openChat(taskId, otherId, otherName, reward, title);
+                }
             });
+            let pressTimer = null;
+            const startPress = (e) => {
+                e.preventDefault();
+                pressTimer = setTimeout(() => {
+                    const taskId = card.getAttribute('data-taskid');
+                    const otherName = card.getAttribute('data-othername');
+                    showConfirm('删除聊天记录', `确定删除与 ${otherName} 的所有聊天记录吗？`, () => {
+                        deleteConversation(taskId);
+                    });
+                }, 500);
+            };
+            const cancelPress = () => {
+                if(pressTimer) clearTimeout(pressTimer);
+            };
+            card.addEventListener('contextmenu', (e) => e.preventDefault());
+            card.addEventListener('touchstart', startPress);
+            card.addEventListener('touchend', cancelPress);
+            card.addEventListener('touchmove', cancelPress);
+            card.addEventListener('mousedown', startPress);
+            card.addEventListener('mouseup', cancelPress);
+            card.addEventListener('mouseleave', cancelPress);
         });
         updateUnreadBadge();
     }
@@ -1308,7 +1416,7 @@
         }
     }
 
-    // ==================== 个人主页函数 ====================
+    // ==================== 个人主页 ====================
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -1576,7 +1684,7 @@
         if(page === 'profile') loadProfile();
     }
 
-    // 事件绑定与自动登录
+    // 事件绑定
     document.getElementById('doLoginBtn').onclick = doLogin;
     document.getElementById('doRegisterBtn').onclick = async () => {
         const username = document.getElementById('regUsername').value.trim();
