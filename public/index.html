@@ -241,7 +241,7 @@
     </div>
 </div>
 <script>
-    // ==================== API 地址（原生环境强制公网） ====================
+    // ==================== 强制使用公网 API 地址 ====================
     const getApiBase = () => {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             return 'https://bounty-app-production.up.railway.app/api';
@@ -398,62 +398,65 @@
         if (!navigator.geolocation && !(window.Capacitor && window.Capacitor.isNativePlatform())) {
             showAlert('提示','设备不支持定位'); return;
         }
-        const address = await (async () => {
+        try {
+            let address = null;
             if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                try {
-                    const { Geolocation } = Capacitor.Plugins;
-                    const permission = await Geolocation.requestPermissions();
-                    if (permission.location !== 'granted') {
-                        showAlert('定位失败', '请授予位置权限后重试');
-                        return null;
-                    }
-                    const position = await Geolocation.getCurrentPosition();
-                    const { latitude, longitude } = position.coords;
-                    const addr = await getDetailedAddress(latitude, longitude);
-                    return addr;
-                } catch(e) {
-                    console.error(e);
-                    return null;
+                const { Geolocation } = Capacitor.Plugins;
+                const permission = await Geolocation.requestPermissions();
+                if (permission.location !== 'granted') {
+                    showAlert('定位失败', '请授予位置权限后重试');
+                    return;
                 }
+                const position = await Geolocation.getCurrentPosition();
+                const { latitude, longitude } = position.coords;
+                address = await getDetailedAddress(latitude, longitude);
             } else {
-                return new Promise((resolve) => {
+                address = await new Promise((resolve) => {
                     navigator.geolocation.getCurrentPosition(async (pos) => {
                         const addr = await getDetailedAddress(pos.coords.latitude, pos.coords.longitude);
                         resolve(addr);
                     }, () => resolve(null));
                 });
             }
-        })();
-        if (address) {
-            document.getElementById('pubAddress').value = address;
-            document.getElementById('locationHint').innerHTML = '✅ 已定位到详细地址';
-            setTimeout(() => {
-                document.getElementById('locationHint').innerHTML = '点击定位自动填入详细地址';
-            },3000);
-        } else {
+            if (address) {
+                document.getElementById('pubAddress').value = address;
+                document.getElementById('locationHint').innerHTML = '✅ 已定位到详细地址';
+                setTimeout(() => {
+                    document.getElementById('locationHint').innerHTML = '点击定位自动填入详细地址';
+                },3000);
+            } else {
+                showAlert('定位失败','请手动输入地点');
+            }
+        } catch(e) {
+            console.error(e);
             showAlert('定位失败','请手动输入地点');
         }
     };
 
+    // 直接唤起高德App并开始导航
     async function navigateTo(lat, lng, address) {
         try {
             const isAndroid = /android/i.test(navigator.userAgent);
             const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
             let url = '';
             if (isAndroid) {
+                // 高德 Android Intent 直接开始导航
                 url = `androidintent://navigation?sourceApplication=赏金集市&lat=${lat}&lon=${lng}&dev=0&style=2#Intent;scheme=amap;package=com.autonavi.minimap;end`;
             } else if (isIOS) {
                 url = `iosamap://navi?sourceApplication=赏金集市&lat=${lat}&lon=${lng}&dev=0&style=2`;
             } else {
                 url = `https://uri.amap.com/navigation?to=${lng},${lat},${encodeURIComponent(address)}&mode=car&callnative=1`;
             }
+            // 直接跳转
             window.location.href = url;
+            // 设置超时降级：如果无法唤起，则打开网页搜索
             setTimeout(() => {
-                window.location.href = `https://uri.amap.com/search?query=${encodeURIComponent(address)}&callnative=1`;
-            }, 1000);
+                if (document.hasFocus()) {
+                    window.location.href = `https://uri.amap.com/search?query=${encodeURIComponent(address)}&callnative=1`;
+                }
+            }, 2000);
         } catch(err) {
-            const fallbackUrl = `https://uri.amap.com/search?query=${encodeURIComponent(address)}&callnative=1`;
-            window.location.href = fallbackUrl;
+            window.location.href = `https://uri.amap.com/search?query=${encodeURIComponent(address)}&callnative=1`;
         }
     }
 
@@ -885,9 +888,47 @@
                 renderMessageList();
                 updateUnreadBadge();
                 switchPage('home');
+                initBackButtonHandler(); // 初始化返回键处理
             } else errorDiv.innerText = result.error || '登录失败';
         } catch(err) {
             errorDiv.innerText = err.message;
+        }
+    }
+
+    // ==================== 返回键处理（首页双击退出） ====================
+    let backPressedOnce = false;
+    function initBackButtonHandler() {
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            Capacitor.Plugins.App.addListener('backButton', handleBackButton);
+        } else {
+            // 浏览器环境监听 popstate
+            window.addEventListener('popstate', handleBackButton);
+        }
+    }
+    function handleBackButton() {
+        const activePage = document.querySelector('.page.active').id;
+        if (activePage === 'homePage') {
+            if (backPressedOnce) {
+                // 退出应用
+                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                    Capacitor.Plugins.App.exitApp();
+                } else {
+                    window.close();
+                }
+            } else {
+                backPressedOnce = true;
+                showToast('再按一次退出应用');
+                setTimeout(() => { backPressedOnce = false; }, 2000);
+            }
+        } else {
+            // 非首页，模拟点击返回按钮
+            const backBtn = document.getElementById('detailBackBtn');
+            if (backBtn && backBtn.closest('.page') && backBtn.closest('.page').classList.contains('active')) {
+                backBtn.click();
+            } else {
+                // 其他页面，返回上一页（浏览器 history）
+                history.back();
+            }
         }
     }
 
@@ -1162,6 +1203,7 @@
         chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
         if(hasNew) chatState.messagesArea.scrollTop = chatState.messagesArea.scrollHeight;
 
+        // 长按删除单条消息（阻止系统菜单）
         document.querySelectorAll('.chat-bubble').forEach(bubble => {
             const isMine = bubble.getAttribute('data-is-mine') === 'true';
             if(!isMine) return;
@@ -1365,7 +1407,9 @@
             `;
         }
         container.innerHTML = html;
+        // 绑定单击和长按（单击打开聊天，长按删除会话）
         document.querySelectorAll('#messageContainer .task-card').forEach(card => {
+            // 单击
             card.addEventListener('click', (e) => {
                 if(e.target.closest('.task-card')) {
                     const taskId = card.getAttribute('data-taskid');
@@ -1376,6 +1420,7 @@
                     openChat(taskId, otherId, otherName, reward, title);
                 }
             });
+            // 长按删除会话
             let pressTimer = null;
             const startPress = (e) => {
                 e.preventDefault();
@@ -1416,7 +1461,7 @@
         }
     }
 
-    // ==================== 个人主页 ====================
+    // ==================== 个人主页函数 ====================
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -1726,6 +1771,7 @@
             renderMessageList();
             updateUnreadBadge();
             switchPage('home');
+            initBackButtonHandler();
         }
     })();
 </script>
