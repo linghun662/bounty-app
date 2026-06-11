@@ -440,16 +440,13 @@
             const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
             let url = '';
             if (isAndroid) {
-                // 高德 Android Intent 直接开始导航
                 url = `androidintent://navigation?sourceApplication=赏金集市&lat=${lat}&lon=${lng}&dev=0&style=2#Intent;scheme=amap;package=com.autonavi.minimap;end`;
             } else if (isIOS) {
                 url = `iosamap://navi?sourceApplication=赏金集市&lat=${lat}&lon=${lng}&dev=0&style=2`;
             } else {
                 url = `https://uri.amap.com/navigation?to=${lng},${lat},${encodeURIComponent(address)}&mode=car&callnative=1`;
             }
-            // 直接跳转
             window.location.href = url;
-            // 设置超时降级：如果无法唤起，则打开网页搜索
             setTimeout(() => {
                 if (document.hasFocus()) {
                     window.location.href = `https://uri.amap.com/search?query=${encodeURIComponent(address)}&callnative=1`;
@@ -895,13 +892,12 @@
         }
     }
 
-    // ==================== 返回键处理（首页双击退出） ====================
+    // ==================== 返回键处理（首页双击退出，非首页返回上一页） ====================
     let backPressedOnce = false;
     function initBackButtonHandler() {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             Capacitor.Plugins.App.addListener('backButton', handleBackButton);
         } else {
-            // 浏览器环境监听 popstate
             window.addEventListener('popstate', handleBackButton);
         }
     }
@@ -909,7 +905,6 @@
         const activePage = document.querySelector('.page.active').id;
         if (activePage === 'homePage') {
             if (backPressedOnce) {
-                // 退出应用
                 if (window.Capacitor && window.Capacitor.isNativePlatform()) {
                     Capacitor.Plugins.App.exitApp();
                 } else {
@@ -926,7 +921,6 @@
             if (backBtn && backBtn.closest('.page') && backBtn.closest('.page').classList.contains('active')) {
                 backBtn.click();
             } else {
-                // 其他页面，返回上一页（浏览器 history）
                 history.back();
             }
         }
@@ -1167,8 +1161,10 @@
         try {
             await callApi(`/conversations/${taskId}/${currentUser.id}`, {method:'DELETE', body:JSON.stringify({userId: currentUser.id})});
             showToast('聊天记录已删除');
+            // 重新加载消息列表（会刷新会话列表）
             await renderMessageList();
             updateUnreadBadge();
+            // 如果当前正在这个聊天中，关闭聊天
             if(chatState.active && chatState.taskId === taskId) {
                 closeChat();
                 switchPage('message');
@@ -1411,6 +1407,7 @@
         document.querySelectorAll('#messageContainer .task-card').forEach(card => {
             // 单击
             card.addEventListener('click', (e) => {
+                // 防止长按后也触发单击
                 if(e.target.closest('.task-card')) {
                     const taskId = card.getAttribute('data-taskid');
                     const otherId = card.getAttribute('data-otherid');
@@ -1423,6 +1420,7 @@
             // 长按删除会话
             let pressTimer = null;
             const startPress = (e) => {
+                // 阻止单击事件
                 e.preventDefault();
                 pressTimer = setTimeout(() => {
                     const taskId = card.getAttribute('data-taskid');
@@ -1461,7 +1459,7 @@
         }
     }
 
-    // ==================== 个人主页函数 ====================
+    // ==================== 个人主页 ====================
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
