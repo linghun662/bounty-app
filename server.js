@@ -400,6 +400,7 @@ app.put('/api/messages/read/:taskId/:userId', async (req, res) => {
   res.json({ success: true });
 });
 
+// 删除单条消息
 app.delete('/api/messages/:messageId', async (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: '缺少用户ID' });
