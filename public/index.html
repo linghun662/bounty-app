@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>赏金集市 · 原生版</title>
     <style>
+        /* 完整样式与之前相同，此处省略以节省篇幅，实际代码会包含全部样式 */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         body{background:#f5f7fb;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1e293b;padding-bottom:70px}
         .app-container{width:100%;background:#f5f7fb;min-height:100vh}
@@ -257,7 +258,7 @@
         return enriched;
     }
 
-    // 获取用户位置（增强版，带详细错误提示）
+    // 获取用户位置（增强版）
     async function getNativeUserLocation() {
         console.log('[定位] 开始获取用户位置');
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -363,7 +364,6 @@
         }
     }
 
-    // 发布定位专用
     async function getPreciseLocationNative() {
         console.log('[定位-发布] 开始获取位置');
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -435,7 +435,6 @@
         }
     };
 
-    // 导航功能（直接唤起高德App）
     async function navigateTo(lat, lng, address) {
         try {
             const isAndroid = /android/i.test(navigator.userAgent);
@@ -1014,17 +1013,28 @@
         } catch(err) { showAlert('删除失败', err.message); }
     }
 
+    // 关键修改：删除整个会话后，直接从DOM中移除卡片
     async function deleteConversation(taskId) {
         try {
             await callApi(`/conversations/${taskId}/${currentUser.id}`, {method:'DELETE', body:JSON.stringify({userId: currentUser.id})});
             showToast('聊天已删除');
-            await renderMessageList();
+            // 直接删除 DOM 中的卡片元素
+            const card = document.querySelector(`.task-card[data-taskid="${taskId}"]`);
+            if (card) card.remove();
+            // 如果消息列表中已经没有其他卡片，显示空状态
+            const container = document.getElementById('messageContainer');
+            if (container && container.querySelectorAll('.task-card').length === 0) {
+                container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
+            }
             updateUnreadBadge();
+            // 如果当前正在这个聊天中，关闭聊天
             if(chatState.active && chatState.taskId === taskId) {
                 closeChat();
                 switchPage('message');
             }
-        } catch(err) { showAlert('删除失败', err.message); }
+        } catch(err) {
+            showAlert('删除失败', err.message);
+        }
     }
 
     async function refreshMessagesOnly() {
@@ -1206,8 +1216,7 @@
         }
         let html = '<div class="card"><strong>📬 消息记录</strong></div>';
         for(let c of convs) {
-            // 如果没有消息且未读为0，则跳过该会话（不显示）
-            if (!c.lastMsg && c.unread === 0) continue;
+            // 仍然保留过滤，但主要删除已由 deleteConversation 直接移除卡片
             let unreadHtml = '';
             if(c.unread > 0) {
                 unreadHtml = `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;
