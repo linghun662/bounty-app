@@ -307,7 +307,6 @@
         return enriched;
     }
 
-    // 获取用户位置（增强版，带日志）
     async function getNativeUserLocation() {
         console.log('[定位] 开始获取用户位置');
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -412,7 +411,6 @@
         }
     }
 
-    // 获取精确位置（用于发布页面）
     async function getPreciseLocationNative() {
         console.log('[定位-发布] 开始获取位置');
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -476,7 +474,6 @@
         }
     };
 
-    // 导航功能（直接唤起高德App）
     async function navigateTo(lat, lng, address) {
         try {
             const isAndroid = /android/i.test(navigator.userAgent);
@@ -935,7 +932,6 @@
         }
     }
 
-    // ==================== 返回键处理 ====================
     let backPressedOnce = false;
     function initBackButtonHandler() {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -1430,6 +1426,9 @@
         }
         let html = '<div class="card"><strong>📬 消息记录</strong></div>';
         for(let c of convs) {
+            // 如果没有消息且未读为0，则跳过该会话（不显示）
+            if (!c.lastMsg && c.unread === 0) continue;
+
             let unreadHtml = '';
             if(c.unread > 0) {
                 unreadHtml = `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;
