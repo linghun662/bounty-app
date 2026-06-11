@@ -241,7 +241,7 @@
     </div>
 </div>
 <script>
-    // ==================== 强制使用公网 API 地址 ====================
+    // ==================== API 地址 ====================
     const getApiBase = () => {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             return 'https://bounty-app-production.up.railway.app/api';
@@ -307,26 +307,41 @@
         return enriched;
     }
 
+    // 获取用户位置（增强版，带日志）
     async function getNativeUserLocation() {
+        console.log('[定位] 开始获取用户位置');
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             try {
                 const { Geolocation } = Capacitor.Plugins;
-                const permission = await Geolocation.requestPermissions();
+                const permission = await Geolocation.checkPermissions();
+                console.log('[定位] 权限状态:', permission);
                 if (permission.location !== 'granted') {
-                    console.warn('位置权限未授予');
-                    return null;
+                    console.log('[定位] 请求权限...');
+                    const result = await Geolocation.requestPermissions();
+                    console.log('[定位] 权限请求结果:', result);
+                    if (result.location !== 'granted') {
+                        console.warn('[定位] 用户拒绝权限');
+                        return null;
+                    }
                 }
                 const position = await Geolocation.getCurrentPosition();
+                console.log('[定位] 获取到坐标:', position.coords);
                 return { lat: position.coords.latitude, lng: position.coords.longitude };
             } catch(err) {
-                console.error('Capacitor 定位失败', err);
+                console.error('[定位] Capacitor 定位错误:', err);
                 return null;
             }
         } else {
             return new Promise((resolve) => {
                 navigator.geolocation.getCurrentPosition(
-                    (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                    (err) => { console.warn('浏览器定位失败', err); resolve(null); }
+                    (pos) => {
+                        console.log('[定位] 浏览器定位成功:', pos.coords);
+                        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                    },
+                    (err) => {
+                        console.warn('[定位] 浏览器定位失败', err);
+                        resolve(null);
+                    }
                 );
             });
         }
@@ -391,49 +406,77 @@
                 return formatted;
             }
             throw new Error('无法获取详细地址');
-        } catch(e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
+        } catch(e) {
+            console.error('[逆地理编码] 失败，返回经纬度', e);
+            return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+    }
+
+    // 获取精确位置（用于发布页面）
+    async function getPreciseLocationNative() {
+        console.log('[定位-发布] 开始获取位置');
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            try {
+                const { Geolocation } = Capacitor.Plugins;
+                let permission = await Geolocation.checkPermissions();
+                console.log('[定位-发布] 当前权限:', permission);
+                if (permission.location !== 'granted') {
+                    console.log('[定位-发布] 请求权限...');
+                    permission = await Geolocation.requestPermissions();
+                    console.log('[定位-发布] 权限请求结果:', permission);
+                    if (permission.location !== 'granted') {
+                        showAlert('定位失败', '请授予位置权限后重试');
+                        return null;
+                    }
+                }
+                const position = await Geolocation.getCurrentPosition();
+                console.log('[定位-发布] 坐标:', position.coords);
+                const { latitude, longitude } = position.coords;
+                const address = await getDetailedAddress(latitude, longitude);
+                console.log('[定位-发布] 地址:', address);
+                return address;
+            } catch(e) {
+                console.error('[定位-发布] Capacitor 错误:', e);
+                showAlert('定位失败', e.message || '未知错误');
+                return null;
+            }
+        } else {
+            return new Promise((resolve) => {
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    const address = await getDetailedAddress(pos.coords.latitude, pos.coords.longitude);
+                    resolve(address);
+                }, (err) => {
+                    console.error('[定位-发布] 浏览器定位失败', err);
+                    resolve(null);
+                });
+            });
+        }
     }
 
     window.getCurrentLocation = async function() {
+        console.log('[定位] 用户点击定位按钮');
         if (!navigator.geolocation && !(window.Capacitor && window.Capacitor.isNativePlatform())) {
-            showAlert('提示','设备不支持定位'); return;
+            showAlert('提示','设备不支持定位');
+            return;
         }
-        try {
-            let address = null;
-            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                const { Geolocation } = Capacitor.Plugins;
-                const permission = await Geolocation.requestPermissions();
-                if (permission.location !== 'granted') {
-                    showAlert('定位失败', '请授予位置权限后重试');
-                    return;
-                }
-                const position = await Geolocation.getCurrentPosition();
-                const { latitude, longitude } = position.coords;
-                address = await getDetailedAddress(latitude, longitude);
-            } else {
-                address = await new Promise((resolve) => {
-                    navigator.geolocation.getCurrentPosition(async (pos) => {
-                        const addr = await getDetailedAddress(pos.coords.latitude, pos.coords.longitude);
-                        resolve(addr);
-                    }, () => resolve(null));
-                });
-            }
-            if (address) {
-                document.getElementById('pubAddress').value = address;
-                document.getElementById('locationHint').innerHTML = '✅ 已定位到详细地址';
+        showAlert('定位提示', '正在获取您的位置...');
+        const address = await getPreciseLocationNative();
+        if (address) {
+            document.getElementById('pubAddress').value = address;
+            const hint = document.getElementById('locationHint');
+            if (hint) {
+                hint.innerHTML = '✅ 已定位到详细地址';
                 setTimeout(() => {
-                    document.getElementById('locationHint').innerHTML = '点击定位自动填入详细地址';
-                },3000);
-            } else {
-                showAlert('定位失败','请手动输入地点');
+                    hint.innerHTML = '点击定位自动填入详细地址';
+                }, 3000);
             }
-        } catch(e) {
-            console.error(e);
-            showAlert('定位失败','请手动输入地点');
+            showToast('定位成功');
+        } else {
+            showAlert('定位失败', '请手动输入地点');
         }
     };
 
-    // 直接唤起高德App并开始导航
+    // 导航功能（直接唤起高德App）
     async function navigateTo(lat, lng, address) {
         try {
             const isAndroid = /android/i.test(navigator.userAgent);
@@ -885,14 +928,14 @@
                 renderMessageList();
                 updateUnreadBadge();
                 switchPage('home');
-                initBackButtonHandler(); // 初始化返回键处理
+                initBackButtonHandler();
             } else errorDiv.innerText = result.error || '登录失败';
         } catch(err) {
             errorDiv.innerText = err.message;
         }
     }
 
-    // ==================== 返回键处理（首页双击退出，非首页返回上一页） ====================
+    // ==================== 返回键处理 ====================
     let backPressedOnce = false;
     function initBackButtonHandler() {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -916,7 +959,6 @@
                 setTimeout(() => { backPressedOnce = false; }, 2000);
             }
         } else {
-            // 非首页，模拟点击返回按钮
             const backBtn = document.getElementById('detailBackBtn');
             if (backBtn && backBtn.closest('.page') && backBtn.closest('.page').classList.contains('active')) {
                 backBtn.click();
@@ -1161,10 +1203,8 @@
         try {
             await callApi(`/conversations/${taskId}/${currentUser.id}`, {method:'DELETE', body:JSON.stringify({userId: currentUser.id})});
             showToast('聊天记录已删除');
-            // 重新加载消息列表（会刷新会话列表）
             await renderMessageList();
             updateUnreadBadge();
-            // 如果当前正在这个聊天中，关闭聊天
             if(chatState.active && chatState.taskId === taskId) {
                 closeChat();
                 switchPage('message');
@@ -1199,7 +1239,6 @@
         chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
         if(hasNew) chatState.messagesArea.scrollTop = chatState.messagesArea.scrollHeight;
 
-        // 长按删除单条消息（阻止系统菜单）
         document.querySelectorAll('.chat-bubble').forEach(bubble => {
             const isMine = bubble.getAttribute('data-is-mine') === 'true';
             if(!isMine) return;
@@ -1403,11 +1442,8 @@
             `;
         }
         container.innerHTML = html;
-        // 绑定单击和长按（单击打开聊天，长按删除会话）
         document.querySelectorAll('#messageContainer .task-card').forEach(card => {
-            // 单击
             card.addEventListener('click', (e) => {
-                // 防止长按后也触发单击
                 if(e.target.closest('.task-card')) {
                     const taskId = card.getAttribute('data-taskid');
                     const otherId = card.getAttribute('data-otherid');
@@ -1417,10 +1453,8 @@
                     openChat(taskId, otherId, otherName, reward, title);
                 }
             });
-            // 长按删除会话
             let pressTimer = null;
             const startPress = (e) => {
-                // 阻止单击事件
                 e.preventDefault();
                 pressTimer = setTimeout(() => {
                     const taskId = card.getAttribute('data-taskid');
