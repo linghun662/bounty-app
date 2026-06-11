@@ -5,176 +5,145 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>赏金集市 · 原生版</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: #f5f7fb; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1e293b; padding-bottom: 70px; }
-        .app-container { width: 100%; background: #f5f7fb; min-height: 100vh; }
-        .page { display: none; animation: fadeIn 0.25s ease; }
-        .page.active { display: block; }
-        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-        .nav-header { background: rgba(255,255,255,0.98); backdrop-filter: blur(20px); padding: 12px 16px; border-bottom: 1px solid rgba(226,232,240,0.8); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 20; }
-        .logo { font-size: 1.3rem; font-weight: 700; background: linear-gradient(135deg, #0f2b3d, #1e4a6b); background-clip: text; -webkit-background-clip: text; color: transparent; }
-        .header-balance { background: #eef2ff; padding: 4px 10px; border-radius: 40px; font-size: 0.75rem; font-weight: 600; color: #1e4a6b; cursor: pointer; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; background: rgba(255,255,255,0.96); backdrop-filter: blur(20px); display: flex; justify-content: space-around; padding: 6px 20px 16px; border-top: 1px solid rgba(226,232,240,0.8); z-index: 20; }
-        .nav-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.7rem; color: #94a3b8; cursor: pointer; }
-        .nav-item.active { color: #1e4a6b; transform: translateY(-2px); font-weight: 500; }
-        .nav-icon { font-size: 1.4rem; }
-        .msg-badge { position: absolute; top: -5px; right: -10px; background: #ef4444; color: white; border-radius: 20px; padding: 2px 6px; font-size: 0.6rem; min-width: 18px; text-align: center; display: none; }
-        .card { background: #fff; border-radius: 20px; padding: 16px; margin: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eef2f8; cursor: pointer; transition: transform 0.1s ease; }
-        .task-card:active { transform: scale(0.98); }
-        .detail-hero { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 20px; margin: 12px 12px 0 12px; padding: 20px 16px; color: white; position: relative; overflow: hidden; }
-        .detail-hero::before { content: "💰"; position: absolute; right: -20px; bottom: -20px; font-size: 80px; opacity: 0.1; }
-        .detail-reward { font-size: 1.6rem; font-weight: 800; margin-top: 6px; }
-        .detail-status { display: inline-block; padding: 3px 10px; border-radius: 40px; font-size: 0.65rem; font-weight: 600; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); margin-bottom: 8px; }
-        .info-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eef2f8; }
-        .info-icon { width: 28px; font-size: 1rem; text-align: center; }
-        .info-content { flex: 1; }
-        .info-label { font-size: 0.65rem; color: #64748b; margin-bottom: 2px; }
-        .info-value { font-weight: 600; color: #1e293b; cursor: pointer; }
-        .desc-section { background: #f8fafc; border-radius: 20px; padding: 12px; margin-top: 12px; }
-        .form-group { margin-bottom: 16px; }
-        .form-label { font-size: 0.85rem; font-weight: 600; color: #1e293b; margin-bottom: 6px; display: block; }
-        .form-input, .form-textarea { width: 100%; padding: 10px 14px; border-radius: 20px; border: 1px solid #e2e8f0; font-size: 0.9rem; outline: none; background: white; }
-        .form-textarea { min-height: 80px; }
-        .btn-primary { background: linear-gradient(95deg, #059669, #047857); border: none; border-radius: 60px; padding: 12px; font-weight: 600; color: white; width: 100%; text-align: center; cursor: pointer; font-size: 0.95rem; }
-        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-secondary { background: #f1f5f9; color: #1e4a6b; border-radius: 60px; padding: 10px; font-weight: 600; border: none; width: 100%; cursor: pointer; }
-        .btn-danger { background: #fee2e2; color: #b91c1c; border-radius: 60px; padding: 6px 12px; font-weight: 600; border: none; cursor: pointer; }
-        .btn-success { background: #10b981; color: white; border-radius: 60px; padding: 6px 12px; font-weight: 600; border: none; cursor: pointer; }
-        .btn-phone { background: #10b981; color: white; border-radius: 60px; padding: 8px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
-        .btn-nav { background: #3b82f6; color: white; border-radius: 60px; padding: 8px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
-        .btn-location { background: #eef2ff; color: #1e4a6b; border-radius: 40px; padding: 6px 12px; font-weight: 500; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-        .location-row { display: flex; gap: 8px; align-items: center; }
-        .image-preview-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-        .preview-img-wrapper { position: relative; width: 70px; height: 70px; border-radius: 16px; overflow: hidden; background: #f1f5f9; border: 1px solid #e2e8f0; }
-        .preview-img-wrapper img, .preview-img-wrapper video { width: 100%; height: 100%; object-fit: cover; }
-        .remove-img-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .upload-btn { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 16px; padding: 10px; text-align: center; cursor: pointer; margin-top: 8px; font-size: 0.8rem; }
-        .profile-header { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 20px; margin: 12px; padding: 16px; color: white; display: flex; align-items: center; gap: 12px; cursor: pointer; }
-        .profile-avatar { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 600; overflow: hidden; }
-        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .stats-row { display: flex; background: #fff; margin: 0 12px 12px; border-radius: 20px; padding: 12px; justify-content: space-around; }
-        .stat-item { text-align: center; flex: 1; cursor: pointer; }
-        .stat-number { font-size: 1.2rem; font-weight: 800; color: #1e4a6b; }
-        .stat-label { font-size: 0.65rem; color: #64748b; margin-top: 2px; }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; }
-        .text-center { text-align: center; }
-        .mt-2 { margin-top: 8px; }
-        .empty-state { text-align: center; padding: 30px 20px; color: #94a3b8; }
-        .loading { text-align: center; padding: 30px; color: #94a3b8; }
-        .reward-badge { background: linear-gradient(135deg, #fef3c7, #fde68a); padding: 3px 10px; border-radius: 40px; font-weight: 700; font-size: 0.75rem; color: #b45309; }
-        .task-meta { display: flex; gap: 10px; font-size: 0.65rem; color: #6c7a91; margin-top: 6px; flex-wrap: wrap; }
-        .task-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
-        .task-title { font-size: 1rem; font-weight: 700; color: #0f172a; }
-        .task-desc { font-size: 0.85rem; color: #475569; margin-bottom: 6px; }
-        .distance-badge { background: #e6f7e6; color: #2b6e2f; padding: 2px 8px; border-radius: 20px; font-weight: 500; font-size: 0.65rem; }
-        .slide-confirm, .slide-action { margin: 12px 0; user-select: none; }
-        .slide-track { position: relative; width: 100%; height: 50px; background: #eef2ff; border-radius: 50px; overflow: hidden; border: 1px solid #cbd5e1; touch-action: none; }
-        .slide-thumb { position: absolute; left: 0; top: 0; width: 70px; height: 50px; background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 50px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.6rem; touch-action: none; transition: none; }
-        .slide-text { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1e4a6b; pointer-events: none; font-size: 0.85rem; gap: 8px; z-index: 1; }
-        .slide-confirm.completed .slide-track, .slide-action.completed .slide-track { background: #d1fae5; border-color: #059669; }
-        .countdown-timer { background: #fef3c7; border-radius: 40px; padding: 8px 12px; text-align: center; margin: 12px 0; font-weight: 700; color: #b45309; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.9rem; }
-        .countdown-timer.warning { background: #fee2e2; color: #dc2626; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        .custom-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .custom-modal-content { background: white; border-radius: 28px; width: 85%; max-width: 320px; padding: 20px; text-align: center; }
-        .custom-modal-content h3 { margin-bottom: 12px; }
-        .custom-modal-buttons { display: flex; gap: 12px; margin-top: 20px; justify-content: center; }
-        .custom-modal-buttons button { flex: 1; padding: 10px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer; }
-        .custom-modal-buttons .confirm-btn { background: #1e4a6b; color: white; }
-        .custom-modal-buttons .cancel-btn { background: #e2e8f0; color: #1e293b; }
-        .toast-message { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 40px; font-size: 0.8rem; z-index: 1100; pointer-events: none; animation: fadeOut 2s forwards; }
-        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
-        .chat-container { display: flex; flex-direction: column; height: calc(100vh - 120px); background: #f5f7fb; }
-        .chat-header-bar { background: white; padding: 12px; border-bottom: 1px solid #eef2f8; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; }
-        .chat-back-btn { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
-        .chat-header-name { font-weight: 700; font-size: 1rem; color: #1e293b; flex: 1; }
-        .chat-messages-area { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .chat-bubble { max-width: 80%; display: flex; flex-direction: column; cursor: pointer; transition: background 0.2s; }
-        .chat-bubble:active { background: rgba(0,0,0,0.05); }
-        .chat-bubble-mine { align-self: flex-end; }
-        .chat-bubble-other { align-self: flex-start; }
-        .bubble-text { padding: 10px 14px; border-radius: 20px; font-size: 0.85rem; line-height: 1.4; word-break: break-word; background: white; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; }
-        .chat-bubble-mine .bubble-text { background: #1e4a6b; color: white; border-bottom-right-radius: 4px; border: none; }
-        .bubble-time { font-size: 0.6rem; color: #94a3b8; margin-top: 2px; margin-left: 8px; margin-right: 8px; }
-        .chat-bubble-mine .bubble-time { text-align: right; }
-        .chat-input-wrapper { background: white; border-top: 1px solid #eef2f8; padding: 10px 12px; border-radius: 24px 24px 0 0; }
-        .flex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .nego-input { flex: 1; min-width: 100px; padding: 8px 12px; border-radius: 30px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; }
-        .nego-send-btn { background: #f59e0b; border: none; border-radius: 30px; padding: 6px 12px; font-weight: 600; color: white; cursor: pointer; font-size: 0.8rem; }
-        .chat-action-row { display: flex; gap: 8px; align-items: center; }
-        .chat-message-input { flex: 1; padding: 8px 12px; border-radius: 30px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-size: 0.9rem; }
-        .send-btn { background: #1e4a6b; border: none; border-radius: 30px; padding: 8px 16px; font-weight: 600; color: white; cursor: pointer; font-size: 0.85rem; }
-        .task-card-in-chat { background: #f8fafc; border-radius: 16px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #e2e8f0; }
-        .category-bar, .sort-bar { display: flex; gap: 10px; padding: 8px 12px; background: white; border-bottom: 1px solid #eef2f8; overflow-x: auto; white-space: nowrap; }
-        .category-chip, .sort-chip { background: #f1f5f9; padding: 4px 10px; border-radius: 40px; font-size: 0.7rem; color: #1e4a6b; cursor: pointer; display: inline-block; }
-        .category-chip.active, .sort-chip.active { background: #1e4a6b; color: white; }
-        .profile-collapse { background: #fff; border-radius: 20px; margin: 12px; overflow: hidden; border: 1px solid #eef2f8; }
-        .collapse-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #fff; cursor: pointer; }
-        .collapse-header:active { background: #f8fafc; }
-        .collapse-title { font-weight: 700; font-size: 0.9rem; color: #1e293b; display: flex; align-items: center; gap: 6px; }
-        .collapse-icon { font-size: 1rem; transition: transform 0.2s; }
-        .collapse-icon.open { transform: rotate(90deg); }
-        .collapse-content { display: none; padding: 0 16px 12px 16px; background: #fff; border-top: 1px solid #eef2f8; }
-        .collapse-content.show { display: block; }
-        .profile-task-item { padding: 10px 0; border-bottom: 1px solid #eef2f8; cursor: pointer; }
-        .profile-task-item:last-child { border-bottom: none; }
-        .profile-task-title { font-weight: 600; font-size: 0.85rem; color: #0f172a; display: inline-block; }
-        .profile-task-status { font-size: 0.65rem; display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 20px; background: #f1f5f9; color: #475569; }
-        .profile-task-status.available { background: #d1fae5; color: #065f46; }
-        .profile-task-status.ongoing { background: #fed7aa; color: #9a3412; }
-        .profile-task-status.completed { background: #e2e8f0; color: #334155; }
-        .profile-task-status.cancelled { background: #fee2e2; color: #b91c1c; }
-        .profile-task-amount { font-weight: 700; color: #b45309; font-size: 0.85rem; text-align: right; }
-        .task-actions { margin-top: 8px; display: flex; justify-content: flex-end; gap: 8px; }
-        .logout-btn { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 60px; padding: 12px; font-weight: 600; font-size: 0.95rem; width: calc(100% - 24px); margin: 12px; cursor: pointer; }
-        .progress-text { font-size: 0.7rem; color: #1e4a6b; margin-top: 4px; }
-        .contact-buttons { display: flex; gap: 12px; margin: 12px 12px 0 12px; }
-        .contact-buttons button { flex: 1; }
-        .progress-steps { display: flex; justify-content: space-between; margin: 16px; position: relative; }
-        .progress-steps::before { content: ''; position: absolute; top: 24px; left: 10%; right: 10%; height: 2px; background: #e2e8f0; z-index: 0; }
-        .step { text-align: center; flex: 1; position: relative; z-index: 1; background: #fff; border-radius: 30px; padding: 6px 2px; }
-        .step-dot { width: 32px; height: 32px; background: white; border: 2px solid #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 1rem; background: #f1f5f9; }
-        .step.active .step-dot { background: #1e4a6b; border-color: #1e4a6b; color: white; }
-        .step.completed .step-dot { background: #059669; border-color: #059669; color: white; }
-        .step-label { font-size: 0.6rem; color: #64748b; }
-        .step.active .step-label { color: #1e4a6b; font-weight: 600; }
-        .step.completed .step-label { color: #059669; }
-        .refresh-container { text-align: center; width: 100%; padding: 12px 0; background: transparent; font-size: 0.8rem; color: #64748b; position: relative; transition: transform 0.2s; }
-        .chat-refresh-indicator { text-align: center; padding: 10px; font-size: 0.75rem; color: #64748b; background: transparent; width: 100%; }
-        .image-preview-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.9);
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: zoom-out;
-        }
-        .image-preview-modal img {
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-            transition: transform 0.2s;
-        }
-        .image-preview-modal .close-preview {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: white;
-            font-size: 2rem;
-            background: rgba(0,0,0,0.5);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        body{background:#f5f7fb;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1e293b;padding-bottom:70px}
+        .app-container{width:100%;background:#f5f7fb;min-height:100vh}
+        .page{display:none;animation:fadeIn .25s ease}
+        .page.active{display:block}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .nav-header{background:rgba(255,255,255,0.98);backdrop-filter:blur(20px);padding:12px 16px;border-bottom:1px solid rgba(226,232,240,0.8);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20}
+        .logo{font-size:1.3rem;font-weight:700;background:linear-gradient(135deg,#0f2b3d,#1e4a6b);background-clip:text;-webkit-background-clip:text;color:transparent}
+        .header-balance{background:#eef2ff;padding:4px 10px;border-radius:40px;font-size:.75rem;font-weight:600;color:#1e4a6b;cursor:pointer}
+        .bottom-nav{position:fixed;bottom:0;left:0;right:0;width:100%;background:rgba(255,255,255,0.96);backdrop-filter:blur(20px);display:flex;justify-content:space-around;padding:6px 20px 16px;border-top:1px solid rgba(226,232,240,0.8);z-index:20}
+        .nav-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;color:#94a3b8;cursor:pointer}
+        .nav-item.active{color:#1e4a6b;transform:translateY(-2px);font-weight:500}
+        .nav-icon{font-size:1.4rem}
+        .msg-badge{position:absolute;top:-5px;right:-10px;background:#ef4444;color:#fff;border-radius:20px;padding:2px 6px;font-size:.6rem;min-width:18px;text-align:center;display:none}
+        .card{background:#fff;border-radius:20px;padding:16px;margin:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);border:1px solid #eef2f8;cursor:pointer;transition:transform .1s ease}
+        .task-card:active{transform:scale(.98)}
+        .detail-hero{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:20px;margin:12px 12px 0 12px;padding:20px 16px;color:#fff;position:relative;overflow:hidden}
+        .detail-hero::before{content:"💰";position:absolute;right:-20px;bottom:-20px;font-size:80px;opacity:.1}
+        .detail-reward{font-size:1.6rem;font-weight:800;margin-top:6px}
+        .detail-status{display:inline-block;padding:3px 10px;border-radius:40px;font-size:.65rem;font-weight:600;background:rgba(255,255,255,0.2);backdrop-filter:blur(4px);margin-bottom:8px}
+        .info-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f8}
+        .info-icon{width:28px;font-size:1rem;text-align:center}
+        .info-content{flex:1}
+        .info-label{font-size:.65rem;color:#64748b;margin-bottom:2px}
+        .info-value{font-weight:600;color:#1e293b;cursor:pointer}
+        .desc-section{background:#f8fafc;border-radius:20px;padding:12px;margin-top:12px}
+        .form-group{margin-bottom:16px}
+        .form-label{font-size:.85rem;font-weight:600;color:#1e293b;margin-bottom:6px;display:block}
+        .form-input,.form-textarea{width:100%;padding:10px 14px;border-radius:20px;border:1px solid #e2e8f0;font-size:.9rem;outline:none;background:#fff}
+        .form-textarea{min-height:80px}
+        .btn-primary{background:linear-gradient(95deg,#059669,#047857);border:none;border-radius:60px;padding:12px;font-weight:600;color:#fff;width:100%;text-align:center;cursor:pointer;font-size:.95rem}
+        .btn-primary:disabled{opacity:.6;cursor:not-allowed}
+        .btn-secondary{background:#f1f5f9;color:#1e4a6b;border-radius:60px;padding:10px;font-weight:600;border:none;width:100%;cursor:pointer}
+        .btn-danger{background:#fee2e2;color:#b91c1c;border-radius:60px;padding:6px 12px;font-weight:600;border:none;cursor:pointer}
+        .btn-success{background:#10b981;color:#fff;border-radius:60px;padding:6px 12px;font-weight:600;border:none;cursor:pointer}
+        .btn-phone{background:#10b981;color:#fff;border-radius:60px;padding:8px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+        .btn-nav{background:#3b82f6;color:#fff;border-radius:60px;padding:8px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+        .btn-location{background:#eef2ff;color:#1e4a6b;border-radius:40px;padding:6px 12px;font-weight:500;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+        .location-row{display:flex;gap:8px;align-items:center}
+        .image-preview-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+        .preview-img-wrapper{position:relative;width:70px;height:70px;border-radius:16px;overflow:hidden;background:#f1f5f9;border:1px solid #e2e8f0}
+        .preview-img-wrapper img,.preview-img-wrapper video{width:100%;height:100%;object-fit:cover}
+        .remove-img-btn{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border-radius:50%;width:20px;height:20px;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+        .upload-btn{background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:16px;padding:10px;text-align:center;cursor:pointer;margin-top:8px;font-size:.8rem}
+        .profile-header{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:20px;margin:12px;padding:16px;color:#fff;display:flex;align-items:center;gap:12px;cursor:pointer}
+        .profile-avatar{width:60px;height:60px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:600;overflow:hidden}
+        .profile-avatar img{width:100%;height:100%;object-fit:cover}
+        .stats-row{display:flex;background:#fff;margin:0 12px 12px;border-radius:20px;padding:12px;justify-content:space-around}
+        .stat-item{text-align:center;flex:1;cursor:pointer}
+        .stat-number{font-size:1.2rem;font-weight:800;color:#1e4a6b}
+        .stat-label{font-size:.65rem;color:#64748b;margin-top:2px}
+        .flex-between{display:flex;justify-content:space-between;align-items:center}
+        .text-center{text-align:center}
+        .mt-2{margin-top:8px}
+        .empty-state{text-align:center;padding:30px 20px;color:#94a3b8}
+        .loading{text-align:center;padding:30px;color:#94a3b8}
+        .reward-badge{background:linear-gradient(135deg,#fef3c7,#fde68a);padding:3px 10px;border-radius:40px;font-weight:700;font-size:.75rem;color:#b45309}
+        .task-meta{display:flex;gap:10px;font-size:.65rem;color:#6c7a91;margin-top:6px;flex-wrap:wrap}
+        .task-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+        .task-title{font-size:1rem;font-weight:700;color:#0f172a}
+        .task-desc{font-size:.85rem;color:#475569;margin-bottom:6px}
+        .distance-badge{background:#e6f7e6;color:#2b6e2f;padding:2px 8px;border-radius:20px;font-weight:500;font-size:.65rem}
+        .slide-confirm,.slide-action{margin:12px 0;user-select:none}
+        .slide-track{position:relative;width:100%;height:50px;background:#eef2ff;border-radius:50px;overflow:hidden;border:1px solid #cbd5e1;touch-action:none}
+        .slide-thumb{position:absolute;left:0;top:0;width:70px;height:50px;background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:50px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.6rem;touch-action:none;transition:none}
+        .slide-text{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1e4a6b;pointer-events:none;font-size:.85rem;gap:8px;z-index:1}
+        .slide-confirm.completed .slide-track,.slide-action.completed .slide-track{background:#d1fae5;border-color:#059669}
+        .countdown-timer{background:#fef3c7;border-radius:40px;padding:8px 12px;text-align:center;margin:12px 0;font-weight:700;color:#b45309;display:flex;align-items:center;justify-content:center;gap:6px;font-size:.9rem}
+        .countdown-timer.warning{background:#fee2e2;color:#dc2626;animation:pulse 1s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+        .custom-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
+        .custom-modal-content{background:#fff;border-radius:28px;width:85%;max-width:320px;padding:20px;text-align:center}
+        .custom-modal-content h3{margin-bottom:12px}
+        .custom-modal-buttons{display:flex;gap:12px;margin-top:20px;justify-content:center}
+        .custom-modal-buttons button{flex:1;padding:10px;border-radius:40px;border:none;font-weight:600;cursor:pointer}
+        .custom-modal-buttons .confirm-btn{background:#1e4a6b;color:#fff}
+        .custom-modal-buttons .cancel-btn{background:#e2e8f0;color:#1e293b}
+        .toast-message{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:8px 16px;border-radius:40px;font-size:.8rem;z-index:1100;pointer-events:none;animation:fadeOut 2s forwards}
+        @keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
+        .chat-container{display:flex;flex-direction:column;height:calc(100vh - 120px);background:#f5f7fb}
+        .chat-header-bar{background:#fff;padding:12px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+        .chat-back-btn{background:#f1f5f9;border:none;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer}
+        .chat-header-name{font-weight:700;font-size:1rem;color:#1e293b;flex:1}
+        .chat-messages-area{flex:1;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+        .chat-bubble{max-width:80%;display:flex;flex-direction:column;cursor:pointer;transition:background .2s}
+        .chat-bubble:active{background:rgba(0,0,0,0.05)}
+        .chat-bubble-mine{align-self:flex-end}
+        .chat-bubble-other{align-self:flex-start}
+        .bubble-text{padding:10px 14px;border-radius:20px;font-size:.85rem;line-height:1.4;word-break:break-word;background:#fff;border:1px solid #e2e8f0;border-bottom-left-radius:4px}
+        .chat-bubble-mine .bubble-text{background:#1e4a6b;color:#fff;border-bottom-right-radius:4px;border:none}
+        .bubble-time{font-size:.6rem;color:#94a3b8;margin-top:2px;margin-left:8px;margin-right:8px}
+        .chat-bubble-mine .bubble-time{text-align:right}
+        .chat-input-wrapper{background:#fff;border-top:1px solid #eef2f8;padding:10px 12px;border-radius:24px 24px 0 0}
+        .flex-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+        .nego-input{flex:1;min-width:100px;padding:8px 12px;border-radius:30px;border:1px solid #e2e8f0;outline:none;background:#f8fafc}
+        .nego-send-btn{background:#f59e0b;border:none;border-radius:30px;padding:6px 12px;font-weight:600;color:#fff;cursor:pointer;font-size:.8rem}
+        .chat-action-row{display:flex;gap:8px;align-items:center}
+        .chat-message-input{flex:1;padding:8px 12px;border-radius:30px;border:1px solid #e2e8f0;outline:none;background:#f8fafc;font-size:.9rem}
+        .send-btn{background:#1e4a6b;border:none;border-radius:30px;padding:8px 16px;font-weight:600;color:#fff;cursor:pointer;font-size:.85rem}
+        .task-card-in-chat{background:#f8fafc;border-radius:16px;padding:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;border:1px solid #e2e8f0}
+        .category-bar,.sort-bar{display:flex;gap:10px;padding:8px 12px;background:#fff;border-bottom:1px solid #eef2f8;overflow-x:auto;white-space:nowrap}
+        .category-chip,.sort-chip{background:#f1f5f9;padding:4px 10px;border-radius:40px;font-size:.7rem;color:#1e4a6b;cursor:pointer;display:inline-block}
+        .category-chip.active,.sort-chip.active{background:#1e4a6b;color:#fff}
+        .profile-collapse{background:#fff;border-radius:20px;margin:12px;overflow:hidden;border:1px solid #eef2f8}
+        .collapse-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#fff;cursor:pointer}
+        .collapse-header:active{background:#f8fafc}
+        .collapse-title{font-weight:700;font-size:.9rem;color:#1e293b;display:flex;align-items:center;gap:6px}
+        .collapse-icon{font-size:1rem;transition:transform .2s}
+        .collapse-icon.open{transform:rotate(90deg)}
+        .collapse-content{display:none;padding:0 16px 12px 16px;background:#fff;border-top:1px solid #eef2f8}
+        .collapse-content.show{display:block}
+        .profile-task-item{padding:10px 0;border-bottom:1px solid #eef2f8;cursor:pointer}
+        .profile-task-item:last-child{border-bottom:none}
+        .profile-task-title{font-weight:600;font-size:.85rem;color:#0f172a;display:inline-block}
+        .profile-task-status{font-size:.65rem;display:inline-block;margin-left:6px;padding:2px 6px;border-radius:20px;background:#f1f5f9;color:#475569}
+        .profile-task-status.available{background:#d1fae5;color:#065f46}
+        .profile-task-status.ongoing{background:#fed7aa;color:#9a3412}
+        .profile-task-status.completed{background:#e2e8f0;color:#334155}
+        .profile-task-status.cancelled{background:#fee2e2;color:#b91c1c}
+        .profile-task-amount{font-weight:700;color:#b45309;font-size:.85rem;text-align:right}
+        .task-actions{margin-top:8px;display:flex;justify-content:flex-end;gap:8px}
+        .logout-btn{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:60px;padding:12px;font-weight:600;font-size:.95rem;width:calc(100% - 24px);margin:12px;cursor:pointer}
+        .progress-text{font-size:.7rem;color:#1e4a6b;margin-top:4px}
+        .contact-buttons{display:flex;gap:12px;margin:12px 12px 0 12px}
+        .contact-buttons button{flex:1}
+        .progress-steps{display:flex;justify-content:space-between;margin:16px;position:relative}
+        .progress-steps::before{content:'';position:absolute;top:24px;left:10%;right:10%;height:2px;background:#e2e8f0;z-index:0}
+        .step{text-align:center;flex:1;position:relative;z-index:1;background:#fff;border-radius:30px;padding:6px 2px}
+        .step-dot{width:32px;height:32px;background:#fff;border:2px solid #cbd5e1;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:1rem;background:#f1f5f9}
+        .step.active .step-dot{background:#1e4a6b;border-color:#1e4a6b;color:#fff}
+        .step.completed .step-dot{background:#059669;border-color:#059669;color:#fff}
+        .step-label{font-size:.6rem;color:#64748b}
+        .step.active .step-label{color:#1e4a6b;font-weight:600}
+        .step.completed .step-label{color:#059669}
+        .refresh-container{text-align:center;width:100%;padding:12px 0;background:transparent;font-size:.8rem;color:#64748b;position:relative;transition:transform .2s}
+        .chat-refresh-indicator{text-align:center;padding:10px;font-size:.75rem;color:#64748b;background:transparent;width:100%}
+        .image-preview-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
+        .image-preview-modal img{max-width:90%;max-height:90%;object-fit:contain;transition:transform .2s}
+        .image-preview-modal .close-preview{position:absolute;top:20px;right:20px;color:#fff;font-size:2rem;background:rgba(0,0,0,0.5);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
     </style>
 </head>
 <body>
@@ -182,7 +151,7 @@
     <div class="app-container">
         <div id="loginPage" class="page active">
             <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
-                <div class="card" style="width:100%; cursor:default;">
+                <div class="card" style="width:100%;cursor:default;">
                     <div class="text-center"><div style="font-size:2.5rem;">💰</div><h2 style="color:#1e4a6b;">赏金集市 · 双向议价</h2><p style="color:#64748b;">悬赏任务 · 轻松赚钱</p></div>
                     <div class="form-group"><input type="text" id="loginUsername" class="form-input" placeholder="用户名" value="xiaoming"></div>
                     <div class="form-group"><input type="password" id="loginPassword" class="form-input" placeholder="密码" value="123456"></div>
@@ -257,13 +226,10 @@
 
     // 工具函数
     function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
-    function calculateDistance(lat1, lng1, lat2, lng2) {
-        const R = 6371;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLng = (lng2 - lng1) * Math.PI / 180;
-        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return (R * c).toFixed(1);
+    function calculateDistance(lat1,lng1,lat2,lng2) {
+        const R=6371; const dLat=(lat2-lat1)*Math.PI/180; const dLng=(lng2-lng1)*Math.PI/180;
+        const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+        const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); return (R*c).toFixed(1);
     }
 
     async function geocodeAddress(address) {
@@ -271,76 +237,68 @@
         if (geocodeCache.has(address)) return geocodeCache.get(address);
         try {
             const url = `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(address)}&key=${AMAP_KEY}&output=JSON`;
-            const resp = await fetch(url);
-            const data = await resp.json();
-            if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
-                const loc = data.geocodes[0].location.split(',');
-                const lng = parseFloat(loc[0]);
-                const lat = parseFloat(loc[1]);
-                const result = { lat, lng };
-                geocodeCache.set(address, result);
-                return result;
-            }
-            return null;
-        } catch(e) {
-            console.error('地理编码失败', e);
-            return null;
-        }
+            const resp = await fetch(url); const data = await resp.json();
+            if (data.status==='1' && data.geocodes && data.geocodes.length>0) {
+                const loc = data.geocodes[0].location.split(','); const lng=parseFloat(loc[0]), lat=parseFloat(loc[1]);
+                const result={lat,lng}; geocodeCache.set(address,result); return result;
+            } return null;
+        } catch(e){ console.error('地理编码失败',e); return null; }
     }
 
     async function enrichTasksWithDistance(tasks) {
         if (!userLocation) return tasks;
-        const enriched = [];
-        for (let task of tasks) {
-            if (!task.locationAddress) {
-                enriched.push({ ...task, distance: null });
-                continue;
-            }
-            const coords = await geocodeAddress(task.locationAddress);
-            if (coords) {
-                const distance = calculateDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng);
-                enriched.push({ ...task, distance });
-            } else {
-                enriched.push({ ...task, distance: null });
-            }
+        const enriched=[];
+        for(let task of tasks){
+            if(!task.locationAddress){ enriched.push({...task,distance:null}); continue; }
+            const coords=await geocodeAddress(task.locationAddress);
+            if(coords){ const distance=calculateDistance(userLocation.lat,userLocation.lng,coords.lat,coords.lng); enriched.push({...task,distance}); }
+            else enriched.push({...task,distance:null});
         }
         return enriched;
     }
 
+    // 获取用户位置（增强版，带详细错误提示和权限处理）
     async function getNativeUserLocation() {
         console.log('[定位] 开始获取用户位置');
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             try {
                 const { Geolocation } = Capacitor.Plugins;
-                const permission = await Geolocation.checkPermissions();
-                console.log('[定位] 权限状态:', permission);
+                let permission = await Geolocation.checkPermissions();
+                console.log('[定位] 当前权限:', permission);
                 if (permission.location !== 'granted') {
                     console.log('[定位] 请求权限...');
-                    const result = await Geolocation.requestPermissions();
-                    console.log('[定位] 权限请求结果:', result);
-                    if (result.location !== 'granted') {
-                        console.warn('[定位] 用户拒绝权限');
+                    permission = await Geolocation.requestPermissions();
+                    console.log('[定位] 权限请求结果:', permission);
+                    if (permission.location !== 'granted') {
+                        showAlert('定位失败', '您拒绝了位置权限，请在系统设置中开启');
                         return null;
                     }
                 }
-                const position = await Geolocation.getCurrentPosition();
+                const position = await Geolocation.getCurrentPosition({ timeout: 10000 });
                 console.log('[定位] 获取到坐标:', position.coords);
                 return { lat: position.coords.latitude, lng: position.coords.longitude };
             } catch(err) {
                 console.error('[定位] Capacitor 定位错误:', err);
+                let msg = err.message || '未知错误';
+                if (err.code === 3) msg = '定位超时，请检查GPS信号';
+                else if (err.code === 1) msg = '用户拒绝权限';
+                showAlert('定位失败', `错误: ${msg}`);
                 return null;
             }
         } else {
             return new Promise((resolve) => {
                 navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        console.log('[定位] 浏览器定位成功:', pos.coords);
-                        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-                    },
+                    (pos) => { console.log('[定位] 浏览器定位成功:', pos.coords); resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
                     (err) => {
                         console.warn('[定位] 浏览器定位失败', err);
+                        let msg = '定位失败，请检查定位权限和GPS';
+                        if (err.code === 1) msg = '用户拒绝了定位权限';
+                        else if (err.code === 2) msg = '定位不可用，请打开GPS开关';
+                        else if (err.code === 3) msg = '定位超时，请稍后再试';
+                        showAlert('定位失败', msg);
                         resolve(null);
-                    }
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
                 );
             });
         }
@@ -353,10 +311,7 @@
             const res = await fetch(fullUrl, { headers: { 'Content-Type': 'application/json' }, ...options });
             if(!res.ok) {
                 let msg = `HTTP ${res.status}`;
-                try {
-                    const data = await res.json();
-                    msg = data.error || msg;
-                } catch(e) {}
+                try { const data = await res.json(); msg = data.error || msg; } catch(e) {}
                 throw new Error(msg);
             }
             return await res.json();
@@ -411,6 +366,7 @@
         }
     }
 
+    // 发布定位专用（带用户引导）
     async function getPreciseLocationNative() {
         console.log('[定位-发布] 开始获取位置');
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -427,7 +383,7 @@
                         return null;
                     }
                 }
-                const position = await Geolocation.getCurrentPosition();
+                const position = await Geolocation.getCurrentPosition({ timeout: 10000 });
                 console.log('[定位-发布] 坐标:', position.coords);
                 const { latitude, longitude } = position.coords;
                 const address = await getDetailedAddress(latitude, longitude);
@@ -435,18 +391,29 @@
                 return address;
             } catch(e) {
                 console.error('[定位-发布] Capacitor 错误:', e);
-                showAlert('定位失败', e.message || '未知错误');
+                let msg = e.message || '未知错误';
+                if (e.code === 3) msg = '定位超时，请检查GPS并确保在室外';
+                showAlert('定位失败', msg);
                 return null;
             }
         } else {
             return new Promise((resolve) => {
-                navigator.geolocation.getCurrentPosition(async (pos) => {
-                    const address = await getDetailedAddress(pos.coords.latitude, pos.coords.longitude);
-                    resolve(address);
-                }, (err) => {
-                    console.error('[定位-发布] 浏览器定位失败', err);
-                    resolve(null);
-                });
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        const address = await getDetailedAddress(pos.coords.latitude, pos.coords.longitude);
+                        resolve(address);
+                    },
+                    (err) => {
+                        console.error('[定位-发布] 浏览器定位失败', err);
+                        let msg = '定位失败，请检查定位权限和GPS';
+                        if (err.code === 1) msg = '用户拒绝了定位权限';
+                        else if (err.code === 2) msg = '定位不可用，请打开GPS开关';
+                        else if (err.code === 3) msg = '定位超时，请稍后再试';
+                        showAlert('定位失败', msg);
+                        resolve(null);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
             });
         }
     }
@@ -457,7 +424,7 @@
             showAlert('提示','设备不支持定位');
             return;
         }
-        showAlert('定位提示', '正在获取您的位置...');
+        showAlert('定位提示', '正在获取您的位置，请稍候...');
         const address = await getPreciseLocationNative();
         if (address) {
             document.getElementById('pubAddress').value = address;
@@ -470,10 +437,11 @@
             }
             showToast('定位成功');
         } else {
-            showAlert('定位失败', '请手动输入地点');
+            showAlert('定位失败', '请手动输入地点，或检查GPS/网络后重试');
         }
     };
 
+    // 导航功能（直接唤起高德App）
     async function navigateTo(lat, lng, address) {
         try {
             const isAndroid = /android/i.test(navigator.userAgent);
@@ -606,15 +574,11 @@
         });
     }
 
-    const categoryMap = {
-        '取件': ['取件','快递','包裹','取货'],
-        '调试': ['调试','bug','修复','代码','前端','后端','程序'],
-        '跑腿': ['跑腿','送','买','代购','排队']
-    };
+    const categoryMap = {'取件':['取件','快递','包裹','取货'],'调试':['调试','bug','修复','代码','前端','后端','程序'],'跑腿':['跑腿','送','买','代购','排队']};
     function getTaskCategory(title) {
         const lower = title.toLowerCase();
-        for (let [cat, keywords] of Object.entries(categoryMap))
-            if (keywords.some(kw => lower.includes(kw))) return cat;
+        for(let [cat,keywords] of Object.entries(categoryMap))
+            if(keywords.some(kw=>lower.includes(kw))) return cat;
         return '其他';
     }
 
@@ -652,17 +616,9 @@
         }
         container.innerHTML = filtered.map(t => `
             <div class="card" onclick="viewTask('${t._id}','home')">
-                <div class="task-header">
-                    <span class="task-title">${escapeHtml(t.title)}</span>
-                    <span class="reward-badge">💰 ${t.reward}元</span>
-                </div>
+                <div class="task-header"><span class="task-title">${escapeHtml(t.title)}</span><span class="reward-badge">💰 ${t.reward}元</span></div>
                 <div class="task-desc">${escapeHtml((t.description||'').substring(0,60))}</div>
-                <div class="task-meta">
-                    <span>👤 ${escapeHtml(t.publisherName)}</span>
-                    <span>📍 ${t.locationAddress||'未知'}</span>
-                    ${t.distance ? `<span class="distance-badge">📏 距您 ${t.distance}km</span>` : ''}
-                    <span class="distance-badge">🏷️ ${t.category}</span>
-                </div>
+                <div class="task-meta"><span>👤 ${escapeHtml(t.publisherName)}</span><span>📍 ${t.locationAddress||'未知'}</span>${t.distance?`<span class="distance-badge">📏 距您 ${t.distance}km</span>`:''}<span class="distance-badge">🏷️ ${t.category}</span></div>
             </div>
         `).join('');
     }
@@ -671,29 +627,18 @@
         const homePage = document.getElementById('homePage');
         let startY = 0, isRefreshing = false;
         const indicator = document.getElementById('refreshIndicator');
-        homePage.addEventListener('touchstart', (e) => {
-            if(homePage.scrollTop === 0) startY = e.touches[0].clientY;
-        });
+        homePage.addEventListener('touchstart', (e) => { if(homePage.scrollTop===0) startY=e.touches[0].clientY; });
         homePage.addEventListener('touchmove', (e) => {
-            if(isRefreshing || homePage.scrollTop > 0) return;
+            if(isRefreshing || homePage.scrollTop>0) return;
             const diff = e.touches[0].clientY - startY;
-            if(diff > 30) {
-                e.preventDefault();
-                indicator.style.display = 'block';
-                indicator.style.transform = `translateY(${Math.min(diff-30,60)}px)`;
-            }
+            if(diff>30) { e.preventDefault(); indicator.style.display='block'; indicator.style.transform=`translateY(${Math.min(diff-30,60)}px)`; }
         });
         homePage.addEventListener('touchend', async () => {
-            if(indicator.style.display === 'block') {
-                indicator.style.transform = '';
-                indicator.style.display = 'none';
-                isRefreshing = true;
-                indicator.innerText = '刷新中...';
-                indicator.style.display = 'block';
+            if(indicator.style.display==='block') {
+                indicator.style.transform=''; indicator.style.display='none';
+                isRefreshing=true; indicator.innerText='刷新中...'; indicator.style.display='block';
                 await refreshTaskList();
-                isRefreshing = false;
-                indicator.style.display = 'none';
-                indicator.innerText = '↓ 下拉刷新';
+                isRefreshing=false; indicator.style.display='none'; indicator.innerText='↓ 下拉刷新';
             }
         });
     }
@@ -701,7 +646,7 @@
     function initFiltersAndCategories() {
         document.querySelectorAll('.category-chip').forEach(chip => {
             chip.addEventListener('click', () => {
-                document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.category-chip').forEach(c=>c.classList.remove('active'));
                 chip.classList.add('active');
                 currentCategory = chip.getAttribute('data-cat');
                 applyFilterAndSort();
@@ -709,7 +654,7 @@
         });
         document.querySelectorAll('.sort-chip').forEach(chip => {
             chip.addEventListener('click', () => {
-                document.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.sort-chip').forEach(c=>c.classList.remove('active'));
                 chip.classList.add('active');
                 currentSort = chip.getAttribute('data-sort');
                 applyFilterAndSort();
@@ -721,57 +666,30 @@
         const track = container.querySelector('.slide-track');
         const thumb = container.querySelector('.slide-thumb');
         if (!track || !thumb) return;
-        if (track.clientWidth === 0 || thumb.clientWidth === 0) {
-            setTimeout(() => initSlide(container, onComplete), 100);
-            return;
-        }
-        let startX = 0, isDragging = false;
+        if (track.clientWidth===0 || thumb.clientWidth===0) { setTimeout(()=>initSlide(container,onComplete),100); return; }
+        let startX=0, isDragging=false;
         const maxLeft = track.clientWidth - thumb.clientWidth;
         function setTransform(x) { thumb.style.transform = `translateX(${x}px)`; }
         function onMove(clientX) {
-            if (!isDragging) return;
+            if(!isDragging) return;
             let delta = clientX - startX;
             let newLeft = Math.min(maxLeft, Math.max(0, delta));
             setTransform(newLeft);
-            if (newLeft >= maxLeft - 5) {
-                isDragging = false;
-                container.classList.add('completed');
-                setTransform(maxLeft);
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-                document.removeEventListener('touchmove', onTouchMove);
-                document.removeEventListener('touchend', onTouchEnd);
-                if (onComplete) onComplete();
+            if(newLeft >= maxLeft-5) {
+                isDragging=false; container.classList.add('completed'); setTransform(maxLeft);
+                document.removeEventListener('mousemove',onMouseMove); document.removeEventListener('mouseup',onMouseUp);
+                document.removeEventListener('touchmove',onTouchMove); document.removeEventListener('touchend',onTouchEnd);
+                if(onComplete) onComplete();
             }
         }
         function onMouseMove(e) { onMove(e.clientX); }
-        function onMouseUp() {
-            isDragging = false;
-            setTransform(0);
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-            container.classList.remove('completed');
-        }
+        function onMouseUp() { isDragging=false; setTransform(0); document.removeEventListener('mousemove',onMouseMove); document.removeEventListener('mouseup',onMouseUp); container.classList.remove('completed'); }
         function onTouchMove(e) { onMove(e.touches[0].clientX); e.preventDefault(); }
-        function onTouchEnd() {
-            isDragging = false;
-            setTransform(0);
-            document.removeEventListener('touchmove', onTouchMove);
-            document.removeEventListener('touchend', onTouchEnd);
-            container.classList.remove('completed');
-        }
-        function onStart(clientX) {
-            startX = clientX;
-            isDragging = true;
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-            document.addEventListener('touchmove', onTouchMove);
-            document.addEventListener('touchend', onTouchEnd);
-        }
-        thumb.addEventListener('mousedown', (e) => { e.preventDefault(); onStart(e.clientX); });
-        thumb.addEventListener('touchstart', (e) => { e.preventDefault(); onStart(e.touches[0].clientX); });
-        container.classList.remove('completed');
-        setTransform(0);
+        function onTouchEnd() { isDragging=false; setTransform(0); document.removeEventListener('touchmove',onTouchMove); document.removeEventListener('touchend',onTouchEnd); container.classList.remove('completed'); }
+        function onStart(clientX) { startX=clientX; isDragging=true; document.addEventListener('mousemove',onMouseMove); document.addEventListener('mouseup',onMouseUp); document.addEventListener('touchmove',onTouchMove); document.addEventListener('touchend',onTouchEnd); }
+        thumb.addEventListener('mousedown',(e)=>{ e.preventDefault(); onStart(e.clientX); });
+        thumb.addEventListener('touchstart',(e)=>{ e.preventDefault(); onStart(e.touches[0].clientX); });
+        container.classList.remove('completed'); setTransform(0);
     }
 
     function startCountdown(estimatedMinutes, startTimestamp) {
@@ -779,131 +697,91 @@
         const countdownDiv = document.getElementById('countdownDisplay');
         if(!countdownDiv) return;
         const update = () => {
-            const elapsed = (Date.now() - startTimestamp) / 1000;
-            const remaining = Math.max(0, estimatedMinutes * 60 - elapsed);
-            const mins = Math.floor(remaining / 60), secs = Math.floor(remaining % 60);
-            if(remaining <= 0) {
-                countdownDiv.innerHTML = '⏰ 预计已到达！请滑动确认到达';
-                countdownDiv.classList.add('warning');
-                clearInterval(countdownTimer);
-                countdownTimer = null;
-            } else {
-                countdownDiv.innerHTML = `🚗 预计剩余时间: ${mins}分${secs.toString().padStart(2,'0')}秒`;
-                if(remaining < 60) countdownDiv.classList.add('warning');
-                else countdownDiv.classList.remove('warning');
-            }
+            const elapsed = (Date.now()-startTimestamp)/1000;
+            const remaining = Math.max(0, estimatedMinutes*60 - elapsed);
+            const mins = Math.floor(remaining/60), secs = Math.floor(remaining%60);
+            if(remaining<=0) { countdownDiv.innerHTML='⏰ 预计已到达！请滑动确认到达'; countdownDiv.classList.add('warning'); clearInterval(countdownTimer); countdownTimer=null; }
+            else { countdownDiv.innerHTML=`🚗 预计剩余时间: ${mins}分${secs.toString().padStart(2,'0')}秒`; if(remaining<60) countdownDiv.classList.add('warning'); else countdownDiv.classList.remove('warning'); }
         };
-        update();
-        countdownTimer = setInterval(update, 1000);
+        update(); countdownTimer = setInterval(update, 1000);
     }
 
     function renderProgressSteps(task) {
         if(!task.takerId) return '';
-        let activeIndex = 0;
-        if(task.status === 'ongoing') {
-            if(task.travelStatus === 'idle') activeIndex = 1;
-            else if(task.travelStatus === 'traveling') activeIndex = 2;
-            else if(task.travelStatus === 'arrived') activeIndex = 3;
-            if(task.takerCompleted) activeIndex = 4;
-        } else if(task.status === 'completed') activeIndex = 5;
+        let activeIndex=0;
+        if(task.status==='ongoing'){
+            if(task.travelStatus==='idle') activeIndex=1;
+            else if(task.travelStatus==='traveling') activeIndex=2;
+            else if(task.travelStatus==='arrived') activeIndex=3;
+            if(task.takerCompleted) activeIndex=4;
+        }else if(task.status==='completed') activeIndex=5;
         const steps = [{icon:'📋',label:'已接取'},{icon:'🚗',label:'出发'},{icon:'📍',label:'到达'},{icon:'📎',label:'提交凭证'},{icon:'✅',label:'结算'}];
-        let html = '<div class="progress-steps">';
-        steps.forEach((step, idx) => {
-            const stepNum = idx+1;
-            let statusClass = '';
-            if(stepNum < activeIndex) statusClass = 'completed';
-            else if(stepNum === activeIndex) statusClass = 'active';
-            html += `<div class="step ${statusClass}"><div class="step-dot">${step.icon}</div><div class="step-label">${step.label}</div></div>`;
+        let html='<div class="progress-steps">';
+        steps.forEach((step,idx)=>{
+            const stepNum=idx+1;
+            let statusClass='';
+            if(stepNum<activeIndex) statusClass='completed';
+            else if(stepNum===activeIndex) statusClass='active';
+            html+=`<div class="step ${statusClass}"><div class="step-dot">${step.icon}</div><div class="step-label">${step.label}</div></div>`;
         });
-        html += '</div>';
+        html+='</div>';
         return html;
     }
 
     async function submitProof(taskId, proofFiles) {
-        const proofMedia = [];
-        for(let file of proofFiles) {
-            const dataURL = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(file);
-            });
-            proofMedia.push({type: file.type.startsWith('image/')?'image':'video', url: dataURL});
+        const proofMedia=[];
+        for(let file of proofFiles){
+            const dataURL = await new Promise((resolve)=>{ const reader=new FileReader(); reader.onload=(e)=>resolve(e.target.result); reader.readAsDataURL(file); });
+            proofMedia.push({type:file.type.startsWith('image/')?'image':'video', url:dataURL});
         }
-        const result = await callApi(`/tasks/${taskId}/submit-proof`, {method:'POST', body:JSON.stringify({userId: currentUser.id, proofMedia})});
+        const result = await callApi(`/tasks/${taskId}/submit-proof`, {method:'POST', body:JSON.stringify({userId:currentUser.id, proofMedia})});
         return result;
     }
 
     async function cancelTask(taskId) {
         showConfirm('确认取消', '确定取消该任务吗？取消后赏金将退还到您的账户。', async () => {
             try {
-                const result = await callApi(`/tasks/${taskId}/cancel`, {method:'PUT', body:JSON.stringify({userId: currentUser.id})});
+                const result = await callApi(`/tasks/${taskId}/cancel`, {method:'PUT', body:JSON.stringify({userId:currentUser.id})});
                 if(result.success) {
                     showToast('任务已取消，赏金已退还');
-                    await refreshTaskList();
-                    await loadProfile();
-                    if(document.getElementById('detailPage').classList.contains('active')) {
-                        switchPage(lastPage || 'home');
-                    }
-                } else {
-                    showAlert('取消失败', result.error || '未知错误');
-                }
-            } catch(err) {
-                showAlert('取消失败', err.message);
-            }
+                    await refreshTaskList(); await loadProfile();
+                    if(document.getElementById('detailPage').classList.contains('active')) switchPage(lastPage||'home');
+                } else showAlert('取消失败', result.error||'未知错误');
+            } catch(err) { showAlert('取消失败', err.message); }
         });
     }
 
     async function publishTask() {
-        if(!currentUser.idCardVerified) { showAlert('提示','请先实名认证'); return; }
+        if(!currentUser.idCardVerified){ showAlert('提示','请先实名认证'); return; }
         const title = document.getElementById('pubTitle').value.trim();
-        if(!title) { showAlert('提示','请输入标题'); return; }
+        if(!title){ showAlert('提示','请输入标题'); return; }
         const reward = parseFloat(document.getElementById('pubReward').value);
-        if(isNaN(reward) || reward <= 0) { showAlert('提示','请输入有效金额'); return; }
-        if(reward > currentUser.balance) { showAlert('提示','余额不足'); return; }
-        const locationAddress = document.getElementById('pubAddress').value.trim() || '未知';
-        const mediaList = pendingMedia.map(m => ({type: m.type, url: m.dataURL}));
+        if(isNaN(reward)||reward<=0){ showAlert('提示','请输入有效金额'); return; }
+        if(reward>currentUser.balance){ showAlert('提示','余额不足'); return; }
+        const locationAddress = document.getElementById('pubAddress').value.trim()||'未知';
+        const mediaList = pendingMedia.map(m=>({type:m.type, url:m.dataURL}));
         const btn = document.getElementById('doPublishBtn');
         const originalText = btn.innerText;
-        btn.innerText = '发布中...';
-        btn.disabled = true;
+        btn.innerText = '发布中...'; btn.disabled=true;
         try {
             const result = await callApi('/tasks', {method:'POST', body:JSON.stringify({
-                title,
-                description: document.getElementById('pubDesc').value,
-                reward,
-                publisherId: currentUser.id,
-                publisherName: currentUser.nickname,
-                publisherPhone: currentUser.phone,
-                locationAddress,
-                mediaList,
-                category: document.getElementById('pubCategory').value
+                title, description:document.getElementById('pubDesc').value, reward,
+                publisherId:currentUser.id, publisherName:currentUser.nickname, publisherPhone:currentUser.phone,
+                locationAddress, mediaList, category:document.getElementById('pubCategory').value
             })});
             if(result._id) {
-                showToast('发布成功');
-                resetPublishForm();
-                await loadProfile();
-                refreshTaskList();
-                switchPage('home');
-            } else {
-                showAlert('发布失败', result.error || '未知错误');
-            }
-        } catch(err) {
-            showAlert('发布出错', err.message);
-        } finally {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }
+                showToast('发布成功'); resetPublishForm(); await loadProfile(); refreshTaskList(); switchPage('home');
+            } else showAlert('发布失败', result.error||'未知错误');
+        } catch(err) { showAlert('发布出错', err.message); }
+        finally { btn.innerText=originalText; btn.disabled=false; }
     }
 
     function resetPublishForm() {
-        document.getElementById('pubTitle').value = '';
-        document.getElementById('pubDesc').value = '';
-        document.getElementById('pubReward').value = '';
-        document.getElementById('pubAddress').value = '';
-        document.getElementById('pubCategory').value = '取件';
-        pendingMedia = [];
-        updateMediaPreview();
-        document.getElementById('locationHint').innerHTML = '点击定位自动填入详细地址';
+        document.getElementById('pubTitle').value=''; document.getElementById('pubDesc').value='';
+        document.getElementById('pubReward').value=''; document.getElementById('pubAddress').value='';
+        document.getElementById('pubCategory').value='取件';
+        pendingMedia=[]; updateMediaPreview();
+        document.getElementById('locationHint').innerHTML='点击定位自动填入详细地址';
     }
 
     async function doLogin() {
@@ -927,43 +805,30 @@
                 switchPage('home');
                 initBackButtonHandler();
             } else errorDiv.innerText = result.error || '登录失败';
-        } catch(err) {
-            errorDiv.innerText = err.message;
-        }
+        } catch(err) { errorDiv.innerText = err.message; }
     }
 
     let backPressedOnce = false;
     function initBackButtonHandler() {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             Capacitor.Plugins.App.addListener('backButton', handleBackButton);
-        } else {
-            window.addEventListener('popstate', handleBackButton);
-        }
+        } else { window.addEventListener('popstate', handleBackButton); }
     }
     function handleBackButton() {
         const activePage = document.querySelector('.page.active').id;
         if (activePage === 'homePage') {
             if (backPressedOnce) {
-                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                    Capacitor.Plugins.App.exitApp();
-                } else {
-                    window.close();
-                }
-            } else {
-                backPressedOnce = true;
-                showToast('再按一次退出应用');
-                setTimeout(() => { backPressedOnce = false; }, 2000);
-            }
+                if (window.Capacitor && window.Capacitor.isNativePlatform()) Capacitor.Plugins.App.exitApp();
+                else window.close();
+            } else { backPressedOnce = true; showToast('再按一次退出应用'); setTimeout(()=>{ backPressedOnce=false; },2000); }
         } else {
             const backBtn = document.getElementById('detailBackBtn');
-            if (backBtn && backBtn.closest('.page') && backBtn.closest('.page').classList.contains('active')) {
-                backBtn.click();
-            } else {
-                history.back();
-            }
+            if (backBtn && backBtn.closest('.page') && backBtn.closest('.page').classList.contains('active')) backBtn.click();
+            else history.back();
         }
     }
 
+    // ---------- 任务详情页 ----------
     window.viewTask = async function(taskId, fromPage = 'home') {
         lastPage = fromPage;
         if(countdownTimer) clearInterval(countdownTimer);
@@ -973,16 +838,11 @@
         const isTaker = task.takerId === currentUser.id;
         const publisherInfo = await callApi(`/user/${task.publisherId}`);
         let detailHtml = `
-            <div class="detail-hero">
-                <span class="detail-status">● ${task.status==='available'?'可接取':(task.status==='ongoing'?'进行中':'已完成')}</span>
-                <div class="detail-reward" id="detailReward">¥${task.reward}</div>
-            </div>
-            <div class="card" style="margin-top:12px;">
-                <h2>${escapeHtml(task.title)}</h2>
-                <div class="info-row"><div class="info-icon">📌</div><div class="info-content"><div class="info-label">发布者</div><div class="info-value" id="publisherName">${escapeHtml(task.publisherName)}</div></div></div>
-                <div class="info-row"><div class="info-icon">📍</div><div class="info-content"><div class="info-label">任务地点</div><div class="info-value">${escapeHtml(task.locationAddress||'未标注')}</div></div></div>
-                <div class="info-row"><div class="info-icon">⏰</div><div class="info-content"><div class="info-label">发布时间</div><div class="info-value">${task.createdAt?new Date(task.createdAt).toLocaleDateString():'未知'}</div></div></div>
-        `;
+            <div class="detail-hero"><span class="detail-status">● ${task.status==='available'?'可接取':(task.status==='ongoing'?'进行中':'已完成')}</span><div class="detail-reward" id="detailReward">¥${task.reward}</div></div>
+            <div class="card" style="margin-top:12px;"><h2>${escapeHtml(task.title)}</h2>
+            <div class="info-row"><div class="info-icon">📌</div><div class="info-content"><div class="info-label">发布者</div><div class="info-value" id="publisherName">${escapeHtml(task.publisherName)}</div></div></div>
+            <div class="info-row"><div class="info-icon">📍</div><div class="info-content"><div class="info-label">任务地点</div><div class="info-value">${escapeHtml(task.locationAddress||'未标注')}</div></div></div>
+            <div class="info-row"><div class="info-icon">⏰</div><div class="info-content"><div class="info-label">发布时间</div><div class="info-value">${task.createdAt?new Date(task.createdAt).toLocaleDateString():'未知'}</div></div></div>`;
         if(task.takerId) detailHtml += renderProgressSteps(task);
         if(task.takerId) {
             const takenTimeStr = task.takenAt ? new Date(task.takenAt).toLocaleString() : '时间未知';
@@ -991,7 +851,7 @@
             else detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
         }
         detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description||'')}</p></div>`;
-        if(task.mediaList && task.mediaList.length > 0) {
+        if(task.mediaList && task.mediaList.length>0) {
             let mediaHtml = `<div class="desc-section"><div class="info-label">📎 附件（${task.mediaList.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;
             for(let media of task.mediaList) {
                 if(media.type === 'image') mediaHtml += `<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="showImagePreview('${media.url}')"></div>`;
@@ -1017,7 +877,7 @@
             if(task.travelStatus === 'idle') detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
             else if(task.travelStatus === 'traveling') {
                 detailHtml += `<div id="countdownDisplay" class="countdown-timer">计算中...</div><div class="slide-action" id="slideArriveWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📍 滑动到达 📍</div></div></div>`;
-            } else if(task.travelStatus === 'arrived' && !task.takerCompleted) {
+            }else if(task.travelStatus === 'arrived' && !task.takerCompleted){
                 detailHtml += `<div class="slide-action" id="slideCompleteWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📎 滑动并上传凭证完成 ✅</div></div></div>`;
             }
             detailHtml += `<div style="margin:8px 12px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
@@ -1070,12 +930,8 @@
         const slideAccept = document.getElementById('slideAcceptWrapper');
         if(slideAccept) initSlide(slideAccept, async () => {
             const res = await callApi(`/tasks/${taskId}/accept`, {method:'PUT', body:JSON.stringify({takerId: currentUser.id, takerName: currentUser.nickname})});
-            if(res.success) {
-                showToast('接取成功');
-                refreshTaskList();
-                loadProfile();
-                viewTask(taskId, lastPage);
-            } else showAlert('接取失败', res.error);
+            if(res.success) { showToast('接取成功'); refreshTaskList(); loadProfile(); viewTask(taskId, lastPage); }
+            else showAlert('接取失败', res.error);
         });
         const slideStart = document.getElementById('slideStartWrapper');
         if(slideStart) {
@@ -1089,49 +945,31 @@
                     }
                 }
                 const result = await callApi(`/tasks/${taskId}/status`, {method:'PUT', body:JSON.stringify({travelStatus:'traveling', estimatedMinutes: minutes, travelStartTime: Date.now()})});
-                if(result.success) {
-                    showToast('出发！');
-                    viewTask(taskId, lastPage);
-                } else showAlert('操作失败', result.error);
+                if(result.success) { showToast('出发！'); viewTask(taskId, lastPage); }
+                else showAlert('操作失败', result.error);
             });
         }
         const slideArrive = document.getElementById('slideArriveWrapper');
         if(slideArrive) {
-            if(task.travelStartTime && task.estimatedMinutes) {
-                startCountdown(task.estimatedMinutes, task.travelStartTime);
-            } else {
-                let est = task.estimatedMinutes || 15;
-                let start = task.travelStartTime || Date.now();
-                startCountdown(est, start);
-            }
+            if(task.travelStartTime && task.estimatedMinutes) startCountdown(task.estimatedMinutes, task.travelStartTime);
+            else { let est = task.estimatedMinutes || 15; let start = task.travelStartTime || Date.now(); startCountdown(est, start); }
             initSlide(slideArrive, async () => {
                 const result = await callApi(`/tasks/${taskId}/status`, {method:'PUT', body:JSON.stringify({travelStatus:'arrived'})});
-                if(result.success) {
-                    if(countdownTimer) clearInterval(countdownTimer);
-                    showToast('已到达目的地！');
-                    viewTask(taskId, lastPage);
-                } else showAlert('操作失败', result.error);
+                if(result.success) { if(countdownTimer) clearInterval(countdownTimer); showToast('已到达目的地！'); viewTask(taskId, lastPage); }
+                else showAlert('操作失败', result.error);
             });
         }
         const slideComplete = document.getElementById('slideCompleteWrapper');
         if(slideComplete) {
             initSlide(slideComplete, async () => {
                 const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*,video/*';
-                input.multiple = true;
+                input.type = 'file'; input.accept = 'image/*,video/*'; input.multiple = true;
                 input.onchange = async (e) => {
                     const files = Array.from(e.target.files);
-                    if(files.length === 0) return;
+                    if(files.length===0) return;
                     const result = await submitProof(taskIdStr, files);
-                    if(result.success) {
-                        showToast('凭证已提交，等待发布者确认');
-                        refreshTaskList();
-                        loadProfile();
-                        viewTask(taskId, lastPage);
-                    } else {
-                        showAlert('提交失败', result.error || '未知错误');
-                    }
+                    if(result.success) { showToast('凭证已提交，等待发布者确认'); refreshTaskList(); loadProfile(); viewTask(taskId, lastPage); }
+                    else showAlert('提交失败', result.error || '未知错误');
                 };
                 input.click();
             });
@@ -1140,12 +978,8 @@
         if(cancelAcceptBtn) cancelAcceptBtn.onclick = async () => {
             showConfirm('确认取消', '取消接取将扣除5信用分，确定吗？', async () => {
                 const res = await callApi(`/tasks/${taskId}/cancel-accept`, {method:'PUT', body:JSON.stringify({userId: currentUser.id})});
-                if(res.success) {
-                    showToast('已取消接取');
-                    loadProfile();
-                    refreshTaskList();
-                    switchPage('home');
-                } else showAlert('操作失败', res.error);
+                if(res.success) { showToast('已取消接取'); loadProfile(); refreshTaskList(); switchPage('home'); }
+                else showAlert('操作失败', res.error);
             });
         };
         const confirmCompleteBtn = document.getElementById('confirmCompleteBtn');
@@ -1153,12 +987,8 @@
             confirmCompleteBtn.onclick = async () => {
                 showConfirm('确认支付', '确认任务已完成？赏金将支付给接取者。', async () => {
                     const res = await callApi(`/tasks/${taskId}/confirm-payment`, {method:'POST', body:JSON.stringify({userId: currentUser.id})});
-                    if(res.success) {
-                        showToast('结算成功');
-                        viewTask(taskId, lastPage);
-                        refreshTaskList();
-                        loadProfile();
-                    } else showAlert('结算失败', res.error);
+                    if(res.success) { showToast('结算成功'); viewTask(taskId, lastPage); refreshTaskList(); loadProfile(); }
+                    else showAlert('结算失败', res.error);
                 });
             };
         }
@@ -1169,16 +999,13 @@
         if(e.target.id === 'detailBackBtn') {
             if(lastPage === 'profile') switchPage('profile');
             else if(lastPage === 'message') {
-                if(chatState.taskId) {
-                    openChat(chatState.taskId, chatState.otherId, chatState.otherName, chatState.reward, chatState.title);
-                } else {
-                    switchPage('message');
-                }
+                if(chatState.taskId) openChat(chatState.taskId, chatState.otherId, chatState.otherName, chatState.reward, chatState.title);
+                else switchPage('message');
             } else switchPage('home');
         }
     });
 
-    // ==================== 聊天功能 ====================
+    // ---------- 聊天功能 ----------
     async function sendMessage(taskId, text, isNego = false) {
         await callApi('/messages', {method:'POST', body:JSON.stringify({taskId, senderId: currentUser.id, senderName: currentUser.nickname, text, isNego})});
     }
@@ -1190,9 +1017,7 @@
             await refreshMessagesOnly();
             await renderMessageList();
             updateUnreadBadge();
-        } catch(err) {
-            showAlert('删除失败', err.message);
-        }
+        } catch(err) { showAlert('删除失败', err.message); }
     }
 
     async function deleteConversation(taskId) {
@@ -1205,9 +1030,7 @@
                 closeChat();
                 switchPage('message');
             }
-        } catch(err) {
-            showAlert('删除失败', err.message);
-        }
+        } catch(err) { showAlert('删除失败', err.message); }
     }
 
     async function refreshMessagesOnly() {
@@ -1223,11 +1046,7 @@
             const isNego = m.text && m.text.includes('💰议价请求:');
             const priceMatch = m.text.match(/¥(\d+)/);
             const negoPrice = priceMatch ? parseInt(priceMatch[1]) : null;
-            html += `
-                <div class="chat-bubble ${isMine?'chat-bubble-mine':'chat-bubble-other'}" data-message-id="${m._id}" data-is-mine="${isMine}">
-                    <div class="bubble-text">${escapeHtml(m.text)}</div>
-                    <div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div>
-                </div>`;
+            html += `<div class="chat-bubble ${isMine?'chat-bubble-mine':'chat-bubble-other'}" data-message-id="${m._id}" data-is-mine="${isMine}"><div class="bubble-text">${escapeHtml(m.text)}</div><div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div></div>`;
             if(!isMine && isNego && negoPrice && m.senderId !== 'system') {
                 html += `<div style="display:flex; gap:8px; margin:4px 0 8px 12px;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
             }
@@ -1243,13 +1062,9 @@
             let pressTimer = null;
             const startPress = (e) => {
                 e.preventDefault();
-                pressTimer = setTimeout(() => {
-                    showConfirm('删除消息', '确定要删除这条消息吗？', () => deleteMessage(messageId));
-                }, 500);
+                pressTimer = setTimeout(() => { showConfirm('删除消息', '确定要删除这条消息吗？', () => deleteMessage(messageId)); }, 500);
             };
-            const cancelPress = () => {
-                if(pressTimer) clearTimeout(pressTimer);
-            };
+            const cancelPress = () => { if(pressTimer) clearTimeout(pressTimer); };
             bubble.addEventListener('contextmenu', (e) => e.preventDefault());
             bubble.addEventListener('touchstart', startPress);
             bubble.addEventListener('touchend', cancelPress);
@@ -1274,68 +1089,43 @@
             messagesArea.parentNode.insertBefore(div, messagesArea);
             return div;
         };
-        messagesArea.addEventListener('touchstart', (e) => {
-            if(messagesArea.scrollTop === 0) startY = e.touches[0].clientY;
-        });
+        messagesArea.addEventListener('touchstart', (e) => { if(messagesArea.scrollTop===0) startY = e.touches[0].clientY; });
         messagesArea.addEventListener('touchmove', (e) => {
-            if(isRefreshing || messagesArea.scrollTop > 0) return;
+            if(isRefreshing || messagesArea.scrollTop>0) return;
             const diff = e.touches[0].clientY - startY;
-            if(diff > 30) {
+            if(diff>30) {
                 e.preventDefault();
                 indicator = indicator || createIndicator();
-                if(indicator) {
-                    indicator.style.display = 'block';
-                    indicator.style.transform = `translateY(${Math.min(diff-30,60)}px)`;
-                }
+                if(indicator) { indicator.style.display='block'; indicator.style.transform=`translateY(${Math.min(diff-30,60)}px)`; }
             }
         });
         messagesArea.addEventListener('touchend', async () => {
-            if(indicator && indicator.style.display === 'block') {
-                indicator.style.transform = '';
-                indicator.style.display = 'none';
-                isRefreshing = true;
-                indicator.innerText = '刷新中...';
-                indicator.style.display = 'block';
+            if(indicator && indicator.style.display==='block') {
+                indicator.style.transform=''; indicator.style.display='none';
+                isRefreshing=true; indicator.innerText='刷新中...'; indicator.style.display='block';
                 await refreshMessagesOnly();
-                isRefreshing = false;
-                indicator.style.display = 'none';
-                indicator.innerText = '↓ 下拉刷新';
+                isRefreshing=false; indicator.style.display='none'; indicator.innerText='↓ 下拉刷新';
             }
         });
     }
 
     function showChatView() {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
         document.getElementById('messagePage').classList.add('active');
         const container = document.getElementById('messageContainer');
         container.innerHTML = `
             <div class="chat-container">
-                <div class="chat-header-bar">
-                    <button class="chat-back-btn" id="chatBackBtn">←</button>
-                    <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
-                </div>
-                <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')">
-                    <div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div>
-                    <span>👉 详情</span>
-                </div>
+                <div class="chat-header-bar"><button class="chat-back-btn" id="chatBackBtn">←</button><span class="chat-header-name">${escapeHtml(chatState.otherName)}</span></div>
+                <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div>
                 <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
-                <div class="chat-input-wrapper">
-                    <div class="flex-row">
-                        <input type="number" id="negoPriceInput" class="nego-input" placeholder="💰议价 (当前¥${chatState.reward})" step="1">
-                        <button class="nego-send-btn" id="sendNegoBtn">发起议价</button>
-                    </div>
-                    <div class="chat-action-row">
-                        <input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息...">
-                        <button class="send-btn" id="sendChatBtn">发送</button>
-                    </div>
-                </div>
+                <div class="chat-input-wrapper"><div class="flex-row"><input type="number" id="negoPriceInput" class="nego-input" placeholder="💰议价 (当前¥${chatState.reward})" step="1"><button class="nego-send-btn" id="sendNegoBtn">发起议价</button></div><div class="chat-action-row"><input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息..."><button class="send-btn" id="sendChatBtn">发送</button></div></div>
             </div>
         `;
         chatState.messagesArea = document.getElementById('chatMsgsArea');
         chatState.lastMessageCount = 0;
         document.getElementById('chatBackBtn').onclick = () => {
             closeChat();
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
             document.getElementById('messagePage').classList.add('active');
             renderMessageList();
             updateUnreadBadge();
@@ -1351,7 +1141,7 @@
         };
         document.getElementById('sendNegoBtn').onclick = async () => {
             const price = parseFloat(document.getElementById('negoPriceInput').value);
-            if(isNaN(price) || price <= 0) { showAlert('提示','输入有效价格'); return; }
+            if(isNaN(price) || price<=0) { showAlert('提示','输入有效价格'); return; }
             await sendMessage(chatState.taskId, `💰议价请求:¥${price}`, true);
             showToast('议价请求已发送');
             document.getElementById('negoPriceInput').value = '';
@@ -1362,9 +1152,7 @@
         refreshMessagesOnly();
         initChatPullToRefresh();
         if(chatState.pollInterval) clearInterval(chatState.pollInterval);
-        chatState.pollInterval = setInterval(async () => {
-            if(chatState.active && chatState.taskId) await refreshMessagesOnly();
-        }, 3000);
+        chatState.pollInterval = setInterval(async () => { if(chatState.active && chatState.taskId) await refreshMessagesOnly(); }, 3000);
     }
 
     async function openChat(taskId, otherId, otherName, reward, title) {
@@ -1389,9 +1177,7 @@
             showToast(`已同意议价，新价格 ¥${price}`);
             if(chatState.taskId === taskId) chatState.reward = price;
             refreshTaskList();
-            if(document.getElementById('detailPage').classList.contains('active')) {
-                viewTask(taskId, lastPage);
-            }
+            if(document.getElementById('detailPage').classList.contains('active')) viewTask(taskId, lastPage);
             renderMessageList();
             updateUnreadBadge();
         } else {
@@ -1428,17 +1214,14 @@
         for(let c of convs) {
             // 如果没有消息且未读为0，则跳过该会话（不显示）
             if (!c.lastMsg && c.unread === 0) continue;
-
             let unreadHtml = '';
             if(c.unread > 0) {
                 unreadHtml = `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;
             }
-            html += `
-                <div class="card task-card" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
-                    <div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div>
-                    <div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div>
-                </div>
-            `;
+            html += `<div class="card task-card" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
+                <div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div>
+                <div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div>
+            </div>`;
         }
         container.innerHTML = html;
         document.querySelectorAll('#messageContainer .task-card').forEach(card => {
@@ -1458,14 +1241,10 @@
                 pressTimer = setTimeout(() => {
                     const taskId = card.getAttribute('data-taskid');
                     const otherName = card.getAttribute('data-othername');
-                    showConfirm('删除聊天记录', `确定删除与 ${otherName} 的所有聊天记录吗？`, () => {
-                        deleteConversation(taskId);
-                    });
+                    showConfirm('删除聊天记录', `确定删除与 ${otherName} 的所有聊天记录吗？`, () => { deleteConversation(taskId); });
                 }, 500);
             };
-            const cancelPress = () => {
-                if(pressTimer) clearTimeout(pressTimer);
-            };
+            const cancelPress = () => { if(pressTimer) clearTimeout(pressTimer); };
             card.addEventListener('contextmenu', (e) => e.preventDefault());
             card.addEventListener('touchstart', startPress);
             card.addEventListener('touchend', cancelPress);
@@ -1482,17 +1261,10 @@
         const convs = await callApi(`/user/${currentUser.id}/conversations`);
         const totalUnread = convs.reduce((sum,c) => sum + (c.unread||0), 0);
         const badge = document.getElementById('msgBadge');
-        if(badge) {
-            if(totalUnread > 0) {
-                badge.innerText = totalUnread > 99 ? '99+' : totalUnread;
-                badge.style.display = 'inline-block';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
+        if(badge) { if(totalUnread>0) { badge.innerText = totalUnread>99?'99+':totalUnread; badge.style.display='inline-block'; } else badge.style.display='none'; }
     }
 
-    // ==================== 个人主页 ====================
+    // ---------- 个人主页 ----------
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -1530,16 +1302,8 @@
             const accHtml = myAcc.map(t => `<div class="profile-task-item" onclick="viewTask('${t._id}','profile')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title">${escapeHtml(t.title)}</div><span class="profile-task-status ongoing">${t.travelStatus==='idle'?'待出发':(t.travelStatus==='traveling'?'行程中':'已到达')}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div><div class="task-actions"><button class="btn-danger" onclick="event.stopPropagation(); cancelAcceptedTask('${t._id}')">取消接取</button></div></div>`).join('') || '<div class="empty-state">暂无</div>';
             const completedHtml = myCompleted.map(t => `<div class="profile-task-item" onclick="viewTask('${t._id}','profile')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title">${escapeHtml(t.title)}</div><span class="profile-task-status completed">已完成</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div></div>`).join('') || '<div class="empty-state">暂无</div>';
             container.innerHTML = `
-                <div class="profile-header" onclick="showEditProfileModal()">
-                    <div class="profile-avatar">${currentUser.avatar ? `<img src="${currentUser.avatar}">` : `<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div>
-                    <div><div class="profile-name">${escapeHtml(currentUser.nickname||currentUser.username)}</div><div class="profile-signature">${currentUser.signature||'点击编辑'}</div></div>
-                    <span>✏️</span>
-                </div>
-                <div class="stats-row">
-                    <div class="stat-item" onclick="showWalletDetail()"><div class="stat-number">💰</div><div class="stat-label">钱包</div></div>
-                    <div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit||60}</div><div class="stat-label">信用</div></div>
-                    <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div>
-                </div>
+                <div class="profile-header" onclick="showEditProfileModal()"><div class="profile-avatar">${currentUser.avatar?`<img src="${currentUser.avatar}">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div><div><div class="profile-name">${escapeHtml(currentUser.nickname||currentUser.username)}</div><div class="profile-signature">${currentUser.signature||'点击编辑'}</div></div><span>✏️</span></div>
+                <div class="stats-row"><div class="stat-item" onclick="showWalletDetail()"><div class="stat-number">💰</div><div class="stat-label">钱包</div></div><div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit||60}</div><div class="stat-label">信用</div></div><div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div></div>
                 <div class="profile-collapse"><div class="collapse-header" data-target="pub"><div class="collapse-title">📤 我发布 <span style="font-size:0.7rem;">(${myPub.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-pub">${pubHtml}</div></div>
                 <div class="profile-collapse"><div class="collapse-header" data-target="acc"><div class="collapse-title">📥 我接取 <span style="font-size:0.7rem;">(${myAcc.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-acc">${accHtml}</div></div>
                 <div class="profile-collapse"><div class="collapse-header" data-target="completed"><div class="collapse-title">✅ 已完成 <span style="font-size:0.7rem;">(${myCompleted.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-completed">${completedHtml}</div></div>
@@ -1550,18 +1314,11 @@
                     const targetId = header.getAttribute('data-target');
                     const content = document.getElementById(`collapse-${targetId}`);
                     const icon = header.querySelector('.collapse-icon');
-                    if(content.classList.contains('show')) {
-                        content.classList.remove('show');
-                        icon.classList.remove('open');
-                    } else {
-                        content.classList.add('show');
-                        icon.classList.add('open');
-                    }
+                    if(content.classList.contains('show')) { content.classList.remove('show'); icon.classList.remove('open'); }
+                    else { content.classList.add('show'); icon.classList.add('open'); }
                 });
             });
-        } catch(err) {
-            container.innerHTML = '<div class="empty-state">加载失败</div>';
-        }
+        } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
 
     async function showWalletDetail() {
@@ -1569,20 +1326,12 @@
         const modal = document.createElement('div');
         modal.className = 'custom-modal';
         modal.innerHTML = `
-            <div class="custom-modal-content">
-                <h3>💰 钱包明细</h3>
-                <div style="background:#eef2ff; padding:12px; border-radius:16px; margin-bottom:12px;">
-                    <div>可用余额</div>
-                    <div style="font-size:1.6rem;">¥${(currentUser.balance||0).toFixed(2)}</div>
-                    <div style="font-size:0.7rem; color:#64748b;">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div>
-                </div>
-                <div><strong>提现</strong></div>
-                <button class="btn-primary" id="withdrawBtn" style="margin:6px 0;">💸 提现</button>
-                <div><strong>账单明细</strong></div>
-                <button class="btn-secondary" id="showBillDetailBtn" style="margin-bottom:8px;">📋 查看明细</button>
-                <div id="billDetailContainer" style="max-height:200px; overflow:auto; display:none;"></div>
-                <div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div>
-            </div>
+            <div class="custom-modal-content"><h3>💰 钱包明细</h3>
+            <div style="background:#eef2ff; padding:12px; border-radius:16px; margin-bottom:12px;"><div>可用余额</div><div style="font-size:1.6rem;">¥${(currentUser.balance||0).toFixed(2)}</div><div style="font-size:0.7rem; color:#64748b;">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div></div>
+            <div><strong>提现</strong></div><button class="btn-primary" id="withdrawBtn" style="margin:6px 0;">💸 提现</button>
+            <div><strong>账单明细</strong></div><button class="btn-secondary" id="showBillDetailBtn" style="margin-bottom:8px;">📋 查看明细</button>
+            <div id="billDetailContainer" style="max-height:200px; overflow:auto; display:none;"></div>
+            <div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>
         `;
         document.body.appendChild(modal);
         const closeModal = () => modal.remove();
@@ -1590,14 +1339,7 @@
         modal.querySelector('#withdrawBtn').onclick = () => {
             const chooseModal = document.createElement('div');
             chooseModal.className = 'custom-modal';
-            chooseModal.innerHTML = `
-                <div class="custom-modal-content">
-                    <h3>选择提现方式</h3>
-                    <button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button>
-                    <button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button>
-                    <div class="custom-modal-buttons"><button class="cancel-btn">取消</button></div>
-                </div>
-            `;
+            chooseModal.innerHTML = `<div class="custom-modal-content"><h3>选择提现方式</h3><button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button><button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button><div class="custom-modal-buttons"><button class="cancel-btn">取消</button></div></div>`;
             document.body.appendChild(chooseModal);
             chooseModal.querySelector('#withdrawWechatBtn').onclick = () => { showToast('提现到微信（演示模式）'); chooseModal.remove(); modal.remove(); };
             chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); modal.remove(); };
@@ -1605,22 +1347,14 @@
         };
         modal.querySelector('#showBillDetailBtn').onclick = () => {
             const container = modal.querySelector('#billDetailContainer');
-            if(container.style.display === 'block') {
-                container.style.display = 'none';
-                modal.querySelector('#showBillDetailBtn').innerText = '📋 查看明细';
-                return;
-            }
-            if(bills.length === 0) {
-                container.innerHTML = '<div class="empty-state">暂无记录</div>';
-            } else {
-                let html = '';
-                for(const b of bills) {
-                    html += `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${b.desc}</div><div>${b.amount>0?`+${b.amount}`:b.amount}元</div><div style="font-size:0.7rem;">${b.createdAt?new Date(b.createdAt).toLocaleString():''}</div></div>`;
-                }
+            if(container.style.display === 'block') { container.style.display='none'; modal.querySelector('#showBillDetailBtn').innerText='📋 查看明细'; return; }
+            if(bills.length===0) container.innerHTML='<div class="empty-state">暂无记录</div>';
+            else {
+                let html='';
+                for(const b of bills) html+=`<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${b.desc}</div><div>${b.amount>0?`+${b.amount}`:b.amount}元</div><div style="font-size:0.7rem;">${b.createdAt?new Date(b.createdAt).toLocaleString():''}</div></div>`;
                 container.innerHTML = html;
             }
-            container.style.display = 'block';
-            modal.querySelector('#showBillDetailBtn').innerText = '🔽 收起明细';
+            container.style.display='block'; modal.querySelector('#showBillDetailBtn').innerText='🔽 收起明细';
         };
     }
 
@@ -1628,13 +1362,7 @@
         const logs = await callApi(`/credit-logs/${currentUser.id}`);
         const modal = document.createElement('div');
         modal.className = 'custom-modal';
-        modal.innerHTML = `
-            <div class="custom-modal-content">
-                <h3>⭐ 信用明细</h3>
-                <div style="max-height:300px; overflow:auto;">${logs.map(l => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${l.reason}</div><div>${l.change>0?`+${l.change}`:l.change} 分</div><div style="font-size:0.7rem;">${new Date(l.createdAt).toLocaleString()}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}</div>
-                <div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div>
-            </div>
-        `;
+        modal.innerHTML = `<div class="custom-modal-content"><h3>⭐ 信用明细</h3><div style="max-height:300px; overflow:auto;">${logs.map(l=>`<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${l.reason}</div><div>${l.change>0?`+${l.change}`:l.change} 分</div><div style="font-size:0.7rem;">${new Date(l.createdAt).toLocaleString()}</div></div>`).join('')||'<div class="empty-state">暂无记录</div>'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;
         document.body.appendChild(modal);
         modal.querySelector('.confirm-btn').onclick = () => modal.remove();
     }
@@ -1642,11 +1370,8 @@
     window.cancelAcceptedTask = async function(taskId) {
         showConfirm('确认取消', '取消接取将扣除5信用分，确定吗？', async () => {
             const result = await callApi(`/tasks/${taskId}/cancel-accept`, {method:'PUT', body:JSON.stringify({userId: currentUser.id})});
-            if(result.success) {
-                showToast('已取消接取');
-                loadProfile();
-                refreshTaskList();
-            } else showAlert('操作失败', result.error || '取消失败');
+            if(result.success) { showToast('已取消接取'); loadProfile(); refreshTaskList(); }
+            else showAlert('操作失败', result.error || '取消失败');
         });
     };
 
@@ -1655,19 +1380,12 @@
         const modal = document.createElement('div');
         modal.className = 'custom-modal';
         modal.innerHTML = `
-            <div class="custom-modal-content">
-                <h3>编辑资料</h3>
-                <div class="form-group">
-                    <div class="form-label">头像</div>
-                    <div id="avatarPreview" style="width:70px;height:70px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">${currentUser.avatar?`<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div>
-                    <input type="file" id="avatarInput" accept="image/*" style="display:none;">
-                    <button class="btn-secondary" id="uploadAvatarBtn">更换头像</button>
-                </div>
-                <div class="form-group"><label>昵称</label><input type="text" id="editNickname" class="form-input" value="${escapeHtml(currentUser.nickname||'')}"></div>
-                <div class="form-group"><label>个性签名</label><textarea id="editSignature" class="form-textarea" rows="2">${escapeHtml(currentUser.signature||'')}</textarea></div>
-                <div class="form-group"><label>家乡</label><input type="text" id="editHometown" class="form-input" value="${escapeHtml(currentUser.hometown||'')}"></div>
-                <div class="double-btn-row" style="display:flex; gap:8px; margin-top:16px;"><button class="btn-primary" id="saveProfileBtn">保存</button><button class="btn-secondary" id="cancelEditBtn">取消</button></div>
-            </div>
+            <div class="custom-modal-content"><h3>编辑资料</h3>
+            <div class="form-group"><div class="form-label">头像</div><div id="avatarPreview" style="width:70px;height:70px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">${currentUser.avatar?`<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div><input type="file" id="avatarInput" accept="image/*" style="display:none;"><button class="btn-secondary" id="uploadAvatarBtn">更换头像</button></div>
+            <div class="form-group"><label>昵称</label><input type="text" id="editNickname" class="form-input" value="${escapeHtml(currentUser.nickname||'')}"></div>
+            <div class="form-group"><label>个性签名</label><textarea id="editSignature" class="form-textarea" rows="2">${escapeHtml(currentUser.signature||'')}</textarea></div>
+            <div class="form-group"><label>家乡</label><input type="text" id="editHometown" class="form-input" value="${escapeHtml(currentUser.hometown||'')}"></div>
+            <div class="double-btn-row" style="display:flex; gap:8px; margin-top:16px;"><button class="btn-primary" id="saveProfileBtn">保存</button><button class="btn-secondary" id="cancelEditBtn">取消</button></div></div>
         `;
         document.body.appendChild(modal);
         const avatarInput = modal.querySelector('#avatarInput');
@@ -1677,30 +1395,15 @@
             const file = e.target.files[0];
             if(file) {
                 const reader = new FileReader();
-                reader.onload = (ev) => {
-                    avatarPreview.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
-                    currentUser.avatar = ev.target.result;
-                };
+                reader.onload = (ev) => { avatarPreview.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`; currentUser.avatar = ev.target.result; };
                 reader.readAsDataURL(file);
             }
         };
         modal.querySelector('#saveProfileBtn').onclick = async () => {
-            const updates = {
-                nickname: modal.querySelector('#editNickname').value.trim() || currentUser.username,
-                signature: modal.querySelector('#editSignature').value,
-                hometown: modal.querySelector('#editHometown').value,
-                avatar: currentUser.avatar || ''
-            };
+            const updates = { nickname: modal.querySelector('#editNickname').value.trim()||currentUser.username, signature: modal.querySelector('#editSignature').value, hometown: modal.querySelector('#editHometown').value, avatar: currentUser.avatar||'' };
             const result = await callApi(`/user/${currentUser.id}`, {method:'PUT', body:JSON.stringify(updates)});
-            if(result.success !== false) {
-                currentUser = {...currentUser, ...updates};
-                localStorage.setItem('user', JSON.stringify(currentUser));
-                loadProfile();
-                showToast('保存成功');
-                modal.remove();
-            } else {
-                showAlert('保存失败', '请重试');
-            }
+            if(result.success!==false) { currentUser={...currentUser,...updates}; localStorage.setItem('user',JSON.stringify(currentUser)); loadProfile(); showToast('保存成功'); modal.remove(); }
+            else showAlert('保存失败','请重试');
         };
         modal.querySelector('#cancelEditBtn').onclick = () => modal.remove();
     }
@@ -1709,27 +1412,15 @@
         if(currentUser.idCardVerified) { showAlert('提示','您已经实名认证过了'); return; }
         const modal = document.createElement('div');
         modal.className = 'custom-modal';
-        modal.innerHTML = `
-            <div class="custom-modal-content">
-                <h3>🆔 实名认证</h3>
-                <div class="form-group"><label>真实姓名</label><input id="realNameInput" class="form-input" placeholder="请输入真实姓名"></div>
-                <div class="form-group"><label>身份证号</label><input id="idCardInput" class="form-input" placeholder="请输入身份证号"></div>
-                <div class="double-btn-row" style="display:flex; gap:8px; margin-top:16px;"><button class="btn-primary" id="submitAuthBtn">提交认证</button><button class="btn-secondary" id="cancelAuthBtn">取消</button></div>
-            </div>
-        `;
+        modal.innerHTML = `<div class="custom-modal-content"><h3>🆔 实名认证</h3><div class="form-group"><label>真实姓名</label><input id="realNameInput" class="form-input" placeholder="请输入真实姓名"></div><div class="form-group"><label>身份证号</label><input id="idCardInput" class="form-input" placeholder="请输入身份证号"></div><div class="double-btn-row" style="display:flex; gap:8px; margin-top:16px;"><button class="btn-primary" id="submitAuthBtn">提交认证</button><button class="btn-secondary" id="cancelAuthBtn">取消</button></div></div>`;
         document.body.appendChild(modal);
         modal.querySelector('#submitAuthBtn').onclick = async () => {
             const realName = modal.querySelector('#realNameInput').value.trim();
             const idCard = modal.querySelector('#idCardInput').value.trim();
-            if(!realName || idCard.length < 15) { showAlert('提示','请填写正确的姓名和身份证号'); return; }
+            if(!realName || idCard.length<15) { showAlert('提示','请填写正确的姓名和身份证号'); return; }
             const result = await callApi('/verify-id', {method:'POST', body:JSON.stringify({userId: currentUser.id, realName, idCard})});
-            if(result.success) {
-                showToast('实名认证成功');
-                currentUser.idCardVerified = true;
-                localStorage.setItem('user', JSON.stringify(currentUser));
-                modal.remove();
-                loadProfile();
-            } else showAlert('认证失败', result.error || '信息无效');
+            if(result.success) { showToast('实名认证成功'); currentUser.idCardVerified=true; localStorage.setItem('user',JSON.stringify(currentUser)); modal.remove(); loadProfile(); }
+            else showAlert('认证失败', result.error||'信息无效');
         };
         modal.querySelector('#cancelAuthBtn').onclick = () => modal.remove();
     }
@@ -1748,13 +1439,13 @@
     function switchPage(page) {
         if(page === 'message') {
             if(chatState.active) closeChat();
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
             document.getElementById('messagePage').classList.add('active');
             renderMessageList();
             return;
         }
         if(page === 'publish') resetPublishForm();
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
         document.getElementById(`${page}Page`).classList.add('active');
         if(page === 'home') refreshTaskList();
         if(page === 'profile') loadProfile();
@@ -1772,14 +1463,9 @@
         if(password !== confirm) { showAlert('提示','两次密码不一致'); return; }
         try {
             const result = await callApi('/register', {method:'POST', body:JSON.stringify({username,password,nickname,phone})});
-            if(result.success) {
-                showToast('注册成功，请登录');
-                document.getElementById('registerPage').classList.remove('active');
-                document.getElementById('loginPage').classList.add('active');
-            } else showAlert('注册失败', result.error);
-        } catch(err) {
-            showAlert('注册失败', err.message);
-        }
+            if(result.success) { showToast('注册成功，请登录'); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); }
+            else showAlert('注册失败', result.error);
+        } catch(err) { showAlert('注册失败', err.message); }
     };
     document.getElementById('doPublishBtn').onclick = publishTask;
     document.getElementById('showRegisterBtn').onclick = (e) => { e.preventDefault(); document.getElementById('loginPage').classList.remove('active'); document.getElementById('registerPage').classList.add('active'); };
