@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>赏金集市 · 原生版</title>
     <style>
-        /* ========== 完整样式（与之前相同） ========== */
+        /* 完整样式（与之前一致，确保所有样式存在） */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         body{background:#f5f7fb;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1e293b;padding-bottom:70px}
         .app-container{width:100%;background:#f5f7fb;min-height:100vh}
@@ -1146,7 +1146,7 @@
         chatState.messagesArea = null;
     }
 
-    // 消息列表渲染（只显示有消息的会话，删除后会自动消失）
+    // ========== 消息列表渲染（关键修复：过滤掉 lastMsg 为空的会话）==========
     async function renderMessageList() {
         if(!currentUser || !currentUser.id) {
             const container = document.getElementById('messageContainer');
@@ -1163,6 +1163,8 @@
         }
         let html = '<div class="card"><strong>📬 消息记录</strong></div>';
         for(let c of convs) {
+            // 关键：如果 lastMsg 为空且未读为0，则跳过（不显示该会话）
+            if (!c.lastMsg && c.unread === 0) continue;
             let unreadHtml = '';
             if(c.unread > 0) {
                 unreadHtml = `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;
