@@ -117,8 +117,6 @@ TaskSchema.index({ publisherId: 1 });
 TaskSchema.index({ takerId: 1 });
 
 const Task = mongoose.model('Task', TaskSchema);
-
-// 确保索引创建
 Task.ensureIndexes().catch(err => console.error('索引创建失败:', err));
 
 const MessageSchema = new mongoose.Schema({
@@ -562,7 +560,7 @@ app.post('/api/geocode', async (req, res) => {
   }
 });
 
-// 逆地理编码 - 使用带超时的 fetch
+// 逆地理编码 - 返回详细地址（街道/门牌号/建筑物）
 app.post('/api/regeo', async (req, res) => {
   const { lat, lng } = req.body;
   const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
@@ -572,8 +570,22 @@ app.post('/api/regeo', async (req, res) => {
     const response = await fetchWithTimeout(url, {}, 5000);
     const data = await response.json();
     if (data.status === '1' && data.regeocode) {
-      let address = data.regeocode.formatted_address;
-      res.json({ address });
+      const addrComp = data.regeocode.addressComponent;
+      const formatted = data.regeocode.formatted_address;
+      let street = addrComp.streetNumber?.street || '';
+      let number = addrComp.streetNumber?.number || '';
+      let building = addrComp.building?.name || '';
+
+      let detailedAddress = formatted;
+      if (street && number && !detailedAddress.includes(street)) {
+        detailedAddress += ` ${street}${number}`;
+      } else if (street && !detailedAddress.includes(street)) {
+        detailedAddress += ` ${street}`;
+      }
+      if (building && !detailedAddress.includes(building)) {
+        detailedAddress += ` ${building}`;
+      }
+      res.json({ address: detailedAddress });
     } else {
       res.status(404).json({ error: '无法解析位置' });
     }
@@ -600,12 +612,12 @@ app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
   res.json(logs);
 });
 
-// ==================== 前端静态文件托管 ====================
+// 前端静态文件托管（Express 5 兼容）
 app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ==================== 启动服务器 ====================
+// 启动服务器
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
