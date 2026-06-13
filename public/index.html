@@ -2,25 +2,30 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=no">
     <title>赏金集市 · 原生版</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         body{background:#f5f7fb;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1e293b;padding-bottom:70px}
         .app-container{width:100%;background:#f5f7fb;min-height:100vh}
-        .page{display:none;animation:fadeIn .25s ease}
+        .page{display:none;animation:fadeIn .2s ease}
         .page.active{display:block}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         .nav-header{background:rgba(255,255,255,0.98);backdrop-filter:blur(20px);padding:12px 16px;border-bottom:1px solid rgba(226,232,240,0.8);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20}
         .logo{font-size:1.3rem;font-weight:700;background:linear-gradient(135deg,#0f2b3d,#1e4a6b);background-clip:text;-webkit-background-clip:text;color:transparent}
         .header-balance{background:#eef2ff;padding:4px 10px;border-radius:40px;font-size:.75rem;font-weight:600;color:#1e4a6b;cursor:pointer}
         .bottom-nav{position:fixed;bottom:0;left:0;right:0;width:100%;background:rgba(255,255,255,0.96);backdrop-filter:blur(20px);display:flex;justify-content:space-around;padding:6px 20px 16px;border-top:1px solid rgba(226,232,240,0.8);z-index:20}
-        .nav-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;color:#94a3b8;cursor:pointer}
-        .nav-item.active{color:#1e4a6b;transform:translateY(-2px);font-weight:500}
+        .nav-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;color:#94a3b8;cursor:pointer;transition:color .1s}
+        .nav-item.active{color:#1e4a6b;font-weight:500}
         .nav-icon{font-size:1.4rem}
         .msg-badge{position:absolute;top:-5px;right:-10px;background:#ef4444;color:#fff;border-radius:20px;padding:2px 6px;font-size:.6rem;min-width:18px;text-align:center;display:none}
         .card{background:#fff;border-radius:20px;padding:16px;margin:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);border:1px solid #eef2f8;cursor:pointer;transition:transform .1s ease}
         .task-card:active{transform:scale(.98)}
+        .skeleton-card{background:#fff;border-radius:20px;padding:16px;margin:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);border:1px solid #eef2f8;animation:pulse 1.5s infinite}
+        @keyframes pulse{0%{opacity:0.6}50%{opacity:1}100%{opacity:0.6}}
+        .skeleton-title{height:20px;background:#e2e8f0;border-radius:12px;width:60%;margin-bottom:12px}
+        .skeleton-desc{height:16px;background:#e2e8f0;border-radius:12px;width:90%;margin-bottom:8px}
+        .skeleton-meta{height:14px;background:#e2e8f0;border-radius:12px;width:40%}
         .detail-hero{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:20px;margin:12px 12px 0 12px;padding:20px 16px;color:#fff;position:relative;overflow:hidden}
         .detail-hero::before{content:"💰";position:absolute;right:-20px;bottom:-20px;font-size:80px;opacity:.1}
         .detail-reward{font-size:1.6rem;font-weight:800;margin-top:6px}
@@ -39,7 +44,6 @@
         .btn-primary:disabled{opacity:.6;cursor:not-allowed}
         .btn-secondary{background:#f1f5f9;color:#1e4a6b;border-radius:60px;padding:10px;font-weight:600;border:none;width:100%;cursor:pointer}
         .btn-danger{background:#fee2e2;color:#b91c1c;border-radius:60px;padding:6px 12px;font-weight:600;border:none;cursor:pointer}
-        .btn-success{background:#10b981;color:#fff;border-radius:60px;padding:6px 12px;font-weight:600;border:none;cursor:pointer}
         .btn-phone{background:#10b981;color:#fff;border-radius:60px;padding:8px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center}
         .btn-nav{background:#3b82f6;color:#fff;border-radius:60px;padding:8px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center}
         .btn-location{background:#eef2ff;color:#1e4a6b;border-radius:40px;padding:6px 12px;font-weight:500;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
@@ -223,9 +227,12 @@
     let currentUser = null, pendingMedia = [], userLocation = null, allTasks = [], currentCategory = 'all', currentSort = 'time', countdownTimer = null, lastPage = null;
     let chatState = { active: false, taskId: null, otherId: null, otherName: '', reward: 0, title: '', pollInterval: null, messagesArea: null, lastMessageCount: 0 };
     let geocodeCache = new Map();
-    let deletedConversations = new Set(); // 本地删除黑名单，防止后端返回复活
+    let deletedConversations = new Set();
+    let tasksCache = { data: null, timestamp: 0, ttl: 5 * 60 * 1000 };
+    let isRefreshingTasks = false;
+    let refreshThrottle = false;
 
-    // ========== 通用函数 ==========
+    // ========== 辅助函数 ==========
     function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
     function calculateDistance(lat1,lng1,lat2,lng2) {
         const R=6371; const dLat=(lat2-lat1)*Math.PI/180; const dLng=(lng2-lng1)*Math.PI/180;
@@ -233,27 +240,90 @@
         const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); return (R*c).toFixed(1);
     }
 
+    async function fetchWithTimeout(url, options = {}, timeout = 8000) {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        try {
+            const response = await fetch(url, { ...options, signal: controller.signal });
+            clearTimeout(id);
+            return response;
+        } catch (err) {
+            clearTimeout(id);
+            if (err.name === 'AbortError') throw new Error('请求超时，请检查网络');
+            throw err;
+        }
+    }
+
+    async function callApi(url, options={}) {
+        const fullUrl = API_BASE + url;
+        try {
+            const res = await fetchWithTimeout(fullUrl, { headers: { 'Content-Type': 'application/json' }, ...options }, 8000);
+            if(!res.ok) {
+                let msg = `HTTP ${res.status}`;
+                try { const data = await res.json(); msg = data.error || msg; } catch(e) {}
+                throw new Error(msg);
+            }
+            return await res.json();
+        } catch(err) {
+            console.error('[API错误]', err);
+            throw err;
+        }
+    }
+
     async function geocodeAddress(address) {
         if (!address) return null;
         if (geocodeCache.has(address)) return geocodeCache.get(address);
+        const cacheKey = `geo_${address}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            try {
+                const { lat, lng, expire } = JSON.parse(cached);
+                if (expire > Date.now()) {
+                    const result = { lat, lng };
+                    geocodeCache.set(address, result);
+                    return result;
+                } else {
+                    localStorage.removeItem(cacheKey);
+                }
+            } catch(e) {}
+        }
         try {
             const url = `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(address)}&key=${AMAP_KEY}&output=JSON`;
-            const resp = await fetch(url); const data = await resp.json();
+            const resp = await fetchWithTimeout(url, {}, 5000);
+            const data = await resp.json();
             if (data.status==='1' && data.geocodes && data.geocodes.length>0) {
                 const loc = data.geocodes[0].location.split(','); const lng=parseFloat(loc[0]), lat=parseFloat(loc[1]);
-                const result={lat,lng}; geocodeCache.set(address,result); return result;
+                const result={lat,lng};
+                geocodeCache.set(address, result);
+                localStorage.setItem(cacheKey, JSON.stringify({ lat, lng, expire: Date.now() + 7*24*60*60*1000 }));
+                return result;
             } return null;
         } catch(e){ console.error('地理编码失败',e); return null; }
     }
 
     async function enrichTasksWithDistance(tasks) {
         if (!userLocation) return tasks;
-        const enriched=[];
+        const enriched = [];
         for(let task of tasks){
             if(!task.locationAddress){ enriched.push({...task,distance:null}); continue; }
-            const coords=await geocodeAddress(task.locationAddress);
-            if(coords){ const distance=calculateDistance(userLocation.lat,userLocation.lng,coords.lat,coords.lng); enriched.push({...task,distance}); }
-            else enriched.push({...task,distance:null});
+            const distKey = `dist_${task._id}`;
+            let distance = null;
+            const cachedDist = localStorage.getItem(distKey);
+            if (cachedDist) {
+                try {
+                    const { dist, expire } = JSON.parse(cachedDist);
+                    if (expire > Date.now()) distance = dist;
+                    else localStorage.removeItem(distKey);
+                } catch(e) {}
+            }
+            if (distance === null) {
+                const coords = await geocodeAddress(task.locationAddress);
+                if(coords){
+                    distance = calculateDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng);
+                    localStorage.setItem(distKey, JSON.stringify({ dist: distance, expire: Date.now() + 7*24*60*60*1000 }));
+                }
+            }
+            enriched.push({...task, distance: distance || null});
         }
         return enriched;
     }
@@ -277,22 +347,6 @@
                     () => resolve(null)
                 );
             });
-        }
-    }
-
-    async function callApi(url, options={}) {
-        const fullUrl = API_BASE + url;
-        try {
-            const res = await fetch(fullUrl, { headers: { 'Content-Type': 'application/json' }, ...options });
-            if(!res.ok) {
-                let msg = `HTTP ${res.status}`;
-                try { const data = await res.json(); msg = data.error || msg; } catch(e) {}
-                throw new Error(msg);
-            }
-            return await res.json();
-        } catch(err) {
-            console.error('[API错误]', err);
-            throw err;
         }
     }
 
@@ -324,7 +378,7 @@
     async function getDetailedAddress(lat, lng) {
         try {
             const url = `https://restapi.amap.com/v3/geocode/regeo?output=json&location=${lng},${lat}&key=${AMAP_KEY}&radius=1000&extensions=all`;
-            const res = await fetch(url);
+            const res = await fetchWithTimeout(url, {}, 5000);
             const data = await res.json();
             if (data.status === '1' && data.regeocode) {
                 let formatted = data.regeocode.formatted_address;
@@ -520,21 +574,35 @@
         return '其他';
     }
 
-    async function refreshTaskList() {
+    async function refreshTaskList(force = false) {
+        if (refreshThrottle) return;
+        refreshThrottle = true;
+        setTimeout(() => { refreshThrottle = false; }, 1000);
+        
         const container = document.getElementById('homeContent');
-        container.innerHTML = '<div class="loading">加载中...</div>';
+        if (!force && tasksCache.data && (Date.now() - tasksCache.timestamp) < tasksCache.ttl) {
+            allTasks = tasksCache.data;
+            applyFilterAndSort();
+            return;
+        }
+        container.innerHTML = '<div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div><div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div>';
         try {
             const tasks = await callApi('/tasks');
             if (!tasks || tasks.length === 0) {
                 container.innerHTML = '<div class="empty-state">✨ 暂无悬赏任务</div>';
+                tasksCache.data = [];
+                tasksCache.timestamp = Date.now();
+                allTasks = [];
+                applyFilterAndSort();
                 return;
             }
             let tasksWithCat = tasks.map(t => ({ ...t, category: getTaskCategory(t.title) }));
             if (userLocation) {
-                container.innerHTML = '<div class="loading">正在计算距离...</div>';
                 tasksWithCat = await enrichTasksWithDistance(tasksWithCat);
             }
             allTasks = tasksWithCat;
+            tasksCache.data = tasksWithCat;
+            tasksCache.timestamp = Date.now();
             applyFilterAndSort();
         } catch (err) {
             container.innerHTML = '<div class="empty-state">加载失败，请下拉刷新</div>';
@@ -584,7 +652,7 @@
                 isRefreshing = true;
                 indicator.innerText = '刷新中...';
                 indicator.style.display = 'block';
-                await refreshTaskList();
+                await refreshTaskList(true);
                 isRefreshing = false;
                 indicator.style.display = 'none';
                 indicator.innerText = '↓ 下拉刷新';
@@ -693,7 +761,7 @@
                 const result = await callApi(`/tasks/${taskId}/cancel`, {method:'PUT', body:JSON.stringify({userId:currentUser.id})});
                 if(result.success) {
                     showToast('任务已取消，赏金已退还');
-                    await refreshTaskList(); await loadProfile();
+                    await refreshTaskList(true); await loadProfile();
                     if(document.getElementById('detailPage').classList.contains('active')) switchPage(lastPage||'home');
                 } else showAlert('取消失败', result.error||'未知错误');
             } catch(err) { showAlert('取消失败', err.message); }
@@ -719,7 +787,7 @@
                 locationAddress, mediaList, category:document.getElementById('pubCategory').value
             })});
             if(result._id) {
-                showToast('发布成功'); resetPublishForm(); await loadProfile(); refreshTaskList(); switchPage('home');
+                showToast('发布成功'); resetPublishForm(); await loadProfile(); refreshTaskList(true); switchPage('home');
             } else showAlert('发布失败', result.error||'未知错误');
         } catch(err) { showAlert('发布出错', err.message); }
         finally { btn.innerText=originalText; btn.disabled=false; }
@@ -747,7 +815,7 @@
                 document.getElementById('loginPage').classList.remove('active');
                 const loc = await getNativeUserLocation();
                 if (loc) userLocation = loc;
-                await refreshTaskList();
+                await refreshTaskList(true);
                 loadProfile();
                 renderMessageList();
                 updateUnreadBadge();
@@ -781,167 +849,172 @@
     window.viewTask = async function(taskId, fromPage = 'home') {
         lastPage = fromPage;
         if(countdownTimer) clearInterval(countdownTimer);
-        const task = await callApi(`/tasks/${taskId}`);
-        if(!task || task.error) { showAlert('错误','任务不存在'); return; }
-        const isMine = task.publisherId === currentUser.id;
-        const isTaker = task.takerId === currentUser.id;
-        const publisherInfo = await callApi(`/user/${task.publisherId}`);
-        let detailHtml = `
-            <div class="detail-hero"><span class="detail-status">● ${task.status==='available'?'可接取':(task.status==='ongoing'?'进行中':'已完成')}</span><div class="detail-reward" id="detailReward">¥${task.reward}</div></div>
-            <div class="card" style="margin-top:12px;"><h2>${escapeHtml(task.title)}</h2>
-            <div class="info-row"><div class="info-icon">📌</div><div class="info-content"><div class="info-label">发布者</div><div class="info-value" id="publisherName">${escapeHtml(task.publisherName)}</div></div></div>
-            <div class="info-row"><div class="info-icon">📍</div><div class="info-content"><div class="info-label">任务地点</div><div class="info-value">${escapeHtml(task.locationAddress||'未标注')}</div></div></div>
-            <div class="info-row"><div class="info-icon">⏰</div><div class="info-content"><div class="info-label">发布时间</div><div class="info-value">${task.createdAt?new Date(task.createdAt).toLocaleDateString():'未知'}</div></div></div>`;
-        if(task.takerId) detailHtml += renderProgressSteps(task);
-        if(task.takerId) {
-            const takenTimeStr = task.takenAt ? new Date(task.takenAt).toLocaleString() : '时间未知';
-            if(isMine) detailHtml += `<div class="info-row" id="takerInfoRow"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
-            else if(isTaker) detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">您已接取</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
-            else detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
-        }
-        detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description||'')}</p></div>`;
-        if(task.mediaList && task.mediaList.length>0) {
-            let mediaHtml = `<div class="desc-section"><div class="info-label">📎 附件（${task.mediaList.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;
-            for(let media of task.mediaList) {
-                if(media.type === 'image') mediaHtml += `<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="showImagePreview('${media.url}')"></div>`;
-                else if(media.type === 'video') mediaHtml += `<div class="preview-img-wrapper"><video src="${media.url}" controls style="width:100%;height:100%;object-fit:cover;"></video></div>`;
+        document.getElementById('detailContainer').innerHTML = '<div class="card loading">加载任务详情...</div>';
+        try {
+            const task = await callApi(`/tasks/${taskId}`);
+            if(!task || task.error) { showAlert('错误','任务不存在'); return; }
+            const isMine = task.publisherId === currentUser.id;
+            const isTaker = task.takerId === currentUser.id;
+            const publisherInfo = await callApi(`/user/${task.publisherId}`);
+            let detailHtml = `
+                <div class="detail-hero"><span class="detail-status">● ${task.status==='available'?'可接取':(task.status==='ongoing'?'进行中':'已完成')}</span><div class="detail-reward" id="detailReward">¥${task.reward}</div></div>
+                <div class="card" style="margin-top:12px;"><h2>${escapeHtml(task.title)}</h2>
+                <div class="info-row"><div class="info-icon">📌</div><div class="info-content"><div class="info-label">发布者</div><div class="info-value" id="publisherName">${escapeHtml(task.publisherName)}</div></div></div>
+                <div class="info-row"><div class="info-icon">📍</div><div class="info-content"><div class="info-label">任务地点</div><div class="info-value">${escapeHtml(task.locationAddress||'未标注')}</div></div></div>
+                <div class="info-row"><div class="info-icon">⏰</div><div class="info-content"><div class="info-label">发布时间</div><div class="info-value">${task.createdAt?new Date(task.createdAt).toLocaleDateString():'未知'}</div></div></div>`;
+            if(task.takerId) detailHtml += renderProgressSteps(task);
+            if(task.takerId) {
+                const takenTimeStr = task.takenAt ? new Date(task.takenAt).toLocaleString() : '时间未知';
+                if(isMine) detailHtml += `<div class="info-row" id="takerInfoRow"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
+                else if(isTaker) detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">您已接取</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
+                else detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
             }
-            mediaHtml += `</div></div>`;
-            detailHtml += mediaHtml;
-        }
-        detailHtml += `</div>`;
-        if(task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
-        if(task.status === 'ongoing' && isTaker) {
-            detailHtml += `<div style="display: flex; gap: 12px; margin: 8px 12px;"><button class="btn-primary" id="contactPublisherBtn" style="flex:1; background:#3b82f6;">💬 联系发布者</button>${task.publisherPhone?`<button class="btn-phone" id="callPublisherPhoneBtn" style="flex:1;">📞 拨打电话</button>`:`<button class="btn-phone" disabled style="flex:1; opacity:0.6;">📞 无手机号</button>`}</div>`;
-        }
-        if(task.status === 'ongoing' && isMine && task.takerId) {
-            detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
-        }
-        if(task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
-        if(task.status === 'ongoing' && isTaker) {
-            if(task.locationAddress) {
-                const coords = await geocodeAddress(task.locationAddress) || { lat: 31.2304, lng: 121.4737 };
-                detailHtml += `<div style="margin:8px 12px;"><button class="btn-nav" id="navigateBtn" data-task-lat="${coords.lat}" data-task-lng="${coords.lng}" data-task-addr="${escapeHtml(task.locationAddress)}">🧭 高德导航</button></div>`;
-            }
-            if(task.travelStatus === 'idle') detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
-            else if(task.travelStatus === 'traveling') {
-                detailHtml += `<div id="countdownDisplay" class="countdown-timer">计算中...</div><div class="slide-action" id="slideArriveWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📍 滑动到达 📍</div></div></div>`;
-            }else if(task.travelStatus === 'arrived' && !task.takerCompleted){
-                detailHtml += `<div class="slide-action" id="slideCompleteWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📎 滑动并上传凭证完成 ✅</div></div></div>`;
-            }
-            detailHtml += `<div style="margin:8px 12px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
-        }
-        if(task.status === 'ongoing' && task.takerCompleted && isMine) {
-            detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="confirmCompleteBtn">✅ 确认完成并支付赏金</button></div>`;
-        }
-        document.getElementById('detailContainer').innerHTML = detailHtml;
-        const taskIdStr = task._id.toString();
-
-        document.getElementById('publisherName')?.addEventListener('click', () => {
-            const modal = document.createElement('div');
-            modal.className = 'custom-modal';
-            modal.innerHTML = `<div class="custom-modal-content"><h3>发布者资料</h3><div>昵称: ${escapeHtml(publisherInfo.nickname)}</div><div>信用: ${publisherInfo.credit}</div><div>家乡: ${publisherInfo.hometown||'未填写'}</div><div>签名: ${publisherInfo.signature||'无'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;
-            document.body.appendChild(modal);
-            modal.querySelector('.confirm-btn').onclick = () => modal.remove();
-        });
-        document.getElementById('takerInfoRow')?.addEventListener('click', async () => {
-            const takerInfo = await callApi(`/user/${task.takerId}`);
-            const modal = document.createElement('div');
-            modal.className = 'custom-modal';
-            modal.innerHTML = `<div class="custom-modal-content"><h3>接取者资料</h3><div>昵称: ${escapeHtml(takerInfo.nickname)}</div><div>信用: ${takerInfo.credit}</div><div>家乡: ${takerInfo.hometown||'未填写'}</div><div>签名: ${takerInfo.signature||'无'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;
-            document.body.appendChild(modal);
-            modal.querySelector('.confirm-btn').onclick = () => modal.remove();
-        });
-        document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
-        document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(taskIdStr, task.takerId, task.takerName, task.reward, task.title));
-        document.getElementById('contactPublisherBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
-        const callPublisherPhoneBtn = document.getElementById('callPublisherPhoneBtn');
-        if(callPublisherPhoneBtn && callPublisherPhoneBtn.getAttribute('disabled') !== 'disabled') {
-            callPublisherPhoneBtn.onclick = () => { window.location.href = `tel:${task.publisherPhone}`; };
-        }
-        const callTakerBtn = document.getElementById('callTakerBtn');
-        if(callTakerBtn) {
-            callTakerBtn.onclick = async () => {
-                const takerInfo = await callApi(`/user/${task.takerId}`);
-                if(takerInfo.phone) window.location.href = `tel:${takerInfo.phone}`;
-                else showAlert('提示','接取者未绑定手机号');
-            };
-        }
-        const navBtn = document.getElementById('navigateBtn');
-        if(navBtn) {
-            navBtn.onclick = async () => {
-                const destLat = parseFloat(navBtn.getAttribute('data-task-lat'));
-                const destLng = parseFloat(navBtn.getAttribute('data-task-lng'));
-                const destAddr = navBtn.getAttribute('data-task-addr');
-                await navigateTo(destLat, destLng, destAddr);
-            };
-        }
-        const slideAccept = document.getElementById('slideAcceptWrapper');
-        if(slideAccept) initSlide(slideAccept, async () => {
-            const res = await callApi(`/tasks/${taskId}/accept`, {method:'PUT', body:JSON.stringify({takerId: currentUser.id, takerName: currentUser.nickname})});
-            if(res.success) { showToast('接取成功'); refreshTaskList(); loadProfile(); viewTask(taskId, lastPage); }
-            else showAlert('接取失败', res.error);
-        });
-        const slideStart = document.getElementById('slideStartWrapper');
-        if(slideStart) {
-            initSlide(slideStart, async () => {
-                let minutes = 15;
-                if(userLocation && task.locationAddress) {
-                    const coords = await geocodeAddress(task.locationAddress);
-                    if(coords) {
-                        const dist = parseFloat(calculateDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng));
-                        if(!isNaN(dist)) minutes = Math.min(60, Math.max(5, Math.round(dist * 2)));
-                    }
+            detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description||'')}</p></div>`;
+            if(task.mediaList && task.mediaList.length>0) {
+                let mediaHtml = `<div class="desc-section"><div class="info-label">📎 附件（${task.mediaList.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;
+                for(let media of task.mediaList) {
+                    if(media.type === 'image') mediaHtml += `<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="showImagePreview('${media.url}')"></div>`;
+                    else if(media.type === 'video') mediaHtml += `<div class="preview-img-wrapper"><video src="${media.url}" controls style="width:100%;height:100%;object-fit:cover;"></video></div>`;
                 }
-                const result = await callApi(`/tasks/${taskId}/status`, {method:'PUT', body:JSON.stringify({travelStatus:'traveling', estimatedMinutes: minutes, travelStartTime: Date.now()})});
-                if(result.success) { showToast('出发！'); viewTask(taskId, lastPage); }
-                else showAlert('操作失败', result.error);
+                mediaHtml += `</div></div>`;
+                detailHtml += mediaHtml;
+            }
+            detailHtml += `</div>`;
+            if(task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
+            if(task.status === 'ongoing' && isTaker) {
+                detailHtml += `<div style="display: flex; gap: 12px; margin: 8px 12px;"><button class="btn-primary" id="contactPublisherBtn" style="flex:1; background:#3b82f6;">💬 联系发布者</button>${task.publisherPhone?`<button class="btn-phone" id="callPublisherPhoneBtn" style="flex:1;">📞 拨打电话</button>`:`<button class="btn-phone" disabled style="flex:1; opacity:0.6;">📞 无手机号</button>`}</div>`;
+            }
+            if(task.status === 'ongoing' && isMine && task.takerId) {
+                detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
+            }
+            if(task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
+            if(task.status === 'ongoing' && isTaker) {
+                if(task.locationAddress) {
+                    const coords = await geocodeAddress(task.locationAddress) || { lat: 31.2304, lng: 121.4737 };
+                    detailHtml += `<div style="margin:8px 12px;"><button class="btn-nav" id="navigateBtn" data-task-lat="${coords.lat}" data-task-lng="${coords.lng}" data-task-addr="${escapeHtml(task.locationAddress)}">🧭 高德导航</button></div>`;
+                }
+                if(task.travelStatus === 'idle') detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
+                else if(task.travelStatus === 'traveling') {
+                    detailHtml += `<div id="countdownDisplay" class="countdown-timer">计算中...</div><div class="slide-action" id="slideArriveWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📍 滑动到达 📍</div></div></div>`;
+                }else if(task.travelStatus === 'arrived' && !task.takerCompleted){
+                    detailHtml += `<div class="slide-action" id="slideCompleteWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📎 滑动并上传凭证完成 ✅</div></div></div>`;
+                }
+                detailHtml += `<div style="margin:8px 12px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
+            }
+            if(task.status === 'ongoing' && task.takerCompleted && isMine) {
+                detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="confirmCompleteBtn">✅ 确认完成并支付赏金</button></div>`;
+            }
+            document.getElementById('detailContainer').innerHTML = detailHtml;
+            const taskIdStr = task._id.toString();
+
+            document.getElementById('publisherName')?.addEventListener('click', () => {
+                const modal = document.createElement('div');
+                modal.className = 'custom-modal';
+                modal.innerHTML = `<div class="custom-modal-content"><h3>发布者资料</h3><div>昵称: ${escapeHtml(publisherInfo.nickname)}</div><div>信用: ${publisherInfo.credit}</div><div>家乡: ${publisherInfo.hometown||'未填写'}</div><div>签名: ${publisherInfo.signature||'无'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;
+                document.body.appendChild(modal);
+                modal.querySelector('.confirm-btn').onclick = () => modal.remove();
             });
-        }
-        const slideArrive = document.getElementById('slideArriveWrapper');
-        if(slideArrive) {
-            if(task.travelStartTime && task.estimatedMinutes) startCountdown(task.estimatedMinutes, task.travelStartTime);
-            else { let est = task.estimatedMinutes || 15; let start = task.travelStartTime || Date.now(); startCountdown(est, start); }
-            initSlide(slideArrive, async () => {
-                const result = await callApi(`/tasks/${taskId}/status`, {method:'PUT', body:JSON.stringify({travelStatus:'arrived'})});
-                if(result.success) { if(countdownTimer) clearInterval(countdownTimer); showToast('已到达目的地！'); viewTask(taskId, lastPage); }
-                else showAlert('操作失败', result.error);
+            document.getElementById('takerInfoRow')?.addEventListener('click', async () => {
+                const takerInfo = await callApi(`/user/${task.takerId}`);
+                const modal = document.createElement('div');
+                modal.className = 'custom-modal';
+                modal.innerHTML = `<div class="custom-modal-content"><h3>接取者资料</h3><div>昵称: ${escapeHtml(takerInfo.nickname)}</div><div>信用: ${takerInfo.credit}</div><div>家乡: ${takerInfo.hometown||'未填写'}</div><div>签名: ${takerInfo.signature||'无'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;
+                document.body.appendChild(modal);
+                modal.querySelector('.confirm-btn').onclick = () => modal.remove();
             });
-        }
-        const slideComplete = document.getElementById('slideCompleteWrapper');
-        if(slideComplete) {
-            initSlide(slideComplete, async () => {
-                const input = document.createElement('input');
-                input.type = 'file'; input.accept = 'image/*,video/*'; input.multiple = true;
-                input.onchange = async (e) => {
-                    const files = Array.from(e.target.files);
-                    if(files.length===0) return;
-                    const result = await submitProof(taskIdStr, files);
-                    if(result.success) { showToast('凭证已提交，等待发布者确认'); refreshTaskList(); loadProfile(); viewTask(taskId, lastPage); }
-                    else showAlert('提交失败', result.error || '未知错误');
+            document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
+            document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(taskIdStr, task.takerId, task.takerName, task.reward, task.title));
+            document.getElementById('contactPublisherBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
+            const callPublisherPhoneBtn = document.getElementById('callPublisherPhoneBtn');
+            if(callPublisherPhoneBtn && callPublisherPhoneBtn.getAttribute('disabled') !== 'disabled') {
+                callPublisherPhoneBtn.onclick = () => { window.location.href = `tel:${task.publisherPhone}`; };
+            }
+            const callTakerBtn = document.getElementById('callTakerBtn');
+            if(callTakerBtn) {
+                callTakerBtn.onclick = async () => {
+                    const takerInfo = await callApi(`/user/${task.takerId}`);
+                    if(takerInfo.phone) window.location.href = `tel:${takerInfo.phone}`;
+                    else showAlert('提示','接取者未绑定手机号');
                 };
-                input.click();
+            }
+            const navBtn = document.getElementById('navigateBtn');
+            if(navBtn) {
+                navBtn.onclick = async () => {
+                    const destLat = parseFloat(navBtn.getAttribute('data-task-lat'));
+                    const destLng = parseFloat(navBtn.getAttribute('data-task-lng'));
+                    const destAddr = navBtn.getAttribute('data-task-addr');
+                    await navigateTo(destLat, destLng, destAddr);
+                };
+            }
+            const slideAccept = document.getElementById('slideAcceptWrapper');
+            if(slideAccept) initSlide(slideAccept, async () => {
+                const res = await callApi(`/tasks/${taskId}/accept`, {method:'PUT', body:JSON.stringify({takerId: currentUser.id, takerName: currentUser.nickname})});
+                if(res.success) { showToast('接取成功'); refreshTaskList(true); loadProfile(); viewTask(taskId, lastPage); }
+                else showAlert('接取失败', res.error);
             });
-        }
-        const cancelAcceptBtn = document.getElementById('cancelAcceptBtn');
-        if(cancelAcceptBtn) cancelAcceptBtn.onclick = async () => {
-            showConfirm('确认取消', '取消接取将扣除5信用分，确定吗？', async () => {
-                const res = await callApi(`/tasks/${taskId}/cancel-accept`, {method:'PUT', body:JSON.stringify({userId: currentUser.id})});
-                if(res.success) { showToast('已取消接取'); loadProfile(); refreshTaskList(); switchPage('home'); }
-                else showAlert('操作失败', res.error);
-            });
-        };
-        const confirmCompleteBtn = document.getElementById('confirmCompleteBtn');
-        if(confirmCompleteBtn) {
-            confirmCompleteBtn.onclick = async () => {
-                showConfirm('确认支付', '确认任务已完成？赏金将支付给接取者。', async () => {
-                    const res = await callApi(`/tasks/${taskId}/confirm-payment`, {method:'POST', body:JSON.stringify({userId: currentUser.id})});
-                    if(res.success) { showToast('结算成功'); viewTask(taskId, lastPage); refreshTaskList(); loadProfile(); }
-                    else showAlert('结算失败', res.error);
+            const slideStart = document.getElementById('slideStartWrapper');
+            if(slideStart) {
+                initSlide(slideStart, async () => {
+                    let minutes = 15;
+                    if(userLocation && task.locationAddress) {
+                        const coords = await geocodeAddress(task.locationAddress);
+                        if(coords) {
+                            const dist = parseFloat(calculateDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng));
+                            if(!isNaN(dist)) minutes = Math.min(60, Math.max(5, Math.round(dist * 2)));
+                        }
+                    }
+                    const result = await callApi(`/tasks/${taskId}/status`, {method:'PUT', body:JSON.stringify({travelStatus:'traveling', estimatedMinutes: minutes, travelStartTime: Date.now()})});
+                    if(result.success) { showToast('出发！'); viewTask(taskId, lastPage); }
+                    else showAlert('操作失败', result.error);
+                });
+            }
+            const slideArrive = document.getElementById('slideArriveWrapper');
+            if(slideArrive) {
+                if(task.travelStartTime && task.estimatedMinutes) startCountdown(task.estimatedMinutes, task.travelStartTime);
+                else { let est = task.estimatedMinutes || 15; let start = task.travelStartTime || Date.now(); startCountdown(est, start); }
+                initSlide(slideArrive, async () => {
+                    const result = await callApi(`/tasks/${taskId}/status`, {method:'PUT', body:JSON.stringify({travelStatus:'arrived'})});
+                    if(result.success) { if(countdownTimer) clearInterval(countdownTimer); showToast('已到达目的地！'); viewTask(taskId, lastPage); }
+                    else showAlert('操作失败', result.error);
+                });
+            }
+            const slideComplete = document.getElementById('slideCompleteWrapper');
+            if(slideComplete) {
+                initSlide(slideComplete, async () => {
+                    const input = document.createElement('input');
+                    input.type = 'file'; input.accept = 'image/*,video/*'; input.multiple = true;
+                    input.onchange = async (e) => {
+                        const files = Array.from(e.target.files);
+                        if(files.length===0) return;
+                        const result = await submitProof(taskIdStr, files);
+                        if(result.success) { showToast('凭证已提交，等待发布者确认'); refreshTaskList(true); loadProfile(); viewTask(taskId, lastPage); }
+                        else showAlert('提交失败', result.error || '未知错误');
+                    };
+                    input.click();
+                });
+            }
+            const cancelAcceptBtn = document.getElementById('cancelAcceptBtn');
+            if(cancelAcceptBtn) cancelAcceptBtn.onclick = async () => {
+                showConfirm('确认取消', '取消接取将扣除5信用分，确定吗？', async () => {
+                    const res = await callApi(`/tasks/${taskId}/cancel-accept`, {method:'PUT', body:JSON.stringify({userId: currentUser.id})});
+                    if(res.success) { showToast('已取消接取'); loadProfile(); refreshTaskList(true); switchPage('home'); }
+                    else showAlert('操作失败', res.error);
                 });
             };
+            const confirmCompleteBtn = document.getElementById('confirmCompleteBtn');
+            if(confirmCompleteBtn) {
+                confirmCompleteBtn.onclick = async () => {
+                    showConfirm('确认支付', '确认任务已完成？赏金将支付给接取者。', async () => {
+                        const res = await callApi(`/tasks/${taskId}/confirm-payment`, {method:'POST', body:JSON.stringify({userId: currentUser.id})});
+                        if(res.success) { showToast('结算成功'); viewTask(taskId, lastPage); refreshTaskList(true); loadProfile(); }
+                        else showAlert('结算失败', res.error);
+                    });
+                };
+            }
+            switchPage('detail');
+        } catch(e) {
+            showAlert('加载失败', e.message);
         }
-        switchPage('detail');
     };
 
     document.addEventListener('click', (e) => {
@@ -973,17 +1046,17 @@
         try {
             await callApi(`/conversations/${taskId}/${currentUser.id}`, {method:'DELETE', body:JSON.stringify({userId: currentUser.id})});
             showToast('聊天已删除');
-            // 添加到黑名单，防止重新渲染时再次出现
             deletedConversations.add(taskId);
-            // 直接从 DOM 移除卡片
             const card = document.querySelector(`.task-card[data-taskid="${taskId}"]`);
             if (card) card.remove();
-            // 更新未读徽章
             await updateUnreadBadge();
-            // 如果当前正在这个聊天中，关闭聊天
             if(chatState.active && chatState.taskId === taskId) {
                 closeChat();
                 switchPage('message');
+            }
+            const container = document.getElementById('messageContainer');
+            if (container && container.querySelectorAll('.task-card').length === 0) {
+                container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
             }
         } catch(err) {
             showAlert('删除失败', err.message);
@@ -992,44 +1065,53 @@
 
     async function refreshMessagesOnly() {
         if(!chatState.messagesArea || !chatState.taskId) return;
-        const messages = await callApi(`/messages/${chatState.taskId}`);
-        if(!messages || !Array.isArray(messages)) return;
-        const newCount = messages.length;
-        const hasNew = newCount > (chatState.lastMessageCount || 0);
-        chatState.lastMessageCount = newCount;
-        let html = '';
-        for(const m of messages) {
-            const isMine = m.senderId === currentUser.id;
-            const isNego = m.text && m.text.includes('💰议价请求:');
-            const priceMatch = m.text.match(/¥(\d+)/);
-            const negoPrice = priceMatch ? parseInt(priceMatch[1]) : null;
-            html += `<div class="chat-bubble ${isMine?'chat-bubble-mine':'chat-bubble-other'}" data-message-id="${m._id}" data-is-mine="${isMine}"><div class="bubble-text">${escapeHtml(m.text)}</div><div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div></div>`;
-            if(!isMine && isNego && negoPrice && m.senderId !== 'system') {
-                html += `<div style="display:flex; gap:8px; margin:4px 0 8px 12px;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
+        try {
+            const messages = await callApi(`/messages/${chatState.taskId}`);
+            if(!messages || !Array.isArray(messages)) return;
+            const newCount = messages.length;
+            const hasNew = newCount > (chatState.lastMessageCount || 0);
+            chatState.lastMessageCount = newCount;
+            let html = '';
+            for(const m of messages) {
+                const isMine = m.senderId === currentUser.id;
+                const isNego = m.text && m.text.includes('💰议价请求:');
+                const priceMatch = m.text.match(/¥(\d+)/);
+                const negoPrice = priceMatch ? parseInt(priceMatch[1]) : null;
+                html += `<div class="chat-bubble ${isMine?'chat-bubble-mine':'chat-bubble-other'}" data-message-id="${m._id}" data-is-mine="${isMine}"><div class="bubble-text">${escapeHtml(m.text)}</div><div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div></div>`;
+                if(!isMine && isNego && negoPrice && m.senderId !== 'system') {
+                    html += `<div style="display:flex; gap:8px; margin:4px 0 8px 12px;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
+                }
             }
-        }
-        chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
-        if(hasNew) chatState.messagesArea.scrollTop = chatState.messagesArea.scrollHeight;
+            chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
+            if(hasNew) chatState.messagesArea.scrollTop = chatState.messagesArea.scrollHeight;
 
-        document.querySelectorAll('.chat-bubble').forEach(bubble => {
-            const isMine = bubble.getAttribute('data-is-mine') === 'true';
-            if(!isMine) return;
-            const messageId = bubble.getAttribute('data-message-id');
-            if(!messageId) return;
-            let pressTimer = null;
-            const startPress = (e) => {
-                e.preventDefault();
-                pressTimer = setTimeout(() => { showConfirm('删除消息', '确定要删除这条消息吗？', () => deleteMessage(messageId)); }, 500);
-            };
-            const cancelPress = () => { if(pressTimer) clearTimeout(pressTimer); };
-            bubble.addEventListener('contextmenu', (e) => e.preventDefault());
-            bubble.addEventListener('touchstart', startPress);
-            bubble.addEventListener('touchend', cancelPress);
-            bubble.addEventListener('touchmove', cancelPress);
-            bubble.addEventListener('mousedown', startPress);
-            bubble.addEventListener('mouseup', cancelPress);
-            bubble.addEventListener('mouseleave', cancelPress);
-        });
+            document.querySelectorAll('.chat-bubble').forEach(bubble => {
+                const isMine = bubble.getAttribute('data-is-mine') === 'true';
+                if(!isMine) return;
+                const messageId = bubble.getAttribute('data-message-id');
+                if(!messageId) return;
+                let pressTimer = null;
+                const startPress = (e) => {
+                    e.preventDefault();
+                    pressTimer = setTimeout(() => { showConfirm('删除消息', '确定要删除这条消息吗？', () => deleteMessage(messageId)); }, 500);
+                };
+                const cancelPress = () => { if(pressTimer) clearTimeout(pressTimer); };
+                bubble.removeEventListener('contextmenu', (e) => e.preventDefault());
+                bubble.removeEventListener('touchstart', startPress);
+                bubble.removeEventListener('touchend', cancelPress);
+                bubble.removeEventListener('touchmove', cancelPress);
+                bubble.removeEventListener('mousedown', startPress);
+                bubble.removeEventListener('mouseup', cancelPress);
+                bubble.removeEventListener('mouseleave', cancelPress);
+                bubble.addEventListener('contextmenu', (e) => e.preventDefault());
+                bubble.addEventListener('touchstart', startPress);
+                bubble.addEventListener('touchend', cancelPress);
+                bubble.addEventListener('touchmove', cancelPress);
+                bubble.addEventListener('mousedown', startPress);
+                bubble.addEventListener('mouseup', cancelPress);
+                bubble.addEventListener('mouseleave', cancelPress);
+            });
+        } catch(e) { console.error('刷新消息失败', e); }
     }
 
     function initChatPullToRefresh() {
@@ -1109,7 +1191,9 @@
         refreshMessagesOnly();
         initChatPullToRefresh();
         if(chatState.pollInterval) clearInterval(chatState.pollInterval);
-        chatState.pollInterval = setInterval(async () => { if(chatState.active && chatState.taskId) await refreshMessagesOnly(); }, 3000);
+        chatState.pollInterval = setInterval(async () => {
+            if(chatState.active && chatState.taskId && document.visibilityState === 'visible') await refreshMessagesOnly();
+        }, 5000);
     }
 
     async function openChat(taskId, otherId, otherName, reward, title) {
@@ -1133,7 +1217,7 @@
             await sendMessage(taskId, `✅ 同意议价，价格调整为 ¥${price}`, false);
             showToast(`已同意议价，新价格 ¥${price}`);
             if(chatState.taskId === taskId) chatState.reward = price;
-            refreshTaskList();
+            refreshTaskList(true);
             if(document.getElementById('detailPage').classList.contains('active')) viewTask(taskId, lastPage);
             renderMessageList();
             updateUnreadBadge();
@@ -1153,7 +1237,6 @@
         chatState.messagesArea = null;
     }
 
-    // ========== 消息列表渲染 ==========
     async function renderMessageList() {
         if(!currentUser || !currentUser.id) {
             const container = document.getElementById('messageContainer');
@@ -1161,72 +1244,83 @@
             updateUnreadBadge();
             return;
         }
-        const convs = await callApi(`/user/${currentUser.id}/conversations`);
-        const container = document.getElementById('messageContainer');
-        if(!convs || convs.length === 0) {
-            container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
-            updateUnreadBadge();
-            return;
-        }
-        // 过滤掉黑名单中的会话和没有消息的会话
-        const filtered = convs.filter(c => !deletedConversations.has(c.taskId) && c.lastMsg);
-        if(filtered.length === 0) {
-            container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
-            updateUnreadBadge();
-            return;
-        }
-        let html = '<div class="card"><strong>📬 消息记录</strong></div>';
-        for(let c of filtered) {
-            let unreadHtml = '';
-            if(c.unread > 0) {
-                unreadHtml = `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;
+        try {
+            const convs = await callApi(`/user/${currentUser.id}/conversations`);
+            const container = document.getElementById('messageContainer');
+            if(!convs || convs.length === 0) {
+                container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
+                updateUnreadBadge();
+                return;
             }
-            html += `<div class="card task-card" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
-                <div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div>
-                <div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div>
-            </div>`;
-        }
-        container.innerHTML = html;
-        // 绑定单击和长按事件
-        document.querySelectorAll('#messageContainer .task-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                if(e.target.closest('.task-card')) {
-                    const taskId = card.getAttribute('data-taskid');
-                    const otherId = card.getAttribute('data-otherid');
-                    const otherName = card.getAttribute('data-othername');
-                    const reward = parseInt(card.getAttribute('data-reward'));
-                    const title = card.getAttribute('data-title');
-                    openChat(taskId, otherId, otherName, reward, title);
+            const filtered = convs.filter(c => !deletedConversations.has(c.taskId) && c.lastMsg);
+            if(filtered.length === 0) {
+                container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
+                updateUnreadBadge();
+                return;
+            }
+            let html = '<div class="card"><strong>📬 消息记录</strong></div>';
+            for(let c of filtered) {
+                let unreadHtml = '';
+                if(c.unread > 0) {
+                    unreadHtml = `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;
                 }
+                html += `<div class="card task-card" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
+                    <div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div>
+                    <div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div>
+                </div>`;
+            }
+            container.innerHTML = html;
+            document.querySelectorAll('#messageContainer .task-card').forEach(card => {
+                card.removeEventListener('click', card._clickHandler);
+                card.removeEventListener('touchstart', card._pressStart);
+                card.removeEventListener('touchend', card._pressEnd);
+                const clickHandler = (e) => {
+                    if(e.target.closest('.task-card')) {
+                        const taskId = card.getAttribute('data-taskid');
+                        const otherId = card.getAttribute('data-otherid');
+                        const otherName = card.getAttribute('data-othername');
+                        const reward = parseInt(card.getAttribute('data-reward'));
+                        const title = card.getAttribute('data-title');
+                        openChat(taskId, otherId, otherName, reward, title);
+                    }
+                };
+                let pressTimer = null;
+                const startPress = (e) => {
+                    e.preventDefault();
+                    pressTimer = setTimeout(() => {
+                        const taskId = card.getAttribute('data-taskid');
+                        const otherName = card.getAttribute('data-othername');
+                        showConfirm('删除聊天', `确定删除与 ${otherName} 的聊天吗？`, () => { deleteConversation(taskId); });
+                    }, 500);
+                };
+                const cancelPress = () => { if(pressTimer) clearTimeout(pressTimer); };
+                card.addEventListener('click', clickHandler);
+                card.addEventListener('contextmenu', (e) => e.preventDefault());
+                card.addEventListener('touchstart', startPress);
+                card.addEventListener('touchend', cancelPress);
+                card.addEventListener('touchmove', cancelPress);
+                card.addEventListener('mousedown', startPress);
+                card.addEventListener('mouseup', cancelPress);
+                card.addEventListener('mouseleave', cancelPress);
+                card._clickHandler = clickHandler;
+                card._pressStart = startPress;
+                card._pressEnd = cancelPress;
             });
-            let pressTimer = null;
-            const startPress = (e) => {
-                e.preventDefault();
-                pressTimer = setTimeout(() => {
-                    const taskId = card.getAttribute('data-taskid');
-                    const otherName = card.getAttribute('data-othername');
-                    showConfirm('删除聊天', `确定删除与 ${otherName} 的聊天吗？`, () => { deleteConversation(taskId); });
-                }, 500);
-            };
-            const cancelPress = () => { if(pressTimer) clearTimeout(pressTimer); };
-            card.addEventListener('contextmenu', (e) => e.preventDefault());
-            card.addEventListener('touchstart', startPress);
-            card.addEventListener('touchend', cancelPress);
-            card.addEventListener('touchmove', cancelPress);
-            card.addEventListener('mousedown', startPress);
-            card.addEventListener('mouseup', cancelPress);
-            card.addEventListener('mouseleave', cancelPress);
-        });
-        updateUnreadBadge();
+            updateUnreadBadge();
+        } catch(e) {
+            console.error('加载消息列表失败', e);
+        }
     }
 
     async function updateUnreadBadge() {
         if(!currentUser) return;
-        const convs = await callApi(`/user/${currentUser.id}/conversations`);
-        const filtered = convs.filter(c => !deletedConversations.has(c.taskId) && c.lastMsg);
-        const totalUnread = filtered.reduce((sum,c) => sum + (c.unread||0), 0);
-        const badge = document.getElementById('msgBadge');
-        if(badge) { if(totalUnread>0) { badge.innerText = totalUnread>99?'99+':totalUnread; badge.style.display='inline-block'; } else badge.style.display='none'; }
+        try {
+            const convs = await callApi(`/user/${currentUser.id}/conversations`);
+            const filtered = convs.filter(c => !deletedConversations.has(c.taskId) && c.lastMsg);
+            const totalUnread = filtered.reduce((sum,c) => sum + (c.unread||0), 0);
+            const badge = document.getElementById('msgBadge');
+            if(badge) { if(totalUnread>0) { badge.innerText = totalUnread>99?'99+':totalUnread; badge.style.display='inline-block'; } else badge.style.display='none'; }
+        } catch(e) {}
     }
 
     // ========== 个人主页 ==========
@@ -1335,7 +1429,7 @@
     window.cancelAcceptedTask = async function(taskId) {
         showConfirm('确认取消', '取消接取将扣除5信用分，确定吗？', async () => {
             const result = await callApi(`/tasks/${taskId}/cancel-accept`, {method:'PUT', body:JSON.stringify({userId: currentUser.id})});
-            if(result.success) { showToast('已取消接取'); loadProfile(); refreshTaskList(); }
+            if(result.success) { showToast('已取消接取'); loadProfile(); refreshTaskList(true); }
             else showAlert('操作失败', result.error || '取消失败');
         });
     };
@@ -1446,7 +1540,7 @@
             document.getElementById('loginPage').classList.remove('active');
             const loc = await getNativeUserLocation();
             if(loc) userLocation = loc;
-            await refreshTaskList();
+            await refreshTaskList(true);
             loadProfile();
             initPullToRefresh();
             initFiltersAndCategories();
