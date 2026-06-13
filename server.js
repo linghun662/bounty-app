@@ -493,7 +493,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 // 静态文件服务
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 地理编码代理接口（使用缓存）
+// 地理编码代理接口（正向）
 app.post('/api/geocode', async (req, res) => {
   const { address } = req.body;
   const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
@@ -525,6 +525,27 @@ app.post('/api/geocode', async (req, res) => {
   } catch (err) {
     console.error('地理编码错误', err);
     res.status(500).json({ error: '地理编码失败' });
+  }
+});
+
+// 逆地理编码接口（根据经纬度获取地址）
+app.post('/api/regeo', async (req, res) => {
+  const { lat, lng } = req.body;
+  const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
+  if (!lat || !lng) return res.status(400).json({ error: '缺少经纬度' });
+  try {
+    const url = `https://restapi.amap.com/v3/geocode/regeo?output=json&location=${lng},${lat}&key=${AMAP_KEY}&radius=200&extensions=all`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data.status === '1' && data.regeocode) {
+      let address = data.regeocode.formatted_address;
+      res.json({ address });
+    } else {
+      res.status(404).json({ error: '无法解析位置' });
+    }
+  } catch (err) {
+    console.error('逆地理编码错误', err);
+    res.status(500).json({ error: '逆地理编码失败' });
   }
 });
 
