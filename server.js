@@ -5,7 +5,6 @@ const path = require('path');
 
 const app = express();
 
-// CORS 配置（支持 Capacitor 原生应用和 file 协议）
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -23,7 +22,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 连接 MongoDB
 mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty', {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
@@ -96,7 +94,6 @@ const CreditLogSchema = new mongoose.Schema({
 });
 const CreditLog = mongoose.model('CreditLog', CreditLogSchema);
 
-// ==================== 辅助函数 ====================
 async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
   const user = await User.findById(userId);
   if (!user) throw new Error(`用户不存在: ${userId}`);
@@ -108,7 +105,6 @@ async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
   return user;
 }
 
-// ==================== 自动初始化默认数据（仅当数据库为空时） ====================
 async function initDefaultData() {
   const userCount = await User.countDocuments();
   if (userCount === 0) {
@@ -350,6 +346,7 @@ app.get('/api/bills/:userId', async (req, res) => {
   res.json(bills);
 });
 
+// 关键修复：当没有消息时 lastMsg 设为 null
 app.get('/api/user/:userId/conversations', async (req, res) => {
   const userId = req.params.userId;
   const tasks = await Task.find({
@@ -371,7 +368,7 @@ app.get('/api/user/:userId/conversations', async (req, res) => {
         taskId: task._id,
         otherId,
         otherName,
-        lastMsg: lastMsg?.text || '暂无消息',
+        lastMsg: lastMsg?.text || null,   // 关键：无消息时为 null
         reward: task.reward,
         taskTitle: task.title,
         unread: unreadCount
@@ -400,7 +397,6 @@ app.put('/api/messages/read/:taskId/:userId', async (req, res) => {
   res.json({ success: true });
 });
 
-// 删除单条消息
 app.delete('/api/messages/:messageId', async (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: '缺少用户ID' });
@@ -411,7 +407,6 @@ app.delete('/api/messages/:messageId', async (req, res) => {
   res.json({ success: true });
 });
 
-// 删除整个会话（任务下的所有消息）
 app.delete('/api/conversations/:taskId/:userId', async (req, res) => {
   const { taskId, userId } = req.params;
   const { userId: bodyUserId } = req.body;
@@ -435,7 +430,6 @@ app.get('/api/credit-logs/:userId', async (req, res) => {
   res.json(logs);
 });
 
-// 前端静态文件
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
