@@ -2,6 +2,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 // 确保 fetch 可用（Node 18+ 内置，低版本需要 node-fetch）
 let fetch;
@@ -32,6 +36,24 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 确保 uploads 目录存在
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+// 配置 multer 存储
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, unique + ext);
+  }
+});
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } }); // 限制10MB
+
+// JWT 密钥（生产环境请使用环境变量）
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-me';
+
 // 连接 MongoDB
 mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty', {
   serverSelectionTimeoutMS: 5000,
@@ -50,7 +72,8 @@ const UserSchema = new mongoose.Schema({
   idCardVerified: { type: Boolean, default: false },
   signature: String,
   hometown: String,
-  avatar: String
+  avatar: String,
+  deletedConversations: [{ type: String }] // 软删除会话
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -126,14 +149,29 @@ async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
   return user;
 }
 
-// ==================== 自动初始化默认数据（仅当数据库为空时） ====================
+// JWT 鉴权中间件
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: '未提供 token' });
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch(err) {
+    return res.status(401).json({ error: 'token 无效或过期' });
+  }
+}
+
+// ==================== 自动初始化默认数据 ====================
 async function initDefaultData() {
   const userCount = await User.countDocuments();
   if (userCount === 0) {
     console.log('数据库为空，正在创建默认测试数据...');
+    const hashedPwd = await bcrypt.hash('123456', 10);
     const user1 = await User.create({
       username: 'xiaoming',
-      password: '123456',
+      password: hashedPwd,
       nickname: '小明',
       phone: '13800000001',
       balance: 200,
@@ -142,7 +180,7 @@ async function initDefaultData() {
     });
     const user2 = await User.create({
       username: 'hong',
-      password: '123456',
+      password: hashedPwd,
       nickname: '小红',
       phone: '13800000002',
       balance: 150,
@@ -172,12 +210,27 @@ async function initDefaultData() {
 }
 
 // ==================== API 路由 ====================
+app.post('/api/register', async (req, res) => {
+  const { username, password, nickname, phone } = req.body;
+  const exist = await User.findOne({ username });
+  if (exist) return res.status(400).json({ error: '用户名已存在' });
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const user = new User({ username, password: hashedPassword, nickname: nickname || username, phone });
+  await user.save();
+  await CreditLog.create({ userId: user._id, reason: '注册奖励', change: 60 });
+  res.json({ success: true });
+});
+
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
-  const user = await User.findOne({ username, password });
+  const user = await User.findOne({ username });
   if (!user) return res.status(401).json({ error: '用户名或密码错误' });
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) return res.status(401).json({ error: '用户名或密码错误' });
+  const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
   res.json({
     success: true,
+    token,
     user: {
       id: user._id,
       username: user.username,
@@ -192,16 +245,6 @@ app.post('/api/login', async (req, res) => {
       phone: user.phone
     }
   });
-});
-
-app.post('/api/register', async (req, res) => {
-  const { username, password, nickname, phone } = req.body;
-  const exist = await User.findOne({ username });
-  if (exist) return res.status(400).json({ error: '用户名已存在' });
-  const user = new User({ username, password, nickname: nickname || username, phone });
-  await user.save();
-  await CreditLog.create({ userId: user._id, reason: '注册奖励', change: 60 });
-  res.json({ success: true });
 });
 
 app.get('/api/tasks', async (req, res) => {
@@ -226,8 +269,9 @@ app.get('/api/tasks/:id', async (req, res) => {
   res.json(task);
 });
 
-app.post('/api/tasks', async (req, res) => {
-  const { title, description, reward, publisherId, publisherName, publisherPhone, locationAddress, mediaList, category } = req.body;
+app.post('/api/tasks', authMiddleware, async (req, res) => {
+  const { title, description, reward, publisherName, publisherPhone, locationAddress, mediaList, category } = req.body;
+  const publisherId = req.userId;
   const user = await User.findById(publisherId);
   if (!user) return res.status(404).json({ error: '用户不存在' });
   if (!user.idCardVerified) return res.status(403).json({ error: '请先实名认证' });
@@ -242,26 +286,21 @@ app.post('/api/tasks', async (req, res) => {
   res.json(task);
 });
 
-app.put('/api/tasks/:id/cancel', async (req, res) => {
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: '缺少用户ID' });
-  try {
-    const task = await Task.findById(req.params.id).select('status publisherId reward title').lean();
-    if (!task) return res.status(404).json({ error: '任务不存在' });
-    if (task.publisherId.toString() !== userId.toString()) return res.status(403).json({ error: '无权取消' });
-    if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成' });
-    await Task.updateOne({ _id: req.params.id }, { $set: { status: 'cancelled', updatedAt: new Date() } });
-    await updateUserBalance(userId, task.reward, -task.reward);
-    await Bill.create({ userId, type: 'income', amount: task.reward, desc: `取消任务退款：${task.title || '未命名任务'}` });
-    res.json({ success: true });
-  } catch (err) {
-    console.error('取消任务详细错误:', err);
-    res.status(500).json({ error: `服务器内部错误: ${err.message}` });
-  }
+app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const task = await Task.findById(req.params.id).select('status publisherId reward title').lean();
+  if (!task) return res.status(404).json({ error: '任务不存在' });
+  if (task.publisherId.toString() !== userId.toString()) return res.status(403).json({ error: '无权取消' });
+  if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成' });
+  await Task.updateOne({ _id: req.params.id }, { $set: { status: 'cancelled', updatedAt: new Date() } });
+  await updateUserBalance(userId, task.reward, -task.reward);
+  await Bill.create({ userId, type: 'income', amount: task.reward, desc: `取消任务退款：${task.title || '未命名任务'}` });
+  res.json({ success: true });
 });
 
-app.put('/api/tasks/:id/accept', async (req, res) => {
-  const { takerId, takerName } = req.body;
+app.put('/api/tasks/:id/accept', authMiddleware, async (req, res) => {
+  const takerId = req.userId;
+  const { takerName } = req.body;
   const task = await Task.findById(req.params.id);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取' });
@@ -273,8 +312,8 @@ app.put('/api/tasks/:id/accept', async (req, res) => {
   res.json({ success: true });
 });
 
-app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
-  const { userId } = req.body;
+app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
+  const userId = req.userId;
   const task = await Task.findById(req.params.id);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.takerId !== userId) return res.status(403).json({ error: '无权取消' });
@@ -295,7 +334,7 @@ app.put('/api/tasks/:id/cancel-accept', async (req, res) => {
   res.json({ success: true });
 });
 
-app.put('/api/tasks/:id/status', async (req, res) => {
+app.put('/api/tasks/:id/status', authMiddleware, async (req, res) => {
   const { travelStatus, estimatedMinutes, travelStartTime } = req.body;
   const update = { updatedAt: new Date() };
   if (travelStatus !== undefined) update.travelStatus = travelStatus;
@@ -305,8 +344,9 @@ app.put('/api/tasks/:id/status', async (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/tasks/:id/submit-proof', async (req, res) => {
-  const { userId, proofMedia } = req.body;
+app.post('/api/tasks/:id/submit-proof', authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const { proofMedia } = req.body;
   const task = await Task.findById(req.params.id);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.takerId !== userId) return res.status(403).json({ error: '只有接取者可提交凭证' });
@@ -317,8 +357,8 @@ app.post('/api/tasks/:id/submit-proof', async (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
-  const { userId } = req.body;
+app.post('/api/tasks/:id/confirm-payment', authMiddleware, async (req, res) => {
+  const userId = req.userId;
   const task = await Task.findById(req.params.id);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.publisherId !== userId) return res.status(403).json({ error: '只有发布者可确认' });
@@ -335,8 +375,9 @@ app.post('/api/tasks/:id/confirm-payment', async (req, res) => {
   res.json({ success: true });
 });
 
-app.put('/api/tasks/:id/reward', async (req, res) => {
-  const { userId, reward: newReward } = req.body;
+app.put('/api/tasks/:id/reward', authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const { reward: newReward } = req.body;
   const task = await Task.findById(req.params.id);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.publisherId !== userId) return res.status(403).json({ error: '只有发布者可修改赏金' });
@@ -358,25 +399,30 @@ app.get('/api/user/:id', async (req, res) => {
   res.json(user);
 });
 
-app.put('/api/user/:id', async (req, res) => {
+app.put('/api/user/:id', authMiddleware, async (req, res) => {
+  if (req.params.id !== req.userId) return res.status(403).json({ error: '无权修改' });
   await User.updateOne({ _id: req.params.id }, { $set: req.body });
   res.json({ success: true });
 });
 
-app.get('/api/bills/:userId', async (req, res) => {
+app.get('/api/bills/:userId', authMiddleware, async (req, res) => {
+  if (req.params.userId !== req.userId) return res.status(403).json({ error: '无权查看' });
   const bills = await Bill.find({ userId: req.params.userId }).sort({ createdAt: -1 }).limit(50).lean();
   res.json(bills);
 });
 
-// 关键修复：当没有消息时 lastMsg 设为 null
-app.get('/api/user/:userId/conversations', async (req, res) => {
+app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
+  if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
+  const user = await User.findById(userId).lean();
+  const deletedSet = new Set(user.deletedConversations || []);
   const tasks = await Task.find({
     $or: [{ publisherId: userId }, { takerId: userId }],
     status: { $ne: 'cancelled' }
   }).select('-mediaList -proofMedia').sort({ updatedAt: -1 }).lean();
   const conversations = [];
   for (const task of tasks) {
+    if (deletedSet.has(task._id.toString())) continue;
     const lastMsg = await Message.findOne({ taskId: task._id.toString() }).sort({ createdAt: -1 }).lean();
     const unreadCount = await Message.countDocuments({
       taskId: task._id.toString(),
@@ -411,17 +457,18 @@ app.post('/api/messages', async (req, res) => {
   res.json(message);
 });
 
-app.put('/api/messages/read/:taskId/:userId', async (req, res) => {
+app.put('/api/messages/read/:taskId/:userId', authMiddleware, async (req, res) => {
+  const { taskId, userId } = req.params;
+  if (userId !== req.userId) return res.status(403).json({ error: '无权操作' });
   await Message.updateMany(
-    { taskId: req.params.taskId, senderId: { $ne: req.params.userId }, read: false },
+    { taskId, senderId: { $ne: userId }, read: false },
     { $set: { read: true } }
   );
   res.json({ success: true });
 });
 
-app.delete('/api/messages/:messageId', async (req, res) => {
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: '缺少用户ID' });
+app.delete('/api/messages/:messageId', authMiddleware, async (req, res) => {
+  const userId = req.userId;
   const message = await Message.findById(req.params.messageId);
   if (!message) return res.status(404).json({ error: '消息不存在' });
   if (message.senderId !== userId) return res.status(403).json({ error: '无权删除' });
@@ -429,18 +476,27 @@ app.delete('/api/messages/:messageId', async (req, res) => {
   res.json({ success: true });
 });
 
-app.delete('/api/conversations/:taskId/:userId', async (req, res) => {
+app.delete('/api/conversations/:taskId/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
-  const { userId: bodyUserId } = req.body;
-  if (!userId || userId !== bodyUserId) return res.status(403).json({ error: '无权操作' });
-  await Message.deleteMany({ taskId });
+  if (userId !== req.userId) return res.status(403).json({ error: '无权操作' });
+  await User.updateOne({ _id: userId }, { $addToSet: { deletedConversations: taskId } });
   res.json({ success: true });
 });
+
+// 上传文件接口
+app.post('/api/upload', upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: '没有文件' });
+  const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+  res.json({ url: fileUrl });
+});
+
+// 静态文件服务
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 地理编码代理接口（使用缓存）
 app.post('/api/geocode', async (req, res) => {
   const { address } = req.body;
-  const AMAP_KEY = '30107d62cf0ec682643d1097a48f7da4';
+  const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
   if (!address) return res.status(400).json({ error: '地址不能为空' });
   try {
     let cached = await GeocodeCache.findOne({ address });
@@ -472,8 +528,9 @@ app.post('/api/geocode', async (req, res) => {
   }
 });
 
-app.post('/api/verify-id', async (req, res) => {
-  const { userId, realName, idCard } = req.body;
+app.post('/api/verify-id', authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const { realName, idCard } = req.body;
   if (realName && idCard.length >= 15) {
     await User.updateOne({ _id: userId }, { $set: { idCardVerified: true } });
     res.json({ success: true });
@@ -482,16 +539,18 @@ app.post('/api/verify-id', async (req, res) => {
   }
 });
 
-app.get('/api/credit-logs/:userId', async (req, res) => {
+app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
+  if (req.params.userId !== req.userId) return res.status(403).json({ error: '无权查看' });
   const logs = await CreditLog.find({ userId: req.params.userId }).sort({ createdAt: -1 }).lean();
   res.json(logs);
 });
 
-// 前端静态文件
-app.get('*', (req, res) => {
+// ==================== 前端静态文件托管（修复 Express 5 通配符语法） ====================
+app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// ==================== 启动服务器 ====================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
