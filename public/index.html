@@ -2,163 +2,171 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>赏金集市 · 双向议价版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=no">
+    <title>赏金集市 · 原生版</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: #f5f7fb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; padding-bottom: 70px; }
-        .app-container { max-width: 600px; margin: 0 auto; background: #f5f7fb; min-height: 100vh; }
-        .page { display: none; animation: fadeIn 0.25s ease; }
-        .page.active { display: block; }
-        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-        .nav-header { background: rgba(255,255,255,0.98); backdrop-filter: blur(20px); padding: 14px 20px; border-bottom: 1px solid rgba(226,232,240,0.8); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 20; }
-        .logo { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, #0f2b3d, #1e4a6b); background-clip: text; -webkit-background-clip: text; color: transparent; }
-        .header-balance { background: #eef2ff; padding: 6px 14px; border-radius: 40px; font-size: 0.8rem; font-weight: 600; color: #1e4a6b; cursor: pointer; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; max-width: 600px; margin: 0 auto; background: rgba(255,255,255,0.96); backdrop-filter: blur(20px); display: flex; justify-content: space-around; padding: 8px 20px 20px; border-top: 1px solid rgba(226,232,240,0.8); z-index: 20; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 0.7rem; color: #94a3b8; cursor: pointer; }
-        .nav-item.active { color: #1e4a6b; transform: translateY(-2px); font-weight: 500; }
-        .nav-icon { font-size: 1.6rem; }
-        .card { background: #fff; border-radius: 28px; padding: 20px; margin: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.04); border: 1px solid #eef2f8; cursor: pointer; transition: transform 0.1s ease; }
-        .task-card:active { transform: scale(0.98); }
-        .detail-hero { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 28px; margin: 16px 16px 0 16px; padding: 24px 20px; color: white; position: relative; overflow: hidden; }
-        .detail-hero::before { content: "💰"; position: absolute; right: -20px; bottom: -20px; font-size: 100px; opacity: 0.1; }
-        .detail-reward { font-size: 2rem; font-weight: 800; margin-top: 8px; }
-        .detail-status { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; font-weight: 600; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); margin-bottom: 12px; }
-        .info-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #eef2f8; }
-        .info-icon { width: 32px; font-size: 1.2rem; text-align: center; }
-        .info-content { flex: 1; }
-        .info-label { font-size: 0.7rem; color: #64748b; margin-bottom: 2px; }
-        .info-value { font-weight: 600; color: #1e293b; cursor: pointer; }
-        .desc-section { background: #f8fafc; border-radius: 24px; padding: 16px; margin-top: 12px; }
-        .form-group { margin-bottom: 18px; }
-        .form-label { font-size: 0.85rem; font-weight: 600; color: #1e293b; margin-bottom: 6px; display: block; }
-        .form-input, .form-textarea { width: 100%; padding: 12px 16px; border-radius: 24px; border: 1px solid #e2e8f0; font-size: 0.95rem; outline: none; background: white; }
-        .form-textarea { min-height: 100px; }
-        .btn-primary { background: linear-gradient(95deg, #059669, #047857); border: none; border-radius: 60px; padding: 14px; font-weight: 600; color: white; width: 100%; text-align: center; cursor: pointer; font-size: 1rem; }
-        .btn-secondary { background: #f1f5f9; color: #1e4a6b; border-radius: 60px; padding: 12px; font-weight: 600; border: none; width: 100%; cursor: pointer; }
-        .btn-outline { background: transparent; border: 1px solid #1e4a6b; color: #1e4a6b; border-radius: 60px; padding: 10px; font-weight: 600; cursor: pointer; }
-        .btn-danger { background: #fee2e2; color: #b91c1c; border-radius: 60px; padding: 8px 16px; font-weight: 600; border: none; cursor: pointer; }
-        .btn-success { background: #10b981; color: white; border-radius: 60px; padding: 6px 12px; font-weight: 600; border: none; cursor: pointer; }
-        .btn-phone { background: #10b981; color: white; border-radius: 60px; padding: 10px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
-        .btn-nav { background: #3b82f6; color: white; border-radius: 60px; padding: 10px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
-        .btn-location { background: #eef2ff; color: #1e4a6b; border-radius: 40px; padding: 8px 16px; font-weight: 500; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-        .location-row { display: flex; gap: 8px; align-items: center; }
-        .upload-area { margin-top: 12px; }
-        .image-preview-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
-        .preview-img-wrapper { position: relative; width: 85px; height: 85px; border-radius: 20px; overflow: hidden; background: #f1f5f9; border: 2px solid #e2e8f0; }
-        .preview-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-        .remove-img-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .upload-btn { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 20px; padding: 12px; text-align: center; cursor: pointer; margin-top: 8px; }
-        .profile-header { background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 28px; margin: 16px; padding: 20px; color: white; display: flex; align-items: center; gap: 16px; cursor: pointer; }
-        .profile-avatar { width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 600; overflow: hidden; }
-        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .stats-row { display: flex; background: #fff; margin: 0 16px 16px; border-radius: 24px; padding: 16px; justify-content: space-around; }
-        .stat-item { text-align: center; flex: 1; cursor: pointer; }
-        .stat-number { font-size: 1.3rem; font-weight: 800; color: #1e4a6b; }
-        .stat-label { font-size: 0.7rem; color: #64748b; margin-top: 4px; }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; }
-        .text-center { text-align: center; }
-        .mt-2 { margin-top: 8px; }
-        .empty-state { text-align: center; padding: 40px 20px; color: #94a3b8; }
-        .loading { text-align: center; padding: 40px; color: #94a3b8; }
-        .reward-badge { background: linear-gradient(135deg, #fef3c7, #fde68a); padding: 4px 14px; border-radius: 40px; font-weight: 700; font-size: 0.85rem; color: #b45309; }
-        .task-meta { display: flex; gap: 12px; font-size: 0.7rem; color: #6c7a91; margin-top: 8px; flex-wrap: wrap; }
-        .task-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
-        .task-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
-        .task-desc { font-size: 0.9rem; color: #475569; margin-bottom: 8px; }
-        .distance-badge { background: #e6f7e6; color: #2b6e2f; padding: 2px 10px; border-radius: 20px; font-weight: 500; font-size: 0.7rem; }
-        .slide-confirm, .slide-action { margin: 12px 0; user-select: none; }
-        .slide-track { position: relative; width: 100%; height: 56px; background: #eef2ff; border-radius: 60px; overflow: hidden; border: 1px solid #cbd5e1; cursor: grab; touch-action: none; }
-        .slide-thumb { position: absolute; left: 0; top: 0; width: 80px; height: 56px; background: linear-gradient(135deg, #1e4a6b, #0f2b3d); border-radius: 60px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; cursor: grab; touch-action: none; transition: none; }
-        .slide-text { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #1e4a6b; pointer-events: none; font-size: 0.95rem; gap: 12px; z-index: 1; }
-        .slide-confirm.completed .slide-track, .slide-action.completed .slide-track { background: #d1fae5; border-color: #059669; }
-        .countdown-timer { background: #fef3c7; border-radius: 40px; padding: 10px 16px; text-align: center; margin: 12px 0; font-weight: 700; color: #b45309; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem; }
-        .countdown-timer.warning { background: #fee2e2; color: #dc2626; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .modal-content { background: white; border-radius: 32px; width: 85%; max-width: 340px; padding: 24px; max-height: 80vh; overflow-y: auto; }
-        .chat-container { display: flex; flex-direction: column; height: calc(100vh - 120px); background: #f5f7fb; }
-        .chat-header-bar { background: white; padding: 12px 16px; border-bottom: 1px solid #eef2f8; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
-        .chat-back-btn { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
-        .chat-header-name { font-weight: 700; font-size: 1.1rem; color: #1e293b; flex: 1; }
-        .chat-messages-area { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-        .chat-bubble { max-width: 80%; display: flex; flex-direction: column; }
-        .chat-bubble-mine { align-self: flex-end; }
-        .chat-bubble-other { align-self: flex-start; }
-        .bubble-text { padding: 12px 16px; border-radius: 24px; font-size: 0.9rem; line-height: 1.4; word-break: break-word; background: white; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; }
-        .chat-bubble-mine .bubble-text { background: #1e4a6b; color: white; border-bottom-right-radius: 4px; border: none; }
-        .bubble-time { font-size: 0.6rem; color: #94a3b8; margin-top: 4px; margin-left: 12px; margin-right: 12px; }
-        .chat-bubble-mine .bubble-time { text-align: right; }
-        .chat-input-wrapper { background: white; border-top: 1px solid #eef2f8; padding: 12px 16px; border-radius: 28px 28px 0 0; }
-        .flex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-        .nego-input { flex: 1; min-width: 120px; padding: 10px 14px; border-radius: 30px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; }
-        .nego-send-btn { background: #f59e0b; border: none; border-radius: 30px; padding: 8px 18px; font-weight: 600; color: white; cursor: pointer; }
-        .chat-action-row { display: flex; gap: 10px; align-items: center; }
-        .chat-message-input { flex: 1; padding: 10px 14px; border-radius: 30px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; }
-        .send-btn { background: #1e4a6b; border: none; border-radius: 30px; padding: 10px 20px; font-weight: 600; color: white; cursor: pointer; }
-        .task-card-in-chat { background: #f8fafc; border-radius: 20px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #e2e8f0; }
-        .refresh-container { text-align: center; padding: 10px 0; font-size: 0.8rem; color: #94a3b8; transition: transform 0.2s; }
-        .category-bar, .sort-bar { display: flex; gap: 12px; padding: 8px 16px; background: white; border-bottom: 1px solid #eef2f8; overflow-x: auto; white-space: nowrap; }
-        .category-chip, .sort-chip { background: #f1f5f9; padding: 6px 12px; border-radius: 40px; font-size: 0.75rem; color: #1e4a6b; cursor: pointer; display: inline-block; }
-        .category-chip.active, .sort-chip.active { background: #1e4a6b; color: white; }
-        .profile-collapse { background: #fff; border-radius: 24px; margin: 12px 16px; overflow: hidden; border: 1px solid #eef2f8; }
-        .collapse-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; cursor: pointer; transition: background 0.2s; }
-        .collapse-header:active { background: #f8fafc; }
-        .collapse-title { font-weight: 700; font-size: 1rem; color: #1e293b; display: flex; align-items: center; gap: 8px; }
-        .collapse-icon { font-size: 1.2rem; transition: transform 0.2s; }
-        .collapse-icon.open { transform: rotate(90deg); }
-        .collapse-content { display: none; padding: 0 16px 16px 16px; background: #fff; border-top: 1px solid #eef2f8; }
-        .collapse-content.show { display: block; }
-        .profile-task-item { padding: 12px 0; border-bottom: 1px solid #eef2f8; }
-        .profile-task-item:last-child { border-bottom: none; }
-        .profile-task-title { font-weight: 600; font-size: 0.95rem; color: #0f172a; cursor: pointer; display: inline-block; }
-        .profile-task-status { font-size: 0.7rem; display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 20px; background: #f1f5f9; color: #475569; }
-        .profile-task-status.available { background: #d1fae5; color: #065f46; }
-        .profile-task-status.ongoing { background: #fed7aa; color: #9a3412; }
-        .profile-task-status.completed { background: #e2e8f0; color: #334155; }
-        .profile-task-amount { font-weight: 700; color: #b45309; font-size: 0.9rem; text-align: right; }
-        .task-actions { margin-top: 8px; display: flex; justify-content: flex-end; gap: 8px; }
-        .logout-btn { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 60px; padding: 14px; font-weight: 600; font-size: 1rem; width: calc(100% - 32px); margin: 16px; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; box-shadow: 0 2px 8px rgba(220,38,38,0.2); }
-        .logout-btn:active { transform: scale(0.98); box-shadow: 0 1px 4px rgba(220,38,38,0.2); }
-        .progress-text { font-size: 0.75rem; color: #1e4a6b; margin-top: 4px; }
-        .contact-buttons { display: flex; gap: 12px; margin: 16px 16px 0 16px; }
-        .contact-buttons button { flex: 1; }
-        .progress-steps { display: flex; justify-content: space-between; margin: 20px 16px; position: relative; }
-        .progress-steps::before { content: ''; position: absolute; top: 28px; left: 10%; right: 10%; height: 2px; background: #e2e8f0; z-index: 0; }
-        .step { text-align: center; flex: 1; position: relative; z-index: 1; background: #fff; border-radius: 40px; padding: 8px 4px; }
-        .step-dot { width: 40px; height: 40px; background: white; border: 2px solid #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 1.2rem; background: #f1f5f9; }
-        .step.active .step-dot { background: #1e4a6b; border-color: #1e4a6b; color: white; }
-        .step.completed .step-dot { background: #059669; border-color: #059669; color: white; }
-        .step-label { font-size: 0.65rem; color: #64748b; }
-        .step.active .step-label { color: #1e4a6b; font-weight: 600; }
-        .step.completed .step-label { color: #059669; }
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        body{background:#f5f7fb;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1e293b;padding-bottom:70px}
+        .app-container{width:100%;background:#f5f7fb;min-height:100vh}
+        .page{display:none;animation:fadeIn .2s ease}
+        .page.active{display:block}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .nav-header{background:rgba(255,255,255,0.98);backdrop-filter:blur(20px);padding:12px 16px;border-bottom:1px solid rgba(226,232,240,0.8);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20}
+        .logo{font-size:1.3rem;font-weight:700;background:linear-gradient(135deg,#0f2b3d,#1e4a6b);background-clip:text;-webkit-background-clip:text;color:transparent}
+        .header-balance{background:#eef2ff;padding:4px 10px;border-radius:40px;font-size:.75rem;font-weight:600;color:#1e4a6b;cursor:pointer}
+        .bottom-nav{position:fixed;bottom:0;left:0;right:0;width:100%;background:rgba(255,255,255,0.96);backdrop-filter:blur(20px);display:flex;justify-content:space-around;padding:6px 20px 16px;border-top:1px solid rgba(226,232,240,0.8);z-index:20}
+        .nav-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;color:#94a3b8;cursor:pointer;transition:color .1s}
+        .nav-item.active{color:#1e4a6b;font-weight:500}
+        .nav-icon{font-size:1.4rem}
+        .msg-badge{position:absolute;top:-5px;right:-10px;background:#ef4444;color:#fff;border-radius:20px;padding:2px 6px;font-size:.6rem;min-width:18px;text-align:center;display:none}
+        .card{background:#fff;border-radius:20px;padding:16px;margin:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);border:1px solid #eef2f8;cursor:pointer;transition:transform .1s ease}
+        .task-card:active{transform:scale(.98)}
+        .skeleton-card{background:#fff;border-radius:20px;padding:16px;margin:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);border:1px solid #eef2f8;animation:pulse 1.5s infinite}
+        @keyframes pulse{0%{opacity:0.6}50%{opacity:1}100%{opacity:0.6}}
+        .skeleton-title{height:20px;background:#e2e8f0;border-radius:12px;width:60%;margin-bottom:12px}
+        .skeleton-desc{height:16px;background:#e2e8f0;border-radius:12px;width:90%;margin-bottom:8px}
+        .skeleton-meta{height:14px;background:#e2e8f0;border-radius:12px;width:40%}
+        .detail-hero{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:20px;margin:12px 12px 0 12px;padding:20px 16px;color:#fff;position:relative;overflow:hidden}
+        .detail-hero::before{content:"💰";position:absolute;right:-20px;bottom:-20px;font-size:80px;opacity:.1}
+        .detail-reward{font-size:1.6rem;font-weight:800;margin-top:6px}
+        .detail-status{display:inline-block;padding:3px 10px;border-radius:40px;font-size:.65rem;font-weight:600;background:rgba(255,255,255,0.2);backdrop-filter:blur(4px);margin-bottom:8px}
+        .info-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f8}
+        .info-icon{width:28px;font-size:1rem;text-align:center}
+        .info-content{flex:1}
+        .info-label{font-size:.65rem;color:#64748b;margin-bottom:2px}
+        .info-value{font-weight:600;color:#1e293b;cursor:pointer}
+        .desc-section{background:#f8fafc;border-radius:20px;padding:12px;margin-top:12px}
+        .form-group{margin-bottom:16px}
+        .form-label{font-size:.85rem;font-weight:600;color:#1e293b;margin-bottom:6px;display:block}
+        .form-input,.form-textarea{width:100%;padding:10px 14px;border-radius:20px;border:1px solid #e2e8f0;font-size:.9rem;outline:none;background:#fff}
+        .form-textarea{min-height:80px}
+        .btn-primary{background:linear-gradient(95deg,#059669,#047857);border:none;border-radius:60px;padding:12px;font-weight:600;color:#fff;width:100%;text-align:center;cursor:pointer;font-size:.95rem}
+        .btn-primary:disabled{opacity:.6;cursor:not-allowed}
+        .btn-secondary{background:#f1f5f9;color:#1e4a6b;border-radius:60px;padding:10px;font-weight:600;border:none;width:100%;cursor:pointer}
+        .btn-danger{background:#fee2e2;color:#b91c1c;border-radius:60px;padding:6px 12px;font-weight:600;border:none;cursor:pointer}
+        .btn-phone{background:#10b981;color:#fff;border-radius:60px;padding:8px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+        .btn-nav{background:#3b82f6;color:#fff;border-radius:60px;padding:8px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+        .btn-location{background:#eef2ff;color:#1e4a6b;border-radius:40px;padding:6px 12px;font-weight:500;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+        .location-row{display:flex;gap:8px;align-items:center}
+        .image-preview-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+        .preview-img-wrapper{position:relative;width:70px;height:70px;border-radius:16px;overflow:hidden;background:#f1f5f9;border:1px solid #e2e8f0}
+        .preview-img-wrapper img,.preview-img-wrapper video{width:100%;height:100%;object-fit:cover}
+        .remove-img-btn{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border-radius:50%;width:20px;height:20px;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+        .upload-btn{background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:16px;padding:10px;text-align:center;cursor:pointer;margin-top:8px;font-size:.8rem}
+        .profile-header{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:20px;margin:12px;padding:16px;color:#fff;display:flex;align-items:center;gap:12px;cursor:pointer}
+        .profile-avatar{width:60px;height:60px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:600;overflow:hidden}
+        .profile-avatar img{width:100%;height:100%;object-fit:cover}
+        .stats-row{display:flex;background:#fff;margin:0 12px 12px;border-radius:20px;padding:12px;justify-content:space-around}
+        .stat-item{text-align:center;flex:1;cursor:pointer}
+        .stat-number{font-size:1.2rem;font-weight:800;color:#1e4a6b}
+        .stat-label{font-size:.65rem;color:#64748b;margin-top:2px}
+        .flex-between{display:flex;justify-content:space-between;align-items:center}
+        .text-center{text-align:center}
+        .mt-2{margin-top:8px}
+        .empty-state{text-align:center;padding:30px 20px;color:#94a3b8}
+        .loading{text-align:center;padding:30px;color:#94a3b8}
+        .reward-badge{background:linear-gradient(135deg,#fef3c7,#fde68a);padding:3px 10px;border-radius:40px;font-weight:700;font-size:.75rem;color:#b45309}
+        .task-meta{display:flex;gap:10px;font-size:.65rem;color:#6c7a91;margin-top:6px;flex-wrap:wrap}
+        .task-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+        .task-title{font-size:1rem;font-weight:700;color:#0f172a}
+        .task-desc{font-size:.85rem;color:#475569;margin-bottom:6px}
+        .distance-badge{background:#e6f7e6;color:#2b6e2f;padding:2px 8px;border-radius:20px;font-weight:500;font-size:.65rem}
+        .slide-confirm,.slide-action{margin:12px 0;user-select:none}
+        .slide-track{position:relative;width:100%;height:50px;background:#eef2ff;border-radius:50px;overflow:hidden;border:1px solid #cbd5e1;touch-action:none}
+        .slide-thumb{position:absolute;left:0;top:0;width:70px;height:50px;background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:50px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.6rem;touch-action:none;transition:none}
+        .slide-text{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1e4a6b;pointer-events:none;font-size:.85rem;gap:8px;z-index:1}
+        .slide-confirm.completed .slide-track,.slide-action.completed .slide-track{background:#d1fae5;border-color:#059669}
+        .countdown-timer{background:#fef3c7;border-radius:40px;padding:8px 12px;text-align:center;margin:12px 0;font-weight:700;color:#b45309;display:flex;align-items:center;justify-content:center;gap:6px;font-size:.9rem}
+        .countdown-timer.warning{background:#fee2e2;color:#dc2626;animation:pulse 1s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+        .custom-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
+        .custom-modal-content{background:#fff;border-radius:28px;width:85%;max-width:320px;padding:20px;text-align:center}
+        .custom-modal-content h3{margin-bottom:12px}
+        .custom-modal-buttons{display:flex;gap:12px;margin-top:20px;justify-content:center}
+        .custom-modal-buttons button{flex:1;padding:10px;border-radius:40px;border:none;font-weight:600;cursor:pointer}
+        .custom-modal-buttons .confirm-btn{background:#1e4a6b;color:#fff}
+        .custom-modal-buttons .cancel-btn{background:#e2e8f0;color:#1e293b}
+        .toast-message{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:8px 16px;border-radius:40px;font-size:.8rem;z-index:1100;pointer-events:none;animation:fadeOut 2s forwards}
+        @keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
+        .chat-container{display:flex;flex-direction:column;height:calc(100vh - 120px);background:#f5f7fb}
+        .chat-header-bar{background:#fff;padding:12px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+        .chat-back-btn{background:#f1f5f9;border:none;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer}
+        .chat-header-name{font-weight:700;font-size:1rem;color:#1e293b;flex:1}
+        .chat-messages-area{flex:1;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+        .chat-bubble{max-width:80%;display:flex;flex-direction:column;cursor:pointer;transition:background .2s}
+        .chat-bubble:active{background:rgba(0,0,0,0.05)}
+        .chat-bubble-mine{align-self:flex-end}
+        .chat-bubble-other{align-self:flex-start}
+        .bubble-text{padding:10px 14px;border-radius:20px;font-size:.85rem;line-height:1.4;word-break:break-word;background:#fff;border:1px solid #e2e8f0;border-bottom-left-radius:4px}
+        .chat-bubble-mine .bubble-text{background:#1e4a6b;color:#fff;border-bottom-right-radius:4px;border:none}
+        .bubble-time{font-size:.6rem;color:#94a3b8;margin-top:2px;margin-left:8px;margin-right:8px}
+        .chat-bubble-mine .bubble-time{text-align:right}
+        .chat-input-wrapper{background:#fff;border-top:1px solid #eef2f8;padding:10px 12px;border-radius:24px 24px 0 0}
+        .flex-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+        .nego-input{flex:1;min-width:100px;padding:8px 12px;border-radius:30px;border:1px solid #e2e8f0;outline:none;background:#f8fafc}
+        .nego-send-btn{background:#f59e0b;border:none;border-radius:30px;padding:6px 12px;font-weight:600;color:#fff;cursor:pointer;font-size:.8rem}
+        .chat-action-row{display:flex;gap:8px;align-items:center}
+        .chat-message-input{flex:1;padding:8px 12px;border-radius:30px;border:1px solid #e2e8f0;outline:none;background:#f8fafc;font-size:.9rem}
+        .send-btn{background:#1e4a6b;border:none;border-radius:30px;padding:8px 16px;font-weight:600;color:#fff;cursor:pointer;font-size:.85rem}
+        .task-card-in-chat{background:#f8fafc;border-radius:16px;padding:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;border:1px solid #e2e8f0}
+        .category-bar,.sort-bar{display:flex;gap:10px;padding:8px 12px;background:#fff;border-bottom:1px solid #eef2f8;overflow-x:auto;white-space:nowrap}
+        .category-chip,.sort-chip{background:#f1f5f9;padding:4px 10px;border-radius:40px;font-size:.7rem;color:#1e4a6b;cursor:pointer;display:inline-block}
+        .category-chip.active,.sort-chip.active{background:#1e4a6b;color:#fff}
+        .profile-collapse{background:#fff;border-radius:20px;margin:12px;overflow:hidden;border:1px solid #eef2f8}
+        .collapse-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#fff;cursor:pointer}
+        .collapse-header:active{background:#f8fafc}
+        .collapse-title{font-weight:700;font-size:.9rem;color:#1e293b;display:flex;align-items:center;gap:6px}
+        .collapse-icon{font-size:1rem;transition:transform .2s}
+        .collapse-icon.open{transform:rotate(90deg)}
+        .collapse-content{display:none;padding:0 16px 12px 16px;background:#fff;border-top:1px solid #eef2f8}
+        .collapse-content.show{display:block}
+        .profile-task-item{padding:10px 0;border-bottom:1px solid #eef2f8;cursor:pointer}
+        .profile-task-item:last-child{border-bottom:none}
+        .profile-task-title{font-weight:600;font-size:.85rem;color:#0f172a;display:inline-block}
+        .profile-task-status{font-size:.65rem;display:inline-block;margin-left:6px;padding:2px 6px;border-radius:20px;background:#f1f5f9;color:#475569}
+        .profile-task-status.available{background:#d1fae5;color:#065f46}
+        .profile-task-status.ongoing{background:#fed7aa;color:#9a3412}
+        .profile-task-status.completed{background:#e2e8f0;color:#334155}
+        .profile-task-status.cancelled{background:#fee2e2;color:#b91c1c}
+        .profile-task-amount{font-weight:700;color:#b45309;font-size:.85rem;text-align:right}
+        .task-actions{margin-top:8px;display:flex;justify-content:flex-end;gap:8px}
+        .logout-btn{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:60px;padding:12px;font-weight:600;font-size:.95rem;width:calc(100% - 24px);margin:12px;cursor:pointer}
+        .progress-text{font-size:.7rem;color:#1e4a6b;margin-top:4px}
+        .contact-buttons{display:flex;gap:12px;margin:12px 12px 0 12px}
+        .contact-buttons button{flex:1}
+        .progress-steps{display:flex;justify-content:space-between;margin:16px;position:relative}
+        .progress-steps::before{content:'';position:absolute;top:24px;left:10%;right:10%;height:2px;background:#e2e8f0;z-index:0}
+        .step{text-align:center;flex:1;position:relative;z-index:1;background:#fff;border-radius:30px;padding:6px 2px}
+        .step-dot{width:32px;height:32px;background:#fff;border:2px solid #cbd5e1;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:1rem;background:#f1f5f9}
+        .step.active .step-dot{background:#1e4a6b;border-color:#1e4a6b;color:#fff}
+        .step.completed .step-dot{background:#059669;border-color:#059669;color:#fff}
+        .step-label{font-size:.6rem;color:#64748b}
+        .step.active .step-label{color:#1e4a6b;font-weight:600}
+        .step.completed .step-label{color:#059669}
+        .refresh-container{text-align:center;width:100%;padding:12px 0;background:transparent;font-size:.8rem;color:#64748b;position:relative;transition:transform .2s}
+        .chat-refresh-indicator{text-align:center;padding:10px;font-size:.75rem;color:#64748b;background:transparent;width:100%}
+        .image-preview-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
+        .image-preview-modal img{max-width:90%;max-height:90%;object-fit:contain;transition:transform .2s}
+        .image-preview-modal .close-preview{position:absolute;top:20px;right:20px;color:#fff;font-size:2rem;background:rgba(0,0,0,0.5);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
+        .network-toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#ffc107;padding:6px 12px;border-radius:30px;font-size:.75rem;z-index:2000;white-space:nowrap}
     </style>
 </head>
 <body>
 <div id="app">
     <div class="app-container">
-        <!-- 登录页面 -->
         <div id="loginPage" class="page active">
             <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
                 <div class="card" style="width:100%; cursor:default;">
-                    <div class="text-center">
-                        <div style="font-size:3rem;">💰</div>
-                        <h2 style="color:#1e4a6b;">赏金集市 · 双向议价</h2>
-                        <p style="color:#64748b;">悬赏任务 · 轻松赚钱</p>
-                    </div>
+                    <div class="text-center"><div style="font-size:2.5rem;">💰</div><h2 style="color:#1e4a6b;">赏金集市 · 双向议价</h2><p style="color:#64748b;">悬赏任务 · 轻松赚钱</p></div>
                     <div class="form-group"><input type="text" id="loginUsername" class="form-input" placeholder="用户名" value="xiaoming"></div>
                     <div class="form-group"><input type="password" id="loginPassword" class="form-input" placeholder="密码" value="123456"></div>
                     <button class="btn-primary" id="doLoginBtn">登录</button>
                     <div class="text-center mt-2"><a href="#" id="showRegisterBtn" style="color:#1e4a6b;">注册账号</a></div>
                     <div class="text-center mt-2" style="font-size:0.7rem;">测试: xiaoming/123456 | hong/123456</div>
                     <div id="loginError" style="color:#ef4444; font-size:0.8rem; text-align:center; margin-top:8px;"></div>
-                    <hr style="margin: 16px 0;">
-                    <button class="btn-primary" id="initDataBtn" style="background:#eef2ff; color:#1e4a6b;">📦 初始化测试数据</button>
                 </div>
             </div>
         </div>
-        
-        <!-- 注册页面 -->
         <div id="registerPage" class="page">
             <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
                 <div class="card" style="width:100%; cursor:default;">
@@ -174,55 +182,24 @@
                 </div>
             </div>
         </div>
-        
-        <!-- 主应用 -->
         <div id="mainApp" style="display:none;">
-            <div class="nav-header">
-                <span class="logo">💰 赏金集市 · 双向议价</span>
-                <div><span class="header-balance" id="headerBalance">余额: ¥0</span></div>
-            </div>
+            <div class="nav-header"><span class="logo">💰 赏金集市 · 双向议价</span><div><span class="header-balance" id="headerBalance">余额: ¥0</span></div></div>
             <div id="homePage" class="page" style="overflow-y:auto; height:calc(100vh - 120px);">
-                <div class="category-bar" id="categoryBar">
-                    <span class="category-chip active" data-cat="all">全部</span>
-                    <span class="category-chip" data-cat="取件">取件</span>
-                    <span class="category-chip" data-cat="调试">调试</span>
-                    <span class="category-chip" data-cat="跑腿">跑腿</span>
-                </div>
-                <div class="sort-bar">
-                    <span class="sort-chip" data-sort="distance">距离最近</span>
-                    <span class="sort-chip" data-sort="reward">赏金最高</span>
-                    <span class="sort-chip active" data-sort="time">最新发布</span>
-                </div>
+                <div class="category-bar" id="categoryBar"><span class="category-chip active" data-cat="all">全部</span><span class="category-chip" data-cat="取件">取件</span><span class="category-chip" data-cat="调试">调试</span><span class="category-chip" data-cat="跑腿">跑腿</span></div>
+                <div class="sort-bar"><span class="sort-chip" data-sort="distance">距离最近</span><span class="sort-chip" data-sort="reward">赏金最高</span><span class="sort-chip active" data-sort="time">最新发布</span></div>
                 <div id="refreshIndicator" class="refresh-container" style="display:none;">↓ 下拉刷新</div>
                 <div id="homeContent" class="loading">加载中...</div>
             </div>
-            <div id="detailPage" class="page"><div id="detailContainer"></div><div class="back-button" style="margin:8px 16px 20px;"><button class="btn-secondary" style="margin:0;" onclick="switchPage('home')">← 返回首页</button></div></div>
+            <div id="detailPage" class="page"><div id="detailContainer"></div><div class="back-button" style="margin:8px 12px 20px;"><button class="btn-secondary" id="detailBackBtn" style="margin:0;">← 返回上一页</button></div></div>
             <div id="publishPage" class="page">
                 <div class="card" style="cursor:default;">
                     <h3>✨ 发布悬赏</h3>
                     <div class="form-group"><input type="text" id="pubTitle" class="form-input" placeholder="标题"></div>
                     <div class="form-group"><textarea id="pubDesc" class="form-textarea" placeholder="描述"></textarea></div>
-                    <div class="form-group"><label class="form-label">任务类目</label>
-                        <select id="pubCategory" class="form-select">
-                            <option value="取件">取件</option>
-                            <option value="调试">调试</option>
-                            <option value="跑腿">跑腿</option>
-                            <option value="其他">其他</option>
-                        </select>
-                    </div>
+                    <div class="form-group"><label class="form-label">任务类目</label><select id="pubCategory" class="form-input"><option value="取件">取件</option><option value="调试">调试</option><option value="跑腿">跑腿</option><option value="其他">其他</option></select></div>
                     <div class="form-group"><input type="number" id="pubReward" class="form-input" placeholder="赏金 (¥)" min="0" step="1"></div>
-                    <div class="form-group">
-                        <div class="location-row">
-                            <input type="text" id="pubAddress" class="form-input" placeholder="任务地点">
-                            <button class="btn-location" id="getLocationBtn" type="button">📍 定位</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <div class="form-label">📎 图片/视频（最多6个）</div>
-                        <div id="mediaPreview" class="image-preview-grid"></div>
-                        <input type="file" id="mediaInput" accept="image/*,video/*" multiple style="display:none;">
-                        <div class="upload-btn" onclick="document.getElementById('mediaInput').click()">+ 选择文件</div>
-                    </div>
+                    <div class="form-group"><div class="location-row"><input type="text" id="pubAddress" class="form-input" placeholder="任务地点"><button class="btn-location" id="getLocationBtn" type="button">📍 定位</button></div><div style="font-size:0.7rem; color:#64748b; margin-top:4px;" id="locationHint">点击定位自动填入详细地址</div></div>
+                    <div class="form-group"><div class="form-label">📎 图片/视频（最多3个）</div><div id="mediaPreview" class="image-preview-grid"></div><input type="file" id="mediaInput" accept="image/*,video/*" multiple style="display:none;"><div class="upload-btn" onclick="document.getElementById('mediaInput').click()">+ 选择文件</div></div>
                     <button class="btn-primary" id="doPublishBtn">🚀 发布任务</button>
                 </div>
             </div>
@@ -231,248 +208,458 @@
             <div class="bottom-nav">
                 <div class="nav-item" onclick="switchPage('home')"><span class="nav-icon">🏠</span><span>首页</span></div>
                 <div class="nav-item" onclick="switchPage('publish')"><span class="nav-icon">✏️</span><span>发布</span></div>
-                <div class="nav-item" onclick="switchPage('message')"><span class="nav-icon">💬</span><span>消息</span></div>
+                <div class="nav-item" onclick="switchPage('message')" id="navMessage"><span class="nav-icon">💬</span><span>消息</span><span id="msgBadge" class="msg-badge">0</span></div>
                 <div class="nav-item" onclick="switchPage('profile')"><span class="nav-icon">👤</span><span>我的</span></div>
             </div>
         </div>
     </div>
 </div>
-
 <script>
-    // ==================== 后端 API 地址 ====================
-    const API_BASE = '/api';
-    
-    let currentUser = null;
-    let pendingMedia = [];
-    let userLocation = null;
-    let allTasks = [];
-    let currentCategory = 'all';
-    let currentSort = 'time';
-    let countdownTimer = null;
-    
-    let chatState = {
-        active: false,
-        taskId: null,
-        otherId: null,
-        otherName: '',
-        reward: 0,
-        title: '',
-        pollInterval: null,
-        messagesArea: null,
-        lastMessageCount: 0
-    };
-    
-    const locationCoords = {
-        '上海交大闵行': { lat: 31.2304, lng: 121.4737 },
-        '徐家汇': { lat: 31.1987, lng: 121.4342 },
-        '人民广场': { lat: 31.2333, lng: 121.4833 },
-        '默认': { lat: 31.2304, lng: 121.4737 }
-    };
-    
-    function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
-    
-    function calculateDistance(lat1, lng1, lat2, lng2) {
-        const R = 6371;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLng = (lng2 - lng1) * Math.PI / 180;
-        const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng/2)**2;
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return (R * c).toFixed(1);
-    }
-    
-    function getTaskCoords(address) {
-        if (!address) return locationCoords['默认'];
-        for (let key in locationCoords) {
-            if (address.includes(key)) return locationCoords[key];
+    // ==================== API 地址 ====================
+    const getApiBase = () => {
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            return 'https://bounty-app-production.up.railway.app/api';
         }
-        return locationCoords['默认'];
+        return '/api';
+    };
+    const API_BASE = getApiBase();
+    const AMAP_KEY = '30107d62cf0ec682643d1097a48f7da4';
+
+    let currentUser = null, pendingMedia = [], userLocation = null, allTasks = [], currentCategory = 'all', currentSort = 'time', countdownTimer = null, lastPage = null;
+    let chatState = { active: false, taskId: null, otherId: null, otherName: '', reward: 0, title: '', pollInterval: null, messagesArea: null, lastMessageCount: 0 };
+    let geocodeCache = new Map();
+    let deletedConversations = new Set();
+    let tasksCache = { data: null, timestamp: 0, ttl: 5 * 60 * 1000 };
+    let refreshThrottle = false;
+    let networkToast = null;
+
+    function showNetworkSlow() {
+        if (networkToast) return;
+        networkToast = document.createElement('div');
+        networkToast.className = 'network-toast';
+        networkToast.innerText = '⚠️ 网络较慢，请稍候...';
+        document.body.appendChild(networkToast);
+        setTimeout(() => {
+            if (networkToast) networkToast.remove();
+            networkToast = null;
+        }, 3000);
     }
-    
-    function getTravelTimeMinutes(address) {
-        if (!userLocation) return 15;
-        const coords = getTaskCoords(address);
-        const dist = parseFloat(calculateDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng));
-        if (isNaN(dist)) return 15;
-        return Math.min(60, Math.max(5, Math.round(dist * 2)));
-    }
-    
-    async function callApi(url, options = {}) {
-        try {
-            const res = await fetch(API_BASE + url, {
-                headers: { 'Content-Type': 'application/json' },
-                ...options
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(`HTTP ${res.status}: ${text}`);
-            }
-            return await res.json();
-        } catch (err) {
-            console.error('API错误:', err);
-            return { error: err.message };
-        }
-    }
-    
-    function getCurrentLocation() {
-        if (!navigator.geolocation) { alert('浏览器不支持定位'); return; }
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                const lat = pos.coords.latitude, lng = pos.coords.longitude;
-                try {
-                    const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=zh`);
-                    const geoData = await geoRes.json();
-                    if (geoData && geoData.locality) {
-                        let address = geoData.city || geoData.locality || '';
-                        if (geoData.principalSubdivision) address = geoData.principalSubdivision + (address ? ' ' + address : '');
-                        if (address) { document.getElementById('pubAddress').value = address; return; }
-                    }
-                    throw new Error();
-                } catch(e) {
-                    document.getElementById('pubAddress').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                    alert('无法获取具体地址，已填入坐标');
+
+    async function fetchWithTimeout(url, options = {}, timeout = 10000, retries = 1) {
+        let lastError;
+        for (let i = 0; i <= retries; i++) {
+            try {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeout);
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response;
+            } catch (err) {
+                lastError = err;
+                if (i < retries) {
+                    await new Promise(r => setTimeout(r, 1000));
+                    showNetworkSlow();
                 }
-            },
-            () => alert('定位失败')
-        );
+            }
+        }
+        throw lastError;
     }
-    
-    function handleMediaFiles(files) {
-        let remain = 6 - pendingMedia.length;
-        if (files.length > remain) { alert(`最多上传6个，当前已有${pendingMedia.length}个`); files = Array.from(files).slice(0, remain); }
-        for (let file of files) {
-            if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) continue;
+
+    async function callApi(url, options={}) {
+        const fullUrl = API_BASE + url;
+        try {
+            const res = await fetchWithTimeout(fullUrl, { headers: { 'Content-Type': 'application/json' }, ...options }, 10000, 1);
+            const data = await res.json();
+            if (res.ok) return data;
+            throw new Error(data.error || `HTTP ${res.status}`);
+        } catch(err) {
+            console.error('[API错误]', err);
+            showNetworkSlow();
+            throw err;
+        }
+    }
+
+    function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+    function calculateDistance(lat1,lng1,lat2,lng2) {
+        const R=6371; const dLat=(lat2-lat1)*Math.PI/180; const dLng=(lng2-lng1)*Math.PI/180;
+        const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+        const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); return (R*c).toFixed(1);
+    }
+
+    async function geocodeAddress(address) {
+        if (!address) return null;
+        if (geocodeCache.has(address)) return geocodeCache.get(address);
+        const cacheKey = `geo_${address}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            try {
+                const { lat, lng, expire } = JSON.parse(cached);
+                if (expire > Date.now()) {
+                    const result = { lat, lng };
+                    geocodeCache.set(address, result);
+                    return result;
+                } else {
+                    localStorage.removeItem(cacheKey);
+                }
+            } catch(e) {}
+        }
+        try {
+            const result = await callApi('/geocode', { method: 'POST', body: JSON.stringify({ address }) });
+            if (result && result.lat && result.lng) {
+                geocodeCache.set(address, result);
+                localStorage.setItem(cacheKey, JSON.stringify({ lat: result.lat, lng: result.lng, expire: Date.now() + 7*24*60*60*1000 }));
+                return result;
+            }
+            return null;
+        } catch(e) {
+            console.error('地理编码失败', e);
+            return null;
+        }
+    }
+
+    async function enrichTasksWithDistance(tasks) {
+        if (!userLocation) return tasks;
+        const enriched = [];
+        for(let task of tasks){
+            if(!task.locationAddress){ enriched.push({...task,distance:null}); continue; }
+            const distKey = `dist_${task._id}`;
+            let distance = null;
+            const cachedDist = localStorage.getItem(distKey);
+            if (cachedDist) {
+                try {
+                    const { dist, expire } = JSON.parse(cachedDist);
+                    if (expire > Date.now()) distance = dist;
+                    else localStorage.removeItem(distKey);
+                } catch(e) {}
+            }
+            if (distance === null) {
+                const coords = await geocodeAddress(task.locationAddress);
+                if(coords){
+                    distance = calculateDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng);
+                    localStorage.setItem(distKey, JSON.stringify({ dist: distance, expire: Date.now() + 7*24*60*60*1000 }));
+                }
+            }
+            enriched.push({...task, distance: distance || null});
+        }
+        return enriched;
+    }
+
+    async function getNativeUserLocation() {
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            try {
+                const { Geolocation } = Capacitor.Plugins;
+                let permission = await Geolocation.checkPermissions();
+                if (permission.location !== 'granted') {
+                    permission = await Geolocation.requestPermissions();
+                    if (permission.location !== 'granted') return null;
+                }
+                const position = await Geolocation.getCurrentPosition({ timeout: 10000 });
+                return { lat: position.coords.latitude, lng: position.coords.longitude };
+            } catch(err) { return null; }
+        } else {
+            return new Promise((resolve) => {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                    () => resolve(null)
+                );
+            });
+        }
+    }
+
+    function showToast(msg, duration=2000) {
+        let toast = document.createElement('div');
+        toast.className = 'toast-message';
+        toast.innerText = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), duration);
+    }
+    function showAlert(title, message) {
+        let modal = document.createElement('div');
+        modal.className = 'custom-modal';
+        modal.innerHTML = `<div class="custom-modal-content"><h3>${title}</h3><p>${message}</p><div class="custom-modal-buttons"><button class="confirm-btn">知道了</button></div></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('.confirm-btn').onclick = () => modal.remove();
+    }
+    function showConfirm(title, message, onConfirm, onCancel) {
+        let modal = document.createElement('div');
+        modal.className = 'custom-modal';
+        modal.innerHTML = `<div class="custom-modal-content"><h3>${title}</h3><p>${message}</p><div class="custom-modal-buttons"><button class="confirm-btn">确定</button><button class="cancel-btn">取消</button></div></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('.confirm-btn').onclick = () => { modal.remove(); if(onConfirm) onConfirm(); };
+        modal.querySelector('.cancel-btn').onclick = () => { modal.remove(); if(onCancel) onCancel(); };
+    }
+    window.alert = function(msg){ showAlert('提示',msg); };
+    window.confirm = function(msg,onOk,onCancel){ showConfirm('确认',msg,onOk,onCancel); return true; };
+
+    async function getDetailedAddress(lat, lng) {
+        try {
+            const url = `https://restapi.amap.com/v3/geocode/regeo?output=json&location=${lng},${lat}&key=${AMAP_KEY}&radius=1000&extensions=all`;
+            const res = await fetchWithTimeout(url, {}, 5000);
+            const data = await res.json();
+            if (data.status === '1' && data.regeocode) {
+                let formatted = data.regeocode.formatted_address;
+                let streetNumber = data.regeocode.addressComponent.streetNumber?.street || '';
+                let building = data.regeocode.addressComponent.building?.name || '';
+                if (streetNumber) formatted += ' ' + streetNumber;
+                if (building) formatted += ' ' + building;
+                return formatted;
+            }
+            throw new Error('无法获取详细地址');
+        } catch(e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
+    }
+
+    async function getPreciseLocationNative() {
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            try {
+                const { Geolocation } = Capacitor.Plugins;
+                let permission = await Geolocation.checkPermissions();
+                if (permission.location !== 'granted') {
+                    permission = await Geolocation.requestPermissions();
+                    if (permission.location !== 'granted') return null;
+                }
+                const position = await Geolocation.getCurrentPosition({ timeout: 10000 });
+                const { latitude, longitude } = position.coords;
+                const address = await getDetailedAddress(latitude, longitude);
+                return address;
+            } catch(e) { return null; }
+        } else {
+            return new Promise((resolve) => {
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    const address = await getDetailedAddress(pos.coords.latitude, pos.coords.longitude);
+                    resolve(address);
+                }, () => resolve(null));
+            });
+        }
+    }
+
+    window.getCurrentLocation = async function() {
+        if (!navigator.geolocation && !(window.Capacitor && window.Capacitor.isNativePlatform())) {
+            showAlert('提示','设备不支持定位'); return;
+        }
+        const address = await getPreciseLocationNative();
+        if (address) {
+            document.getElementById('pubAddress').value = address;
+            const hint = document.getElementById('locationHint');
+            if (hint) {
+                hint.innerHTML = '✅ 已定位到详细地址';
+                setTimeout(() => { hint.innerHTML = '点击定位自动填入详细地址'; }, 3000);
+            }
+            showToast('定位成功');
+        } else {
+            showAlert('定位失败', '请手动输入地点或检查权限');
+        }
+    };
+
+    async function navigateTo(lat, lng, address) {
+        try {
+            const isAndroid = /android/i.test(navigator.userAgent);
+            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            let url = '';
+            if (isAndroid) {
+                url = `androidintent://navigation?sourceApplication=赏金集市&lat=${lat}&lon=${lng}&dev=0&style=2#Intent;scheme=amap;package=com.autonavi.minimap;end`;
+            } else if (isIOS) {
+                url = `iosamap://navi?sourceApplication=赏金集市&lat=${lat}&lon=${lng}&dev=0&style=2`;
+            } else {
+                url = `https://uri.amap.com/navigation?to=${lng},${lat},${encodeURIComponent(address)}&mode=car&callnative=1`;
+            }
+            window.location.href = url;
+            setTimeout(() => {
+                if (document.hasFocus()) {
+                    window.location.href = `https://uri.amap.com/search?query=${encodeURIComponent(address)}&callnative=1`;
+                }
+            }, 2000);
+        } catch(err) {
+            window.location.href = `https://uri.amap.com/search?query=${encodeURIComponent(address)}&callnative=1`;
+        }
+    }
+
+    function showImagePreview(url) {
+        const modal = document.createElement('div');
+        modal.className = 'image-preview-modal';
+        modal.innerHTML = `<div class="close-preview">✕</div><img src="${url}">`;
+        document.body.appendChild(modal);
+        modal.querySelector('.close-preview').onclick = () => modal.remove();
+        modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
+        let img = modal.querySelector('img');
+        let scale = 1;
+        img.ontouchstart = (e) => {
+            if(e.touches.length === 2) {
+                e.preventDefault();
+                let startDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                let onMove = (moveEvent) => {
+                    if(moveEvent.touches.length !== 2) return;
+                    let newDist = Math.hypot(moveEvent.touches[0].clientX - moveEvent.touches[1].clientX, moveEvent.touches[0].clientY - moveEvent.touches[1].clientY);
+                    let newScale = scale * (newDist / startDist);
+                    newScale = Math.min(3, Math.max(0.5, newScale));
+                    img.style.transform = `scale(${newScale})`;
+                };
+                let onEnd = () => {
+                    scale = parseFloat(img.style.transform.replace('scale(', '').replace(')', '')) || 1;
+                    document.removeEventListener('touchmove', onMove);
+                    document.removeEventListener('touchend', onEnd);
+                };
+                document.addEventListener('touchmove', onMove);
+                document.addEventListener('touchend', onEnd);
+            }
+        };
+    }
+
+    function compressImage(file, quality=0.5, maxWidth=600, maxHeight=600) {
+        return new Promise((resolve,reject) => {
             const reader = new FileReader();
-            reader.onload = (e) => {
-                pendingMedia.push({ type: file.type.startsWith('image/') ? 'image' : 'video', dataURL: e.target.result, file });
-                updateMediaPreview();
-            };
             reader.readAsDataURL(file);
+            reader.onload = (e) => {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    let width = img.width, height = img.height;
+                    if(width > height) {
+                        if(width > maxWidth) {
+                            height *= maxWidth / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if(height > maxHeight) {
+                            width *= maxHeight / height;
+                            height = maxHeight;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    resolve(dataUrl);
+                };
+                img.onerror = reject;
+            };
+            reader.onerror = reject;
+        });
+    }
+    async function handleMediaFiles(files) {
+        let remain = 3 - pendingMedia.length;
+        if(files.length > remain) {
+            showAlert('提示', `最多上传3个，当前已有${pendingMedia.length}个`);
+            files = Array.from(files).slice(0, remain);
+        }
+        for(let file of files) {
+            if(!file.type.startsWith('image/') && !file.type.startsWith('video/')) continue;
+            let dataURL;
+            if(file.type.startsWith('image/')) {
+                dataURL = await compressImage(file);
+            } else {
+                dataURL = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+            pendingMedia.push({type: file.type.startsWith('image/')?'image':'video', dataURL, file});
+            updateMediaPreview();
         }
         document.getElementById('mediaInput').value = '';
     }
     function updateMediaPreview() {
         const container = document.getElementById('mediaPreview');
-        if (!container) return;
-        if (pendingMedia.length === 0) { container.innerHTML = ''; return; }
-        container.innerHTML = pendingMedia.map((m, idx) => `
+        if(!container) return;
+        if(pendingMedia.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        container.innerHTML = pendingMedia.map((m,idx) => `
             <div class="preview-img-wrapper">
-                ${m.type === 'image' ? `<img src="${m.dataURL}">` : `<video src="${m.dataURL}" style="width:100%;height:100%;object-fit:cover;"></video>`}
+                ${m.type==='image' ? `<img src="${m.dataURL}">` : `<video src="${m.dataURL}" style="width:100%;height:100%;object-fit:cover;"></video>`}
                 <div class="remove-img-btn" data-index="${idx}">✕</div>
             </div>
         `).join('');
         document.querySelectorAll('#mediaPreview .remove-img-btn').forEach(btn => {
             btn.onclick = (e) => {
                 const idx = parseInt(btn.getAttribute('data-index'));
-                pendingMedia.splice(idx, 1);
+                pendingMedia.splice(idx,1);
                 updateMediaPreview();
             };
         });
     }
-    
-    async function doLogin() {
-        const username = document.getElementById('loginUsername').value.trim();
-        const password = document.getElementById('loginPassword').value;
-        const errorDiv = document.getElementById('loginError');
-        errorDiv.innerText = '登录中...';
-        const result = await callApi('/login', { method: 'POST', body: JSON.stringify({ username, password }) });
-        if (result.success) {
-            currentUser = result.user;
-            localStorage.setItem('user', JSON.stringify(currentUser));
-            document.getElementById('mainApp').style.display = 'block';
-            document.getElementById('loginPage').classList.remove('active');
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                        refreshTaskList();
-                    },
-                    () => refreshTaskList()
-                );
-            } else {
-                refreshTaskList();
-            }
-            loadProfile();
-            initPullToRefresh();
-            initFiltersAndCategories();
-            renderMessageList();
-        } else {
-            errorDiv.innerText = result.error || '登录失败';
-        }
-    }
-    
-    async function refreshTaskList() {
-        const container = document.getElementById('homeContent');
-        container.innerHTML = '<div class="loading">加载中...</div>';
-        const tasks = await callApi('/tasks');
-        if (!tasks || tasks.length === 0) { container.innerHTML = '<div class="empty-state">✨ 暂无悬赏任务</div>'; return; }
-        allTasks = tasks.map(t => {
-            let distance = null;
-            if (userLocation && t.locationAddress) {
-                const coords = getTaskCoords(t.locationAddress);
-                distance = calculateDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng);
-            }
-            return { ...t, distance, category: getTaskCategory(t.title) };
-        });
-        applyFilterAndSort();
-    }
-    
-    const categoryMap = {
-        '取件': ['取件', '快递', '包裹', '取货'],
-        '调试': ['调试', 'bug', '修复', '代码', '前端', '后端', '程序'],
-        '跑腿': ['跑腿', '送', '买', '代购', '排队']
-    };
+
+    const categoryMap = {'取件':['取件','快递','包裹','取货'],'调试':['调试','bug','修复','代码','前端','后端','程序'],'跑腿':['跑腿','送','买','代购','排队']};
     function getTaskCategory(title) {
         const lower = title.toLowerCase();
-        for (let [cat, keywords] of Object.entries(categoryMap)) {
-            if (keywords.some(kw => lower.includes(kw))) return cat;
-        }
+        for(let [cat,keywords] of Object.entries(categoryMap))
+            if(keywords.some(kw=>lower.includes(kw))) return cat;
         return '其他';
     }
-    
+
+    async function refreshTaskList(force = false) {
+        if (refreshThrottle) return;
+        refreshThrottle = true;
+        setTimeout(() => { refreshThrottle = false; }, 1000);
+        
+        const container = document.getElementById('homeContent');
+        if (!force && tasksCache.data && (Date.now() - tasksCache.timestamp) < tasksCache.ttl) {
+            allTasks = tasksCache.data;
+            applyFilterAndSort();
+            return;
+        }
+        container.innerHTML = '<div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div><div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div>';
+        try {
+            const tasks = await callApi('/tasks');
+            if (!tasks || tasks.length === 0) {
+                container.innerHTML = '<div class="empty-state">✨ 暂无悬赏任务</div>';
+                tasksCache.data = [];
+                tasksCache.timestamp = Date.now();
+                allTasks = [];
+                applyFilterAndSort();
+                return;
+            }
+            let tasksWithCat = tasks.map(t => ({ ...t, category: getTaskCategory(t.title) }));
+            if (userLocation) {
+                tasksWithCat = await enrichTasksWithDistance(tasksWithCat);
+            }
+            allTasks = tasksWithCat;
+            tasksCache.data = tasksWithCat;
+            tasksCache.timestamp = Date.now();
+            applyFilterAndSort();
+        } catch (err) {
+            container.innerHTML = '<div class="empty-state">加载失败，请下拉刷新</div>';
+        }
+    }
+
     function applyFilterAndSort() {
         let filtered = [...allTasks];
-        if (currentCategory !== 'all') {
-            filtered = filtered.filter(t => t.category === currentCategory);
-        }
-        if (currentSort === 'distance') {
-            filtered.sort((a,b) => (parseFloat(a.distance) || 999) - (parseFloat(b.distance) || 999));
-        } else if (currentSort === 'reward') {
-            filtered.sort((a,b) => b.reward - a.reward);
-        } else {
-            filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-        }
+        if (currentCategory !== 'all') filtered = filtered.filter(t => t.category === currentCategory);
+        if (currentSort === 'distance') filtered.sort((a,b) => (parseFloat(a.distance)||999) - (parseFloat(b.distance)||999));
+        else if (currentSort === 'reward') filtered.sort((a,b) => b.reward - a.reward);
+        else filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
         const container = document.getElementById('homeContent');
-        if (filtered.length === 0) { container.innerHTML = '<div class="empty-state">✨ 暂无此类任务</div>'; return; }
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="empty-state">✨ 暂无此类任务</div>';
+            return;
+        }
         container.innerHTML = filtered.map(t => `
-            <div class="card" onclick="viewTask('${t._id}')">
+            <div class="card" onclick="viewTask('${t._id}','home')">
                 <div class="task-header"><span class="task-title">${escapeHtml(t.title)}</span><span class="reward-badge">💰 ${t.reward}元</span></div>
-                <div class="task-desc">${escapeHtml((t.description || '').substring(0, 60))}</div>
-                <div class="task-meta">
-                    <span>👤 ${escapeHtml(t.publisherName)}</span>
-                    <span>📍 ${t.locationAddress || '未知'}</span>
-                    ${t.distance ? `<span class="distance-badge">📏 距您 ${t.distance}km</span>` : ''}
-                    <span class="distance-badge">🏷️ ${t.category}</span>
-                </div>
+                <div class="task-desc">${escapeHtml((t.description||'').substring(0,60))}</div>
+                <div class="task-meta"><span>👤 ${escapeHtml(t.publisherName)}</span><span>📍 ${t.locationAddress||'未知'}</span>${t.distance?`<span class="distance-badge">📏 距您 ${t.distance}km</span>`:''}<span class="distance-badge">🏷️ ${t.category}</span></div>
             </div>
         `).join('');
     }
-    
+
     function initPullToRefresh() {
         const homePage = document.getElementById('homePage');
-        let startY = 0;
-        let isRefreshing = false;
+        let startY = 0, isRefreshing = false;
         const indicator = document.getElementById('refreshIndicator');
         homePage.addEventListener('touchstart', (e) => {
             if (homePage.scrollTop === 0) startY = e.touches[0].clientY;
         });
         homePage.addEventListener('touchmove', (e) => {
             if (isRefreshing || homePage.scrollTop > 0) return;
-            const moveY = e.touches[0].clientY;
-            const diff = moveY - startY;
+            const diff = e.touches[0].clientY - startY;
             if (diff > 30) {
                 e.preventDefault();
                 indicator.style.display = 'block';
-                indicator.style.transform = `translateY(${Math.min(diff, 60)}px)`;
+                indicator.style.transform = `translateY(${Math.min(diff - 30, 60)}px)`;
             }
         });
         homePage.addEventListener('touchend', async () => {
@@ -482,17 +669,18 @@
                 isRefreshing = true;
                 indicator.innerText = '刷新中...';
                 indicator.style.display = 'block';
-                await refreshTaskList();
+                await refreshTaskList(true);
                 isRefreshing = false;
                 indicator.style.display = 'none';
+                indicator.innerText = '↓ 下拉刷新';
             }
         });
     }
-    
+
     function initFiltersAndCategories() {
         document.querySelectorAll('.category-chip').forEach(chip => {
             chip.addEventListener('click', () => {
-                document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.category-chip').forEach(c=>c.classList.remove('active'));
                 chip.classList.add('active');
                 currentCategory = chip.getAttribute('data-cat');
                 applyFilterAndSort();
@@ -500,534 +688,845 @@
         });
         document.querySelectorAll('.sort-chip').forEach(chip => {
             chip.addEventListener('click', () => {
-                document.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.sort-chip').forEach(c=>c.classList.remove('active'));
                 chip.classList.add('active');
                 currentSort = chip.getAttribute('data-sort');
                 applyFilterAndSort();
             });
         });
     }
-    
+
     function initSlide(container, onComplete) {
         const track = container.querySelector('.slide-track');
         const thumb = container.querySelector('.slide-thumb');
         if (!track || !thumb) return;
-        thumb.style.transition = 'none';
-        let startX = 0, startLeft = 0, isDragging = false;
+        if (track.clientWidth===0 || thumb.clientWidth===0) { setTimeout(()=>initSlide(container,onComplete),100); return; }
+        let startX=0, isDragging=false;
         const maxLeft = track.clientWidth - thumb.clientWidth;
-        const onMove = (e) => {
-            if (!isDragging) return;
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            let newLeft = startLeft + (clientX - startX);
-            newLeft = Math.min(maxLeft, Math.max(0, newLeft));
-            thumb.style.left = newLeft + 'px';
-            if (newLeft >= maxLeft - 2) {
-                isDragging = false;
-                container.classList.add('completed');
-                thumb.style.left = maxLeft + 'px';
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-                document.removeEventListener('touchmove', onMove);
-                document.removeEventListener('touchend', onUp);
-                if (onComplete) onComplete();
+        function setTransform(x) { thumb.style.transform = `translateX(${x}px)`; }
+        function onMove(clientX) {
+            if(!isDragging) return;
+            let delta = clientX - startX;
+            let newLeft = Math.min(maxLeft, Math.max(0, delta));
+            setTransform(newLeft);
+            if(newLeft >= maxLeft-5) {
+                isDragging=false; container.classList.add('completed'); setTransform(maxLeft);
+                document.removeEventListener('mousemove',onMouseMove); document.removeEventListener('mouseup',onMouseUp);
+                document.removeEventListener('touchmove',onTouchMove); document.removeEventListener('touchend',onTouchEnd);
+                if(onComplete) onComplete();
             }
-        };
-        const onUp = () => {
-            if (isDragging) {
-                thumb.style.left = '0px';
-                isDragging = false;
-                container.classList.remove('completed');
-            }
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
-            document.removeEventListener('touchmove', onMove);
-            document.removeEventListener('touchend', onUp);
-        };
-        const onStart = (e) => {
-            e.preventDefault();
-            startX = e.touches ? e.touches[0].clientX : e.clientX;
-            startLeft = parseInt(thumb.style.left, 10) || 0;
-            isDragging = true;
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onUp);
-            document.addEventListener('touchmove', onMove);
-            document.addEventListener('touchend', onUp);
-        };
-        thumb.addEventListener('mousedown', onStart);
-        thumb.addEventListener('touchstart', onStart);
-        container.classList.remove('completed');
-        thumb.style.left = '0px';
-    }
-    
-    function startCountdown(estimatedMinutes, startTimestamp) {
-        if (countdownTimer) clearInterval(countdownTimer);
-        const countdownDiv = document.getElementById('countdownDisplay');
-        if (!countdownDiv) return;
-        const update = () => {
-            const elapsed = (Date.now() - startTimestamp) / 1000;
-            const remaining = Math.max(0, estimatedMinutes * 60 - elapsed);
-            const mins = Math.floor(remaining / 60);
-            const secs = Math.floor(remaining % 60);
-            if (remaining <= 0) {
-                countdownDiv.innerHTML = '⏰ 预计已到达！请滑动确认到达';
-                countdownDiv.classList.add('warning');
-                clearInterval(countdownTimer);
-                countdownTimer = null;
-            } else {
-                countdownDiv.innerHTML = `🚗 预计剩余时间: ${mins}分${secs.toString().padStart(2,'0')}秒`;
-                if (remaining < 60) countdownDiv.classList.add('warning');
-                else countdownDiv.classList.remove('warning');
-            }
-        };
-        update();
-        countdownTimer = setInterval(update, 1000);
-    }
-    
-    function renderProgressSteps(task) {
-        if (!task.takerId) return '';
-        let activeIndex = 0;
-        if (task.status === 'ongoing') {
-            if (task.travelStatus === 'idle') activeIndex = 1;
-            else if (task.travelStatus === 'traveling') activeIndex = 2;
-            else if (task.travelStatus === 'arrived') activeIndex = 3;
-            if (task.takerCompleted) activeIndex = 4;
-        } else if (task.status === 'completed') {
-            activeIndex = 5;
         }
-        const steps = [
-            { icon: '📋', label: '已接取' },
-            { icon: '🚗', label: '出发' },
-            { icon: '📍', label: '到达' },
-            { icon: '📎', label: '提交凭证' },
-            { icon: '✅', label: '结算' }
-        ];
-        let html = '<div class="progress-steps">';
-        steps.forEach((step, idx) => {
-            const stepNum = idx + 1;
-            let statusClass = '';
-            if (stepNum < activeIndex) statusClass = 'completed';
-            else if (stepNum === activeIndex) statusClass = 'active';
-            html += `
-                <div class="step ${statusClass}">
-                    <div class="step-dot">${step.icon}</div>
-                    <div class="step-label">${step.label}</div>
-                </div>
-            `;
+        function onMouseMove(e) { onMove(e.clientX); }
+        function onMouseUp() { isDragging=false; setTransform(0); document.removeEventListener('mousemove',onMouseMove); document.removeEventListener('mouseup',onMouseUp); container.classList.remove('completed'); }
+        function onTouchMove(e) { onMove(e.touches[0].clientX); e.preventDefault(); }
+        function onTouchEnd() { isDragging=false; setTransform(0); document.removeEventListener('touchmove',onTouchMove); document.removeEventListener('touchend',onTouchEnd); container.classList.remove('completed'); }
+        function onStart(clientX) { startX=clientX; isDragging=true; document.addEventListener('mousemove',onMouseMove); document.addEventListener('mouseup',onMouseUp); document.addEventListener('touchmove',onTouchMove); document.addEventListener('touchend',onTouchEnd); }
+        thumb.addEventListener('mousedown',(e)=>{ e.preventDefault(); onStart(e.clientX); });
+        thumb.addEventListener('touchstart',(e)=>{ e.preventDefault(); onStart(e.touches[0].clientX); });
+        container.classList.remove('completed'); setTransform(0);
+    }
+
+    function startCountdown(estimatedMinutes, startTimestamp) {
+        if(countdownTimer) clearInterval(countdownTimer);
+        const countdownDiv = document.getElementById('countdownDisplay');
+        if(!countdownDiv) return;
+        const update = () => {
+            const elapsed = (Date.now()-startTimestamp)/1000;
+            const remaining = Math.max(0, estimatedMinutes*60 - elapsed);
+            const mins = Math.floor(remaining/60), secs = Math.floor(remaining%60);
+            if(remaining<=0) { countdownDiv.innerHTML='⏰ 预计已到达！请滑动确认到达'; countdownDiv.classList.add('warning'); clearInterval(countdownTimer); countdownTimer=null; }
+            else { countdownDiv.innerHTML=`🚗 预计剩余时间: ${mins}分${secs.toString().padStart(2,'0')}秒`; if(remaining<60) countdownDiv.classList.add('warning'); else countdownDiv.classList.remove('warning'); }
+        };
+        update(); countdownTimer = setInterval(update, 1000);
+    }
+
+    function renderProgressSteps(task) {
+        if(!task.takerId) return '';
+        let activeIndex=0;
+        if(task.status==='ongoing'){
+            if(task.travelStatus==='idle') activeIndex=1;
+            else if(task.travelStatus==='traveling') activeIndex=2;
+            else if(task.travelStatus==='arrived') activeIndex=3;
+            if(task.takerCompleted) activeIndex=4;
+        }else if(task.status==='completed') activeIndex=5;
+        const steps = [{icon:'📋',label:'已接取'},{icon:'🚗',label:'出发'},{icon:'📍',label:'到达'},{icon:'📎',label:'提交凭证'},{icon:'✅',label:'结算'}];
+        let html='<div class="progress-steps">';
+        steps.forEach((step,idx)=>{
+            const stepNum=idx+1;
+            let statusClass='';
+            if(stepNum<activeIndex) statusClass='completed';
+            else if(stepNum===activeIndex) statusClass='active';
+            html+=`<div class="step ${statusClass}"><div class="step-dot">${step.icon}</div><div class="step-label">${step.label}</div></div>`;
         });
-        html += '</div>';
+        html+='</div>';
         return html;
     }
-    
-    async function showTakerProfile(takerId, takenAt) {
-        const user = await callApi(`/user/${takerId}`);
-        if (!user || user.error) {
-            alert('获取用户信息失败');
-            return;
+
+    async function submitProof(taskId, proofFiles) {
+        const proofMedia=[];
+        for(let file of proofFiles){
+            const dataURL = await new Promise((resolve)=>{ const reader=new FileReader(); reader.onload=(e)=>resolve(e.target.result); reader.readAsDataURL(file); });
+            proofMedia.push({type:file.type.startsWith('image/')?'image':'video', url:dataURL});
         }
-        const takenTimeStr = takenAt ? new Date(takenAt).toLocaleString() : '暂未知';
-        const modal = document.createElement('div');
-        modal.className = 'modal-mask';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>👤 接取者资料</h3>
-                <div><strong>昵称</strong>: ${escapeHtml(user.nickname || user.username)}</div>
-                <div><strong>信用分</strong>: ${user.credit || 60}</div>
-                <div><strong>家乡</strong>: ${escapeHtml(user.hometown || '未填写')}</div>
-                <div><strong>签名</strong>: ${escapeHtml(user.signature || '这个人很懒')}</div>
-                <div><strong>手机号</strong>: ${user.phone || '未绑定'}</div>
-                <div style="margin-top:12px;"><strong>接取时间</strong>: ${takenTimeStr}</div>
-                <button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button>
-            </div>
-        `;
-        document.body.appendChild(modal);
+        const result = await callApi(`/tasks/${taskId}/submit-proof`, {method:'POST', body:JSON.stringify({userId:currentUser.id, proofMedia})});
+        return result;
     }
-    
-    // ==================== 任务详情 ====================
-    window.viewTask = async function(taskId) {
-        if (countdownTimer) clearInterval(countdownTimer);
-        const task = await callApi(`/tasks/${taskId}`);
-        if (!task || task.error) { alert('任务不存在'); return; }
-        const isMine = task.publisherId === currentUser.id;
-        const isTaker = task.takerId === currentUser.id;
-        const publisherInfo = await callApi(`/user/${task.publisherId}`);
-        
-        let detailHtml = `
-            <div class="detail-hero">
-                <span class="detail-status">● ${task.status === 'available' ? '可接取' : (task.status === 'ongoing' ? '进行中' : '已完成')}</span>
-                <div class="detail-reward">¥${task.reward}</div>
-            </div>
-            <div class="card" style="margin-top:12px;">
-                <h2>${escapeHtml(task.title)}</h2>
-                <div class="info-row">
-                    <div class="info-icon">📌</div>
-                    <div class="info-content">
-                        <div class="info-label">发布者</div>
-                        <div class="info-value" id="publisherName" data-id="${task.publisherId}">${escapeHtml(task.publisherName)}</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <div class="info-icon">📍</div>
-                    <div class="info-content">
-                        <div class="info-label">任务地点</div>
-                        <div class="info-value">${escapeHtml(task.locationAddress || '未标注')}</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <div class="info-icon">⏰</div>
-                    <div class="info-content">
-                        <div class="info-label">发布时间</div>
-                        <div class="info-value">${task.createdAt ? new Date(task.createdAt).toLocaleDateString() : '未知'}</div>
-                    </div>
-                </div>
-        `;
-        
-        if (task.takerId) detailHtml += renderProgressSteps(task);
-        
-        if (task.takerId) {
-            const takenTimeStr = task.takenAt ? new Date(task.takenAt).toLocaleString() : '时间未知';
-            if (isMine) {
-                detailHtml += `<div class="info-row" style="cursor:pointer;" id="takerInfoRow"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div></div>`;
-            } else if (isTaker) {
-                detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">您已接取</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div></div>`;
-            } else {
-                detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div style="font-size:0.7rem; color:#64748b;">接取时间: ${takenTimeStr}</div></div>`;
-            }
-        }
-        
-        detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description || '')}</p></div></div>`;
-        
-        // 可接取状态下，非发布者显示“联系发布者/议价”按钮
-        if (task.status === 'available' && !isMine) {
-            detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6; margin-bottom:8px;">💬 联系发布者 / 议价</button></div>`;
-        }
-        
-        if (task.status === 'ongoing') {
-            if (isMine && task.takerId) {
-                detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn" style="background:#3b82f6;">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
-            } else if (isTaker) {
-                detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
-            }
-        }
-        
-        if (task.status === 'available' && !isMine) {
-            detailHtml += `<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
-        }
-        
-        if (task.status === 'ongoing' && isTaker) {
-            if (task.publisherPhone) detailHtml += `<div style="margin:8px 16px;"><button class="btn-phone" id="callPublisherBtn">📞 联系发布者 (${task.publisherPhone})</button></div>`;
-            if (task.locationAddress) detailHtml += `<div style="margin:8px 16px;"><button class="btn-nav" id="navigateBtn">🧭 高德导航</button></div>`;
-            if (task.travelStatus === 'idle') {
-                detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
-            } else if (task.travelStatus === 'traveling') {
-                const remaining = Math.max(0, (task.estimatedMinutes * 60) - ((Date.now() - task.travelStartTime) / 1000));
-                const mins = Math.floor(remaining / 60);
-                const secs = Math.floor(remaining % 60);
-                detailHtml += `<div id="countdownDisplay" class="countdown-timer">⏰ 预计剩余: ${mins}分${secs.toString().padStart(2,'0')}秒</div>`;
-                detailHtml += `<div class="slide-action" id="slideArriveWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📍 滑动到达目的地 📍</div></div></div>`;
-            } else if (task.travelStatus === 'arrived' && !task.takerCompleted) {
-                detailHtml += `<div class="slide-action" id="slideCompleteWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">✅ 滑动完成任务 ✅</div></div></div>`;
-            }
-            detailHtml += `<div style="margin:8px 16px 20px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取（扣5信用分）</button></div>`;
-        }
-        
-        document.getElementById('detailContainer').innerHTML = detailHtml;
-        
-        // 绑定事件
-        document.getElementById('publisherName')?.addEventListener('click', () => {
-            const modal = document.createElement('div');
-            modal.className = 'modal-mask';
-            modal.innerHTML = `<div class="modal-content"><h3>👤 发布者资料</h3><div><strong>昵称</strong>: ${escapeHtml(publisherInfo.nickname || task.publisherName)}</div><div><strong>信用分</strong>: ${publisherInfo.credit || '60'}</div><div><strong>家乡</strong>: ${escapeHtml(publisherInfo.hometown || '未填写')}</div><div><strong>签名</strong>: ${escapeHtml(publisherInfo.signature || '这个人很懒')}</div><button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button></div>`;
-            document.body.appendChild(modal);
+
+    async function cancelTask(taskId) {
+        showConfirm('确认取消', '确定取消该任务吗？取消后赏金将退还到您的账户。', async () => {
+            try {
+                const result = await callApi(`/tasks/${taskId}/cancel`, {method:'PUT', body:JSON.stringify({userId:currentUser.id})});
+                if(result.success) {
+                    showToast('任务已取消，赏金已退还');
+                    await refreshTaskList(true); await loadProfile();
+                    if(document.getElementById('detailPage').classList.contains('active')) switchPage(lastPage||'home');
+                } else showAlert('取消失败', result.error||'未知错误');
+            } catch(err) { showAlert('取消失败', err.message); }
         });
-        
-        document.getElementById('takerInfoRow')?.addEventListener('click', () => showTakerProfile(task.takerId, task.takenAt));
-        document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(task._id, task.publisherId, task.publisherName, task.reward, task.title));
-        document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(task._id, task.takerId, task.takerName, task.reward, task.title));
-        document.getElementById('callTakerBtn')?.addEventListener('click', () => window.location.href = `tel:${task.takerPhone}`);
-        document.getElementById('contactPublisherBtn')?.addEventListener('click', () => openChat(task._id, task.publisherId, task.publisherName, task.reward, task.title));
-        document.getElementById('callPublisherBtn')?.addEventListener('click', () => window.location.href = `tel:${task.publisherPhone}`);
-        document.getElementById('navigateBtn')?.addEventListener('click', () => {
-            const coords = getTaskCoords(task.locationAddress);
-            window.open(`https://uri.amap.com/navigation?to=${coords.lng},${coords.lat},${encodeURIComponent(task.locationAddress)}&mode=car`, '_blank');
-        });
-        
-        const slideAccept = document.getElementById('slideAcceptWrapper');
-        if (slideAccept) {
-            initSlide(slideAccept, async () => {
-                const acceptRes = await callApi(`/tasks/${taskId}/accept`, { method: 'PUT', body: JSON.stringify({ takerId: currentUser.id, takerName: currentUser.nickname, takerPhone: currentUser.phone }) });
-                if (acceptRes.success) {
-                    alert('接取成功！');
-                    refreshTaskList();
-                    loadProfile();
-                    setTimeout(() => viewTask(taskId), 300);
-                } else alert(acceptRes.error || '接取失败');
-            });
+    }
+
+    async function publishTask() {
+        if(!currentUser.idCardVerified){ showAlert('提示','请先实名认证'); return; }
+        const title = document.getElementById('pubTitle').value.trim();
+        if(!title){ showAlert('提示','请输入标题'); return; }
+        const reward = parseFloat(document.getElementById('pubReward').value);
+        if(isNaN(reward)||reward<=0){ showAlert('提示','请输入有效金额'); return; }
+        if(reward>currentUser.balance){ showAlert('提示','余额不足'); return; }
+        const locationAddress = document.getElementById('pubAddress').value.trim()||'未知';
+        const mediaList = pendingMedia.map(m=>({type:m.type, url:m.dataURL}));
+        const btn = document.getElementById('doPublishBtn');
+        const originalText = btn.innerText;
+        btn.innerText = '发布中...'; btn.disabled=true;
+        try {
+            const result = await callApi('/tasks', {method:'POST', body:JSON.stringify({
+                title, description:document.getElementById('pubDesc').value, reward,
+                publisherId:currentUser.id, publisherName:currentUser.nickname, publisherPhone:currentUser.phone,
+                locationAddress, mediaList, category:document.getElementById('pubCategory').value
+            })});
+            if(result._id) {
+                showToast('发布成功'); resetPublishForm(); await loadProfile(); refreshTaskList(true); switchPage('home');
+            } else showAlert('发布失败', result.error||'未知错误');
+        } catch(err) { showAlert('发布出错', err.message); }
+        finally { btn.innerText=originalText; btn.disabled=false; }
+    }
+
+    function resetPublishForm() {
+        document.getElementById('pubTitle').value=''; document.getElementById('pubDesc').value='';
+        document.getElementById('pubReward').value=''; document.getElementById('pubAddress').value='';
+        document.getElementById('pubCategory').value='取件';
+        pendingMedia=[]; updateMediaPreview();
+        document.getElementById('locationHint').innerHTML='点击定位自动填入详细地址';
+    }
+
+    async function doLogin() {
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        const errorDiv = document.getElementById('loginError');
+        errorDiv.innerText = '登录中...';
+        try {
+            const result = await callApi('/login', {method:'POST', body:JSON.stringify({username,password})});
+            if(result.success) {
+                currentUser = result.user;
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('loginPage').classList.remove('active');
+                const loc = await getNativeUserLocation();
+                if (loc) userLocation = loc;
+                await refreshTaskList(true);
+                loadProfile();
+                renderMessageList();
+                updateUnreadBadge();
+                switchPage('home');
+                initBackButtonHandler();
+            } else errorDiv.innerText = result.error || '登录失败';
+        } catch(err) { errorDiv.innerText = err.message; }
+    }
+
+    let backPressedOnce = false;
+    function initBackButtonHandler() {
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            Capacitor.Plugins.App.addListener('backButton', handleBackButton);
+        } else { window.addEventListener('popstate', handleBackButton); }
+    }
+    function handleBackButton() {
+        const activePage = document.querySelector('.page.active').id;
+        if (activePage === 'homePage') {
+            if (backPressedOnce) {
+                if (window.Capacitor && window.Capacitor.isNativePlatform()) Capacitor.Plugins.App.exitApp();
+                else window.close();
+            } else { backPressedOnce = true; showToast('再按一次退出应用'); setTimeout(()=>{ backPressedOnce=false; },2000); }
+        } else {
+            const backBtn = document.getElementById('detailBackBtn');
+            if (backBtn && backBtn.closest('.page') && backBtn.closest('.page').classList.contains('active')) backBtn.click();
+            else history.back();
         }
-        
-        const startWrapper = document.getElementById('slideStartWrapper');
-        if (startWrapper) {
-            initSlide(startWrapper, async () => {
-                const minutes = getTravelTimeMinutes(task.locationAddress);
-                const result = await callApi(`/tasks/${taskId}/status`, { method: 'PUT', body: JSON.stringify({ travelStatus: 'traveling', estimatedMinutes: minutes, travelStartTime: Date.now() }) });
-                if (result.success) { alert('出发！'); viewTask(taskId); } else alert('操作失败');
-            });
-        }
-        
-        const arriveWrapper = document.getElementById('slideArriveWrapper');
-        if (arriveWrapper) {
-            if (task.travelStartTime && task.estimatedMinutes) startCountdown(task.estimatedMinutes, task.travelStartTime);
-            initSlide(arriveWrapper, async () => {
-                const result = await callApi(`/tasks/${taskId}/status`, { method: 'PUT', body: JSON.stringify({ travelStatus: 'arrived' }) });
-                if (result.success) { if (countdownTimer) clearInterval(countdownTimer); alert('已到达目的地！'); viewTask(taskId); } else alert('操作失败');
-            });
-        }
-        
-        const completeWrapper = document.getElementById('slideCompleteWrapper');
-        if (completeWrapper) {
-            initSlide(completeWrapper, async () => {
-                const result = await callApi(`/tasks/${taskId}/complete`, { method: 'POST' });
-                if (result.success) { alert('任务完成，等待发布者确认结算'); refreshTaskList(); loadProfile(); viewTask(taskId); } else alert('操作失败');
-            });
-        }
-        
-        const cancelBtn = document.getElementById('cancelAcceptBtn');
-        if (cancelBtn) {
-            cancelBtn.onclick = async () => {
-                if (confirm('确定取消接取吗？将扣除5信用分！')) {
-                    const result = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT', body: JSON.stringify({ userId: currentUser.id }) });
-                    if (result.success) { alert('已取消接取，信用-5'); await loadProfile(); refreshTaskList(); switchPage('home'); } else alert(result.error || '取消失败');
+    }
+
+    // ========== 任务详情页 viewTask ==========
+    window.viewTask = async function(taskId, fromPage = 'home') {
+        lastPage = fromPage;
+        if(countdownTimer) clearInterval(countdownTimer);
+        document.getElementById('detailContainer').innerHTML = '<div class="card loading">加载任务详情...</div>';
+        try {
+            const task = await callApi(`/tasks/${taskId}`);
+            if(!task || task.error) { showAlert('错误','任务不存在'); return; }
+            const isMine = task.publisherId === currentUser.id;
+            const isTaker = task.takerId === currentUser.id;
+            const publisherInfo = await callApi(`/user/${task.publisherId}`);
+            let detailHtml = `
+                <div class="detail-hero"><span class="detail-status">● ${task.status==='available'?'可接取':(task.status==='ongoing'?'进行中':'已完成')}</span><div class="detail-reward" id="detailReward">¥${task.reward}</div></div>
+                <div class="card" style="margin-top:12px;"><h2>${escapeHtml(task.title)}</h2>
+                <div class="info-row"><div class="info-icon">📌</div><div class="info-content"><div class="info-label">发布者</div><div class="info-value" id="publisherName">${escapeHtml(task.publisherName)}</div></div></div>
+                <div class="info-row"><div class="info-icon">📍</div><div class="info-content"><div class="info-label">任务地点</div><div class="info-value">${escapeHtml(task.locationAddress||'未标注')}</div></div></div>
+                <div class="info-row"><div class="info-icon">⏰</div><div class="info-content"><div class="info-label">发布时间</div><div class="info-value">${task.createdAt?new Date(task.createdAt).toLocaleDateString():'未知'}</div></div></div>`;
+            if(task.takerId) detailHtml += renderProgressSteps(task);
+            if(task.takerId) {
+                const takenTimeStr = task.takenAt ? new Date(task.takenAt).toLocaleString() : '时间未知';
+                if(isMine) detailHtml += `<div class="info-row" id="takerInfoRow"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
+                else if(isTaker) detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">您已接取</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
+                else detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
+            }
+            detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description||'')}</p></div>`;
+            if(task.mediaList && task.mediaList.length>0) {
+                let mediaHtml = `<div class="desc-section"><div class="info-label">📎 附件（${task.mediaList.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;
+                for(let media of task.mediaList) {
+                    if(media.type === 'image') mediaHtml += `<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="showImagePreview('${media.url}')"></div>`;
+                    else if(media.type === 'video') mediaHtml += `<div class="preview-img-wrapper"><video src="${media.url}" controls style="width:100%;height:100%;object-fit:cover;"></video></div>`;
                 }
-            };
-        }
-        switchPage('detail');
-    };
-    
-    async function confirmPayment(taskId) {
-        if (confirm('确认支付赏金？此操作不可撤销')) {
-            const result = await callApi(`/tasks/${taskId}/confirm-payment`, { method: 'POST' });
-            if (result.success) { alert('结算成功，赏金已发放'); refreshTaskList(); loadProfile(); if (document.getElementById('detailPage').classList.contains('active')) viewTask(taskId); }
-            else alert(result.error || '结算失败');
-        }
-    }
-    
-    // ==================== 消息相关（增强版） ====================
-    async function sendMessage(taskId, senderId, senderName, text, isNego = false) {
-        const payload = { taskId, senderId, senderName, text, isNego, time: new Date().toLocaleTimeString(), createdAt: new Date().toISOString() };
-        const result = await callApi('/messages', { method: 'POST', body: JSON.stringify(payload) });
-        if (result.error) { alert('发送失败：' + result.error); return false; }
-        return true;
-    }
-    
-    async function refreshMessagesOnly() {
-        if (!chatState.messagesArea || !chatState.taskId) return;
-        const messages = await callApi(`/messages/${chatState.taskId}`);
-        if (!messages || !Array.isArray(messages)) return;
-        const newCount = messages.length;
-        const hasNew = newCount > (chatState.lastMessageCount || 0);
-        chatState.lastMessageCount = newCount;
-        let html = '';
-        for (const m of messages) {
-            const isMine = m.senderId === currentUser.id;
-            const isNego = m.text && m.text.includes('💰议价请求:');
-            const priceMatch = m.text.match(/¥(\d+)/);
-            const negoPrice = priceMatch ? parseInt(priceMatch[1]) : null;
-            html += `<div class="chat-bubble ${isMine ? 'chat-bubble-mine' : 'chat-bubble-other'}"><div class="bubble-text">${escapeHtml(m.text)}</div><div class="bubble-time">${m.time || new Date(m.createdAt).toLocaleTimeString()}</div></div>`;
-            if (!isMine && isNego && negoPrice && m.senderId !== 'system') {
-                html += `<div style="display:flex; gap:8px; margin:4px 0 8px 16px;"><button class="btn-primary" style="padding:6px 12px; font-size:0.75rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:6px 12px; font-size:0.75rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
+                mediaHtml += `</div></div>`;
+                detailHtml += mediaHtml;
             }
+            detailHtml += `</div>`;
+            if(task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
+            if(task.status === 'ongoing' && isTaker) {
+                detailHtml += `<div style="display: flex; gap: 12px; margin: 8px 12px;"><button class="btn-primary" id="contactPublisherBtn" style="flex:1; background:#3b82f6;">💬 联系发布者</button>${task.publisherPhone?`<button class="btn-phone" id="callPublisherPhoneBtn" style="flex:1;">📞 拨打电话</button>`:`<button class="btn-phone" disabled style="flex:1; opacity:0.6;">📞 无手机号</button>`}</div>`;
+            }
+            if(task.status === 'ongoing' && isMine && task.takerId) {
+                detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
+            }
+            if(task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
+            if(task.status === 'ongoing' && isTaker) {
+                if(task.locationAddress) {
+                    const coords = await geocodeAddress(task.locationAddress) || { lat: 31.2304, lng: 121.4737 };
+                    detailHtml += `<div style="margin:8px 12px;"><button class="btn-nav" id="navigateBtn" data-task-lat="${coords.lat}" data-task-lng="${coords.lng}" data-task-addr="${escapeHtml(task.locationAddress)}">🧭 高德导航</button></div>`;
+                }
+                if(task.travelStatus === 'idle') detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
+                else if(task.travelStatus === 'traveling') {
+                    detailHtml += `<div id="countdownDisplay" class="countdown-timer">计算中...</div><div class="slide-action" id="slideArriveWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📍 滑动到达 📍</div></div></div>`;
+                }else if(task.travelStatus === 'arrived' && !task.takerCompleted){
+                    detailHtml += `<div class="slide-action" id="slideCompleteWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📎 滑动并上传凭证完成 ✅</div></div></div>`;
+                }
+                detailHtml += `<div style="margin:8px 12px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
+            }
+            if(task.status === 'ongoing' && task.takerCompleted && isMine) {
+                detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="confirmCompleteBtn">✅ 确认完成并支付赏金</button></div>`;
+            }
+            document.getElementById('detailContainer').innerHTML = detailHtml;
+            const taskIdStr = task._id.toString();
+
+            document.getElementById('publisherName')?.addEventListener('click', () => {
+                const modal = document.createElement('div');
+                modal.className = 'custom-modal';
+                modal.innerHTML = `<div class="custom-modal-content"><h3>发布者资料</h3><div>昵称: ${escapeHtml(publisherInfo.nickname)}</div><div>信用: ${publisherInfo.credit}</div><div>家乡: ${publisherInfo.hometown||'未填写'}</div><div>签名: ${publisherInfo.signature||'无'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;
+                document.body.appendChild(modal);
+                modal.querySelector('.confirm-btn').onclick = () => modal.remove();
+            });
+            document.getElementById('takerInfoRow')?.addEventListener('click', async () => {
+                const takerInfo = await callApi(`/user/${task.takerId}`);
+                const modal = document.createElement('div');
+                modal.className = 'custom-modal';
+                modal.innerHTML = `<div class="custom-modal-content"><h3>接取者资料</h3><div>昵称: ${escapeHtml(takerInfo.nickname)}</div><div>信用: ${takerInfo.credit}</div><div>家乡: ${takerInfo.hometown||'未填写'}</div><div>签名: ${takerInfo.signature||'无'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;
+                document.body.appendChild(modal);
+                modal.querySelector('.confirm-btn').onclick = () => modal.remove();
+            });
+            document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
+            document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(taskIdStr, task.takerId, task.takerName, task.reward, task.title));
+            document.getElementById('contactPublisherBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
+            const callPublisherPhoneBtn = document.getElementById('callPublisherPhoneBtn');
+            if(callPublisherPhoneBtn && callPublisherPhoneBtn.getAttribute('disabled') !== 'disabled') {
+                callPublisherPhoneBtn.onclick = () => { window.location.href = `tel:${task.publisherPhone}`; };
+            }
+            const callTakerBtn = document.getElementById('callTakerBtn');
+            if(callTakerBtn) {
+                callTakerBtn.onclick = async () => {
+                    const takerInfo = await callApi(`/user/${task.takerId}`);
+                    if(takerInfo.phone) window.location.href = `tel:${takerInfo.phone}`;
+                    else showAlert('提示','接取者未绑定手机号');
+                };
+            }
+            const navBtn = document.getElementById('navigateBtn');
+            if(navBtn) {
+                navBtn.onclick = async () => {
+                    const destLat = parseFloat(navBtn.getAttribute('data-task-lat'));
+                    const destLng = parseFloat(navBtn.getAttribute('data-task-lng'));
+                    const destAddr = navBtn.getAttribute('data-task-addr');
+                    await navigateTo(destLat, destLng, destAddr);
+                };
+            }
+            const slideAccept = document.getElementById('slideAcceptWrapper');
+            if(slideAccept) initSlide(slideAccept, async () => {
+                const res = await callApi(`/tasks/${taskId}/accept`, {method:'PUT', body:JSON.stringify({takerId: currentUser.id, takerName: currentUser.nickname})});
+                if(res.success) { showToast('接取成功'); refreshTaskList(true); loadProfile(); viewTask(taskId, lastPage); }
+                else showAlert('接取失败', res.error);
+            });
+            const slideStart = document.getElementById('slideStartWrapper');
+            if(slideStart) {
+                initSlide(slideStart, async () => {
+                    let minutes = 15;
+                    if(userLocation && task.locationAddress) {
+                        const coords = await geocodeAddress(task.locationAddress);
+                        if(coords) {
+                            const dist = parseFloat(calculateDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng));
+                            if(!isNaN(dist)) minutes = Math.min(60, Math.max(5, Math.round(dist * 2)));
+                        }
+                    }
+                    const result = await callApi(`/tasks/${taskId}/status`, {method:'PUT', body:JSON.stringify({travelStatus:'traveling', estimatedMinutes: minutes, travelStartTime: Date.now()})});
+                    if(result.success) { showToast('出发！'); viewTask(taskId, lastPage); }
+                    else showAlert('操作失败', result.error);
+                });
+            }
+            const slideArrive = document.getElementById('slideArriveWrapper');
+            if(slideArrive) {
+                if(task.travelStartTime && task.estimatedMinutes) startCountdown(task.estimatedMinutes, task.travelStartTime);
+                else { let est = task.estimatedMinutes || 15; let start = task.travelStartTime || Date.now(); startCountdown(est, start); }
+                initSlide(slideArrive, async () => {
+                    const result = await callApi(`/tasks/${taskId}/status`, {method:'PUT', body:JSON.stringify({travelStatus:'arrived'})});
+                    if(result.success) { if(countdownTimer) clearInterval(countdownTimer); showToast('已到达目的地！'); viewTask(taskId, lastPage); }
+                    else showAlert('操作失败', result.error);
+                });
+            }
+            const slideComplete = document.getElementById('slideCompleteWrapper');
+            if(slideComplete) {
+                initSlide(slideComplete, async () => {
+                    const input = document.createElement('input');
+                    input.type = 'file'; input.accept = 'image/*,video/*'; input.multiple = true;
+                    input.onchange = async (e) => {
+                        const files = Array.from(e.target.files);
+                        if(files.length===0) return;
+                        const result = await submitProof(taskIdStr, files);
+                        if(result.success) { showToast('凭证已提交，等待发布者确认'); refreshTaskList(true); loadProfile(); viewTask(taskId, lastPage); }
+                        else showAlert('提交失败', result.error || '未知错误');
+                    };
+                    input.click();
+                });
+            }
+            const cancelAcceptBtn = document.getElementById('cancelAcceptBtn');
+            if(cancelAcceptBtn) cancelAcceptBtn.onclick = async () => {
+                showConfirm('确认取消', '取消接取将扣除5信用分，确定吗？', async () => {
+                    const res = await callApi(`/tasks/${taskId}/cancel-accept`, {method:'PUT', body:JSON.stringify({userId: currentUser.id})});
+                    if(res.success) { showToast('已取消接取'); loadProfile(); refreshTaskList(true); switchPage('home'); }
+                    else showAlert('操作失败', res.error);
+                });
+            };
+            const confirmCompleteBtn = document.getElementById('confirmCompleteBtn');
+            if(confirmCompleteBtn) {
+                confirmCompleteBtn.onclick = async () => {
+                    showConfirm('确认支付', '确认任务已完成？赏金将支付给接取者。', async () => {
+                        const res = await callApi(`/tasks/${taskId}/confirm-payment`, {method:'POST', body:JSON.stringify({userId: currentUser.id})});
+                        if(res.success) { showToast('结算成功'); viewTask(taskId, lastPage); refreshTaskList(true); loadProfile(); }
+                        else showAlert('结算失败', res.error);
+                    });
+                };
+            }
+            switchPage('detail');
+        } catch(e) {
+            showAlert('加载失败', e.message);
         }
-        chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
-        if (hasNew) chatState.messagesArea.scrollTop = chatState.messagesArea.scrollHeight;
+    };
+
+    document.addEventListener('click', (e) => {
+        if(e.target.id === 'detailBackBtn') {
+            if(lastPage === 'profile') switchPage('profile');
+            else if(lastPage === 'message') {
+                if(chatState.taskId) openChat(chatState.taskId, chatState.otherId, chatState.otherName, chatState.reward, chatState.title);
+                else switchPage('message');
+            } else switchPage('home');
+        }
+    });
+
+    // ========== 聊天功能 ==========
+    async function sendMessage(taskId, text, isNego = false) {
+        await callApi('/messages', {method:'POST', body:JSON.stringify({taskId, senderId: currentUser.id, senderName: currentUser.nickname, text, isNego})});
     }
-    
+
+    async function deleteMessage(messageId) {
+        try {
+            await callApi(`/messages/${messageId}`, {method:'DELETE', body:JSON.stringify({userId: currentUser.id})});
+            showToast('消息已删除');
+            await refreshMessagesOnly();
+            await renderMessageList();
+            updateUnreadBadge();
+        } catch(err) { showAlert('删除失败', err.message); }
+    }
+
+    async function deleteConversation(taskId) {
+        try {
+            await callApi(`/conversations/${taskId}/${currentUser.id}`, {method:'DELETE', body:JSON.stringify({userId: currentUser.id})});
+            showToast('聊天已删除');
+            deletedConversations.add(taskId);
+            const card = document.querySelector(`.task-card[data-taskid="${taskId}"]`);
+            if (card) card.remove();
+            await updateUnreadBadge();
+            if(chatState.active && chatState.taskId === taskId) {
+                closeChat();
+                switchPage('message');
+            }
+            const container = document.getElementById('messageContainer');
+            if (container && container.querySelectorAll('.task-card').length === 0) {
+                container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
+            }
+        } catch(err) {
+            showAlert('删除失败', err.message);
+        }
+    }
+
+    async function refreshMessagesOnly() {
+        if(!chatState.messagesArea || !chatState.taskId) return;
+        try {
+            const messages = await callApi(`/messages/${chatState.taskId}`);
+            if(!messages || !Array.isArray(messages)) return;
+            const newCount = messages.length;
+            const hasNew = newCount > (chatState.lastMessageCount || 0);
+            chatState.lastMessageCount = newCount;
+            let html = '';
+            for(const m of messages) {
+                const isMine = m.senderId === currentUser.id;
+                const isNego = m.text && m.text.includes('💰议价请求:');
+                const priceMatch = m.text.match(/¥(\d+)/);
+                const negoPrice = priceMatch ? parseInt(priceMatch[1]) : null;
+                html += `<div class="chat-bubble ${isMine?'chat-bubble-mine':'chat-bubble-other'}" data-message-id="${m._id}" data-is-mine="${isMine}"><div class="bubble-text">${escapeHtml(m.text)}</div><div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div></div>`;
+                if(!isMine && isNego && negoPrice && m.senderId !== 'system') {
+                    html += `<div style="display:flex; gap:8px; margin:4px 0 8px 12px;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
+                }
+            }
+            chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
+            if(hasNew) chatState.messagesArea.scrollTop = chatState.messagesArea.scrollHeight;
+
+            document.querySelectorAll('.chat-bubble').forEach(bubble => {
+                const isMine = bubble.getAttribute('data-is-mine') === 'true';
+                if(!isMine) return;
+                const messageId = bubble.getAttribute('data-message-id');
+                if(!messageId) return;
+                let pressTimer = null;
+                const startPress = (e) => {
+                    e.preventDefault();
+                    pressTimer = setTimeout(() => { showConfirm('删除消息', '确定要删除这条消息吗？', () => deleteMessage(messageId)); }, 500);
+                };
+                const cancelPress = () => { if(pressTimer) clearTimeout(pressTimer); };
+                bubble.removeEventListener('contextmenu', (e) => e.preventDefault());
+                bubble.removeEventListener('touchstart', startPress);
+                bubble.removeEventListener('touchend', cancelPress);
+                bubble.removeEventListener('touchmove', cancelPress);
+                bubble.removeEventListener('mousedown', startPress);
+                bubble.removeEventListener('mouseup', cancelPress);
+                bubble.removeEventListener('mouseleave', cancelPress);
+                bubble.addEventListener('contextmenu', (e) => e.preventDefault());
+                bubble.addEventListener('touchstart', startPress);
+                bubble.addEventListener('touchend', cancelPress);
+                bubble.addEventListener('touchmove', cancelPress);
+                bubble.addEventListener('mousedown', startPress);
+                bubble.addEventListener('mouseup', cancelPress);
+                bubble.addEventListener('mouseleave', cancelPress);
+            });
+        } catch(e) { console.error('刷新消息失败', e); }
+    }
+
+    function initChatPullToRefresh() {
+        const messagesArea = document.getElementById('chatMsgsArea');
+        if(!messagesArea) return;
+        let startY = 0, isRefreshing = false;
+        let indicator = null;
+        const createIndicator = () => {
+            if(document.getElementById('chatRefreshIndicator')) return;
+            const div = document.createElement('div');
+            div.id = 'chatRefreshIndicator';
+            div.className = 'chat-refresh-indicator';
+            div.innerText = '↓ 下拉刷新';
+            messagesArea.parentNode.insertBefore(div, messagesArea);
+            return div;
+        };
+        messagesArea.addEventListener('touchstart', (e) => { if(messagesArea.scrollTop===0) startY = e.touches[0].clientY; });
+        messagesArea.addEventListener('touchmove', (e) => {
+            if(isRefreshing || messagesArea.scrollTop>0) return;
+            const diff = e.touches[0].clientY - startY;
+            if(diff>30) {
+                e.preventDefault();
+                indicator = indicator || createIndicator();
+                if(indicator) { indicator.style.display='block'; indicator.style.transform=`translateY(${Math.min(diff-30,60)}px)`; }
+            }
+        });
+        messagesArea.addEventListener('touchend', async () => {
+            if(indicator && indicator.style.display==='block') {
+                indicator.style.transform=''; indicator.style.display='none';
+                isRefreshing=true; indicator.innerText='刷新中...'; indicator.style.display='block';
+                await refreshMessagesOnly();
+                isRefreshing=false; indicator.style.display='none'; indicator.innerText='↓ 下拉刷新';
+            }
+        });
+    }
+
     function showChatView() {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
         document.getElementById('messagePage').classList.add('active');
         const container = document.getElementById('messageContainer');
-        const taskCard = `<div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span style="font-size:12px;">👉 点击查看详情</span></div>`;
-        container.innerHTML = `<div class="chat-container"><div class="chat-header-bar"><button class="chat-back-btn" id="chatBackBtn">←</button><span class="chat-header-name">${escapeHtml(chatState.otherName)}</span><button id="manualRefreshBtn" style="background:#eef2ff; border:none; border-radius:20px; padding:6px 12px; font-size:0.7rem;">🔄 刷新</button></div>${taskCard}<div class="chat-messages-area" id="chatMsgsArea">加载中...</div><div class="chat-input-wrapper"><div class="flex-row"><input type="number" id="negoPriceInput" class="nego-input" placeholder="💰议价 (当前¥${chatState.reward})" step="1"><button class="nego-send-btn" id="sendNegoBtn">发起议价</button></div><div class="chat-action-row"><input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息..."><button class="send-btn" id="sendChatBtn">发送</button></div></div></div>`;
+        container.innerHTML = `
+            <div class="chat-container">
+                <div class="chat-header-bar"><button class="chat-back-btn" id="chatBackBtn">←</button><span class="chat-header-name">${escapeHtml(chatState.otherName)}</span></div>
+                <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div>
+                <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
+                <div class="chat-input-wrapper"><div class="flex-row"><input type="number" id="negoPriceInput" class="nego-input" placeholder="💰议价 (当前¥${chatState.reward})" step="1"><button class="nego-send-btn" id="sendNegoBtn">发起议价</button></div><div class="chat-action-row"><input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息..."><button class="send-btn" id="sendChatBtn">发送</button></div></div>
+            </div>
+        `;
         chatState.messagesArea = document.getElementById('chatMsgsArea');
         chatState.lastMessageCount = 0;
-        document.getElementById('chatBackBtn').onclick = () => { closeChat(); document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('messagePage').classList.add('active'); renderMessageList(); };
-        document.getElementById('manualRefreshBtn').onclick = async () => { await refreshMessagesOnly(); alert('已刷新消息'); };
-        document.getElementById('sendChatBtn').onclick = async () => { const txt = document.getElementById('chatInput').value.trim(); if (!txt) return; const success = await sendMessage(chatState.taskId, currentUser.id, currentUser.nickname, txt, false); if (success) { document.getElementById('chatInput').value = ''; await refreshMessagesOnly(); } };
-        document.getElementById('sendNegoBtn').onclick = async () => { const price = parseFloat(document.getElementById('negoPriceInput').value); if (isNaN(price) || price <= 0) return alert('输入有效价格'); const success = await sendMessage(chatState.taskId, currentUser.id, currentUser.nickname, `💰议价请求:¥${price}`, true); if (success) { alert('议价请求已发送'); document.getElementById('negoPriceInput').value = ''; await refreshMessagesOnly(); } };
+        document.getElementById('chatBackBtn').onclick = () => {
+            closeChat();
+            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+            document.getElementById('messagePage').classList.add('active');
+            renderMessageList();
+            updateUnreadBadge();
+        };
+        document.getElementById('sendChatBtn').onclick = async () => {
+            const txt = document.getElementById('chatInput').value.trim();
+            if(!txt) return;
+            await sendMessage(chatState.taskId, txt, false);
+            document.getElementById('chatInput').value = '';
+            await refreshMessagesOnly();
+            await renderMessageList();
+            updateUnreadBadge();
+        };
+        document.getElementById('sendNegoBtn').onclick = async () => {
+            const price = parseFloat(document.getElementById('negoPriceInput').value);
+            if(isNaN(price) || price<=0) { showAlert('提示','输入有效价格'); return; }
+            await sendMessage(chatState.taskId, `💰议价请求:¥${price}`, true);
+            showToast('议价请求已发送');
+            document.getElementById('negoPriceInput').value = '';
+            await refreshMessagesOnly();
+            await renderMessageList();
+            updateUnreadBadge();
+        };
         refreshMessagesOnly();
-        if (chatState.pollInterval) clearInterval(chatState.pollInterval);
-        chatState.pollInterval = setInterval(async () => { if (chatState.active && chatState.taskId) await refreshMessagesOnly(); }, 3000);
+        initChatPullToRefresh();
+        if(chatState.pollInterval) clearInterval(chatState.pollInterval);
+        chatState.pollInterval = setInterval(async () => {
+            if(chatState.active && chatState.taskId && document.visibilityState === 'visible') await refreshMessagesOnly();
+        }, 5000);
     }
-    
+
     async function openChat(taskId, otherId, otherName, reward, title) {
-        if (chatState.pollInterval) clearInterval(chatState.pollInterval);
-        chatState.active = true; chatState.taskId = taskId; chatState.otherId = otherId; chatState.otherName = otherName; chatState.reward = reward; chatState.title = title;
+        if(chatState.pollInterval) clearInterval(chatState.pollInterval);
+        await callApi(`/messages/read/${taskId}/${currentUser.id}`, {method:'PUT'});
+        chatState.active = true;
+        chatState.taskId = taskId;
+        chatState.otherId = otherId;
+        chatState.otherName = otherName;
+        chatState.reward = reward;
+        chatState.title = title;
         showChatView();
+        updateUnreadBadge();
     }
-    
+
     window.respondToNego = async function(taskId, price, isAccept) {
         const task = await callApi(`/tasks/${taskId}`);
-        if (task.status !== 'available') { alert('任务已被接取，无法议价'); return; }
-        if (isAccept) {
-            const updateResult = await callApi(`/tasks/${taskId}/status`, { method: 'PUT', body: JSON.stringify({ reward: price }) });
-            if (updateResult.error) { alert('更新价格失败：' + updateResult.error); return; }
-            await sendMessage(taskId, 'system', '系统', `✅ ${currentUser.nickname} 同意了议价，任务价格调整为 ¥${price}`, false);
-            alert(`已同意议价，任务价格更新为 ¥${price}`);
-            if (chatState.taskId === taskId) chatState.reward = price;
-            refreshTaskList();
+        if(task.status !== 'available') { showAlert('提示','任务已被接取'); return; }
+        if(isAccept) {
+            await callApi(`/tasks/${taskId}/reward`, {method:'PUT', body:JSON.stringify({userId: currentUser.id, reward: price})});
+            await sendMessage(taskId, `✅ 同意议价，价格调整为 ¥${price}`, false);
+            showToast(`已同意议价，新价格 ¥${price}`);
+            if(chatState.taskId === taskId) chatState.reward = price;
+            refreshTaskList(true);
+            if(document.getElementById('detailPage').classList.contains('active')) viewTask(taskId, lastPage);
+            renderMessageList();
+            updateUnreadBadge();
         } else {
-            await sendMessage(taskId, 'system', '系统', `❌ ${currentUser.nickname} 拒绝了议价，价格仍为 ¥${task.reward}`, false);
-            alert('已拒绝议价');
+            await sendMessage(taskId, `❌ 拒绝了议价`, false);
+            showToast('已拒绝议价');
+            renderMessageList();
+            updateUnreadBadge();
         }
         await refreshMessagesOnly();
     };
-    
+
     function closeChat() {
-        if (chatState.pollInterval) clearInterval(chatState.pollInterval);
-        chatState.active = false; chatState.taskId = null; chatState.messagesArea = null;
+        if(chatState.pollInterval) clearInterval(chatState.pollInterval);
+        chatState.active = false;
+        chatState.taskId = null;
+        chatState.messagesArea = null;
     }
-    
+
     async function renderMessageList() {
-        const convs = await callApi(`/user/${currentUser.id}/conversations`);
-        const container = document.getElementById('messageContainer');
-        if (!convs || convs.length === 0) { container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>'; return; }
-        let html = `<div class="card"><strong>📬 消息记录</strong></div>`;
-        for (let c of convs) {
-            html += `<div class="card task-card" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}"><div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}</span><span class="reward-badge">¥${c.reward}</span></div><div class="task-desc">${escapeHtml((c.lastMsg || '暂无消息').substring(0,50))}</div></div>`;
+        if(!currentUser || !currentUser.id) {
+            const container = document.getElementById('messageContainer');
+            if(container) container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">请先登录</div></div>';
+            updateUnreadBadge();
+            return;
         }
-        container.innerHTML = html;
-        document.querySelectorAll('#messageContainer .task-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                const taskId = card.getAttribute('data-taskid'); const otherId = card.getAttribute('data-otherid'); const otherName = card.getAttribute('data-othername'); const reward = parseInt(card.getAttribute('data-reward')); const title = card.getAttribute('data-title');
-                openChat(taskId, otherId, otherName, reward, title);
+        try {
+            const convs = await callApi(`/user/${currentUser.id}/conversations`);
+            const container = document.getElementById('messageContainer');
+            if(!convs || convs.length === 0) {
+                container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
+                updateUnreadBadge();
+                return;
+            }
+            const filtered = convs.filter(c => !deletedConversations.has(c.taskId) && c.lastMsg);
+            if(filtered.length === 0) {
+                container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
+                updateUnreadBadge();
+                return;
+            }
+            let html = '<div class="card"><strong>📬 消息记录</strong></div>';
+            for(let c of filtered) {
+                let unreadHtml = '';
+                if(c.unread > 0) {
+                    unreadHtml = `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;
+                }
+                html += `<div class="card task-card" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
+                    <div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div>
+                    <div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div>
+                </div>`;
+            }
+            container.innerHTML = html;
+            document.querySelectorAll('#messageContainer .task-card').forEach(card => {
+                card.removeEventListener('click', card._clickHandler);
+                card.removeEventListener('touchstart', card._pressStart);
+                card.removeEventListener('touchend', card._pressEnd);
+                const clickHandler = (e) => {
+                    if(e.target.closest('.task-card')) {
+                        const taskId = card.getAttribute('data-taskid');
+                        const otherId = card.getAttribute('data-otherid');
+                        const otherName = card.getAttribute('data-othername');
+                        const reward = parseInt(card.getAttribute('data-reward'));
+                        const title = card.getAttribute('data-title');
+                        openChat(taskId, otherId, otherName, reward, title);
+                    }
+                };
+                let pressTimer = null;
+                const startPress = (e) => {
+                    e.preventDefault();
+                    pressTimer = setTimeout(() => {
+                        const taskId = card.getAttribute('data-taskid');
+                        const otherName = card.getAttribute('data-othername');
+                        showConfirm('删除聊天', `确定删除与 ${otherName} 的聊天吗？`, () => { deleteConversation(taskId); });
+                    }, 500);
+                };
+                const cancelPress = () => { if(pressTimer) clearTimeout(pressTimer); };
+                card.addEventListener('click', clickHandler);
+                card.addEventListener('contextmenu', (e) => e.preventDefault());
+                card.addEventListener('touchstart', startPress);
+                card.addEventListener('touchend', cancelPress);
+                card.addEventListener('touchmove', cancelPress);
+                card.addEventListener('mousedown', startPress);
+                card.addEventListener('mouseup', cancelPress);
+                card.addEventListener('mouseleave', cancelPress);
+                card._clickHandler = clickHandler;
+                card._pressStart = startPress;
+                card._pressEnd = cancelPress;
             });
-        });
+            updateUnreadBadge();
+        } catch(e) {
+            console.error('加载消息列表失败', e);
+        }
     }
-    
-    // ==================== 用户主页、发布、个人资料等 ====================
-    function resetPublishForm() {
-        document.getElementById('pubTitle').value = '';
-        document.getElementById('pubDesc').value = '';
-        document.getElementById('pubReward').value = '';
-        document.getElementById('pubAddress').value = '';
-        document.getElementById('pubCategory').value = '取件';
-        pendingMedia = [];
-        updateMediaPreview();
+
+    async function updateUnreadBadge() {
+        if(!currentUser) return;
+        try {
+            const convs = await callApi(`/user/${currentUser.id}/conversations`);
+            const filtered = convs.filter(c => !deletedConversations.has(c.taskId) && c.lastMsg);
+            const totalUnread = filtered.reduce((sum,c) => sum + (c.unread||0), 0);
+            const badge = document.getElementById('msgBadge');
+            if(badge) { if(totalUnread>0) { badge.innerText = totalUnread>99?'99+':totalUnread; badge.style.display='inline-block'; } else badge.style.display='none'; }
+        } catch(e) {}
     }
-    
-    async function publishTask() {
-        if (!currentUser.idCardVerified) { alert('请先实名认证'); return; }
-        const title = document.getElementById('pubTitle').value.trim();
-        if (!title) return alert('请输入标题');
-        const category = document.getElementById('pubCategory').value;
-        const reward = parseFloat(document.getElementById('pubReward').value);
-        if (isNaN(reward) || reward <= 0) return alert('请输入有效金额');
-        if (reward > currentUser.balance) return alert('余额不足');
-        const locationAddress = document.getElementById('pubAddress').value.trim() || '未知';
-        const mediaList = pendingMedia.map(m => ({ type: m.type, url: m.dataURL }));
-        const result = await callApi('/tasks', { method: 'POST', body: JSON.stringify({ title, description: document.getElementById('pubDesc').value, reward, publisherId: currentUser.id, publisherName: currentUser.nickname, publisherPhone: currentUser.phone, locationAddress, mediaList, category }) });
-        if (result._id) { alert('发布成功'); resetPublishForm(); await loadProfile(); refreshTaskList(); switchPage('home'); } else alert('发布失败');
-    }
-    
-    async function showRealNameAuth() {
-        if (currentUser.idCardVerified) { alert('您已经实名认证过了'); return; }
-        const modal = document.createElement('div');
-        modal.className = 'modal-mask';
-        modal.innerHTML = `<div class="modal-content"><h3>🆔 实名认证</h3><div class="form-group"><label>真实姓名</label><input id="realNameInput" class="form-input" placeholder="请输入真实姓名"></div><div class="form-group"><label>身份证号</label><input id="idCardInput" class="form-input" placeholder="请输入身份证号"></div><div class="double-btn-row" style="display:flex; gap:8px;"><button class="btn-primary" id="submitAuthBtn">提交认证</button><button class="btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button></div></div>`;
-        document.body.appendChild(modal);
-        modal.querySelector('#submitAuthBtn').onclick = async () => {
-            const realName = modal.querySelector('#realNameInput').value.trim();
-            const idCard = modal.querySelector('#idCardInput').value.trim();
-            if (!realName || idCard.length < 15) { alert('请填写正确的姓名和身份证号'); return; }
-            const result = await callApi('/verify-id', { method: 'POST', body: JSON.stringify({ userId: currentUser.id, realName, idCard }) });
-            if (result.success) { alert('实名认证成功'); currentUser.idCardVerified = true; localStorage.setItem('user', JSON.stringify(currentUser)); modal.remove(); loadProfile(); }
-            else alert(result.error || '认证失败，请稍后重试');
-        };
-    }
-    
+
+    // ========== 个人主页 ==========
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
-        const user = await callApi(`/user/${currentUser.id}`);
-        if (user && user._id) { currentUser = { ...currentUser, ...user }; localStorage.setItem('user', JSON.stringify(currentUser)); document.getElementById('headerBalance').innerHTML = `余额: ¥${(currentUser.balance || 0).toFixed(2)}`; }
-        const allTasks = await callApi('/tasks/all');
-        const myPub = (allTasks || []).filter(t => t.publisherId === currentUser.id);
-        const myAcc = (allTasks || []).filter(t => t.takerId === currentUser.id && t.status !== 'completed');
-        const myCompleted = (allTasks || []).filter(t => t.takerId === currentUser.id && t.status === 'completed');
-        
-        const pubHtml = myPub.map(t => { let progressText = ''; if (t.status === 'ongoing' && t.takerName) { let step = t.travelStatus === 'idle' ? '待出发' : (t.travelStatus === 'traveling' ? '行程中' : '已到达，待确认'); progressText = `<div class="progress-text">接取者: ${escapeHtml(t.takerName)} | 状态: ${step}</div>`; } return `<div class="profile-task-item"><div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div><span class="profile-task-status ${t.status === 'available' ? 'available' : (t.status === 'ongoing' ? 'ongoing' : 'completed')}">${t.status === 'available' ? '悬赏中' : (t.status === 'ongoing' ? '进行中' : '已完成')}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div>${progressText}${t.status === 'ongoing' && t.takerCompleted ? `<div class="task-actions"><button class="btn-success" onclick="confirmPayment('${t._id}')">确认结算</button></div>` : ''}</div>`; }).join('') || '<div class="empty-state">暂无</div>';
-        const accHtml = myAcc.map(t => `<div class="profile-task-item"><div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div><span class="profile-task-status ongoing">${t.travelStatus === 'idle' ? '待出发' : (t.travelStatus === 'traveling' ? '行程中' : '已到达')}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div><div class="task-actions"><button class="btn-danger" onclick="cancelAcceptedTask('${t._id}')">取消接取</button></div></div>`).join('') || '<div class="empty-state">暂无</div>';
-        const completedHtml = myCompleted.map(t => `<div class="profile-task-item"><div class="profile-task-row" style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title" onclick="viewTask('${t._id}')">${escapeHtml(t.title)}</div><span class="profile-task-status completed">已完成</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div></div>`).join('') || '<div class="empty-state">暂无</div>';
-        
-        container.innerHTML = `<div class="profile-header" onclick="showEditProfileModal()"><div class="profile-avatar" id="profileAvatar">${currentUser.avatar ? `<img src="${currentUser.avatar}">` : `<span>${(currentUser.nickname || currentUser.username).charAt(0)}</span>`}</div><div><div class="profile-name">${escapeHtml(currentUser.nickname || currentUser.username)}</div><div class="profile-signature">${currentUser.signature || '点击编辑'}</div></div><span>✏️</span></div><div class="stats-row"><div class="stat-item" onclick="showWalletDetail()"><div class="stat-number">💰</div><div class="stat-label">钱包</div></div><div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit || 60}</div><div class="stat-label">信用</div></div><div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified ? '已实名' : '未实名'}</div></div></div><div class="profile-collapse"><div class="collapse-header" data-target="pub"><div class="collapse-title">📤 我发布 <span style="font-size:0.8rem; color:#64748b;">(${myPub.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-pub">${pubHtml}</div></div><div class="profile-collapse"><div class="collapse-header" data-target="acc"><div class="collapse-title">📥 我接取 <span style="font-size:0.8rem; color:#64748b;">(${myAcc.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-acc">${accHtml}</div></div><div class="profile-collapse"><div class="collapse-header" data-target="completed"><div class="collapse-title">✅ 已完成 <span style="font-size:0.8rem; color:#64748b;">(${myCompleted.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-completed">${completedHtml}</div></div><button class="logout-btn" onclick="logout()">退出登录</button>`;
-        
-        document.querySelectorAll('.collapse-header').forEach(header => {
-            header.addEventListener('click', () => {
-                const targetId = header.getAttribute('data-target');
-                const content = document.getElementById(`collapse-${targetId}`);
-                const icon = header.querySelector('.collapse-icon');
-                if (content.classList.contains('show')) { content.classList.remove('show'); icon.classList.remove('open'); } else { content.classList.add('show'); icon.classList.add('open'); }
+        try {
+            const user = await callApi(`/user/${currentUser.id}`);
+            currentUser = {...currentUser, ...user};
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            document.getElementById('headerBalance').innerHTML = `余额: ¥${(currentUser.balance||0).toFixed(2)}`;
+            const allTasks = await callApi('/tasks/all');
+            const myPub = (allTasks||[]).filter(t => t.publisherId === currentUser.id && t.status !== 'cancelled');
+            const myAcc = (allTasks||[]).filter(t => t.takerId === currentUser.id && t.status !== 'completed' && t.status !== 'cancelled');
+            const myCompleted = (allTasks||[]).filter(t => t.takerId === currentUser.id && t.status === 'completed');
+            const pubHtml = myPub.map(t => {
+                let progressText = '';
+                if(t.status === 'ongoing') {
+                    if(t.takerName) {
+                        let step = '';
+                        if(t.travelStatus === 'idle') step = '待出发';
+                        else if(t.travelStatus === 'traveling') step = '行程中';
+                        else if(t.travelStatus === 'arrived') step = '已到达，待凭证';
+                        progressText = `<div class="progress-text">接取者: ${escapeHtml(t.takerName)} | 状态: ${step}</div>`;
+                    } else progressText = `<div class="progress-text">暂无接取者</div>`;
+                }
+                let cancelBtn = '';
+                if(t.status === 'available') {
+                    cancelBtn = `<div class="task-actions"><button class="btn-danger" onclick="cancelTask('${t._id}')">取消任务</button></div>`;
+                }
+                let statusClass = '', statusText = '';
+                if(t.status === 'available') { statusClass='available'; statusText='悬赏中'; }
+                else if(t.status === 'ongoing') { statusClass='ongoing'; statusText='进行中'; }
+                else if(t.status === 'completed') { statusClass='completed'; statusText='已完成'; }
+                else if(t.status === 'cancelled') { statusClass='cancelled'; statusText='已取消'; }
+                return `<div class="profile-task-item" onclick="viewTask('${t._id}','profile')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title">${escapeHtml(t.title)}</div><span class="profile-task-status ${statusClass}">${statusText}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div>${progressText}${cancelBtn}</div>`;
+            }).join('') || '<div class="empty-state">暂无</div>';
+            const accHtml = myAcc.map(t => `<div class="profile-task-item" onclick="viewTask('${t._id}','profile')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title">${escapeHtml(t.title)}</div><span class="profile-task-status ongoing">${t.travelStatus==='idle'?'待出发':(t.travelStatus==='traveling'?'行程中':'已到达')}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div><div class="task-actions"><button class="btn-danger" onclick="event.stopPropagation(); cancelAcceptedTask('${t._id}')">取消接取</button></div></div>`).join('') || '<div class="empty-state">暂无</div>';
+            const completedHtml = myCompleted.map(t => `<div class="profile-task-item" onclick="viewTask('${t._id}','profile')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title">${escapeHtml(t.title)}</div><span class="profile-task-status completed">已完成</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div></div>`).join('') || '<div class="empty-state">暂无</div>';
+            container.innerHTML = `
+                <div class="profile-header" onclick="showEditProfileModal()"><div class="profile-avatar">${currentUser.avatar?`<img src="${currentUser.avatar}">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div><div><div class="profile-name">${escapeHtml(currentUser.nickname||currentUser.username)}</div><div class="profile-signature">${currentUser.signature||'点击编辑'}</div></div><span>✏️</span></div>
+                <div class="stats-row"><div class="stat-item" onclick="showWalletDetail()"><div class="stat-number">💰</div><div class="stat-label">钱包</div></div><div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit||60}</div><div class="stat-label">信用</div></div><div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div></div>
+                <div class="profile-collapse"><div class="collapse-header" data-target="pub"><div class="collapse-title">📤 我发布 <span style="font-size:0.7rem;">(${myPub.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-pub">${pubHtml}</div></div>
+                <div class="profile-collapse"><div class="collapse-header" data-target="acc"><div class="collapse-title">📥 我接取 <span style="font-size:0.7rem;">(${myAcc.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-acc">${accHtml}</div></div>
+                <div class="profile-collapse"><div class="collapse-header" data-target="completed"><div class="collapse-title">✅ 已完成 <span style="font-size:0.7rem;">(${myCompleted.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-completed">${completedHtml}</div></div>
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            `;
+            document.querySelectorAll('.collapse-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const targetId = header.getAttribute('data-target');
+                    const content = document.getElementById(`collapse-${targetId}`);
+                    const icon = header.querySelector('.collapse-icon');
+                    if(content.classList.contains('show')) { content.classList.remove('show'); icon.classList.remove('open'); }
+                    else { content.classList.add('show'); icon.classList.add('open'); }
+                });
             });
-        });
+        } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
-    
+
     async function showWalletDetail() {
         const bills = await callApi(`/bills/${currentUser.id}`);
         const modal = document.createElement('div');
-        modal.className = 'modal-mask';
-        modal.innerHTML = `<div class="modal-content"><h3>💰 钱包明细</h3><div style="background:#eef2ff; padding:12px; border-radius:20px; margin-bottom:16px;"><div>当前余额</div><div style="font-size:1.8rem;">¥${(currentUser.balance || 0).toFixed(2)}</div></div><div><strong>提现</strong></div><button class="btn-primary" id="withdrawBtn" style="margin:8px 0;">💸 提现</button><div><strong>账单明细</strong></div><div style="max-height:200px; overflow:auto;">${bills.map(b => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${b.desc}</div><div>${b.amount > 0 ? `+${b.amount}` : b.amount}元</div><div style="font-size:0.7rem;">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}</div><button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button></div>`;
+        modal.className = 'custom-modal';
+        modal.innerHTML = `
+            <div class="custom-modal-content"><h3>💰 钱包明细</h3>
+            <div style="background:#eef2ff; padding:12px; border-radius:16px; margin-bottom:12px;"><div>可用余额</div><div style="font-size:1.6rem;">¥${(currentUser.balance||0).toFixed(2)}</div><div style="font-size:0.7rem; color:#64748b;">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div></div>
+            <div><strong>提现</strong></div><button class="btn-primary" id="withdrawBtn" style="margin:6px 0;">💸 提现</button>
+            <div><strong>账单明细</strong></div><button class="btn-secondary" id="showBillDetailBtn" style="margin-bottom:8px;">📋 查看明细</button>
+            <div id="billDetailContainer" style="max-height:200px; overflow:auto; display:none;"></div>
+            <div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>
+        `;
         document.body.appendChild(modal);
-        modal.querySelector('#withdrawBtn').onclick = () => { alert('提现功能演示（需对接支付接口）'); modal.remove(); };
+        const closeModal = () => modal.remove();
+        modal.querySelector('.confirm-btn').onclick = closeModal;
+        modal.querySelector('#withdrawBtn').onclick = () => {
+            const chooseModal = document.createElement('div');
+            chooseModal.className = 'custom-modal';
+            chooseModal.innerHTML = `<div class="custom-modal-content"><h3>选择提现方式</h3><button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button><button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button><div class="custom-modal-buttons"><button class="cancel-btn">取消</button></div></div>`;
+            document.body.appendChild(chooseModal);
+            chooseModal.querySelector('#withdrawWechatBtn').onclick = () => { showToast('提现到微信（演示模式）'); chooseModal.remove(); modal.remove(); };
+            chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); modal.remove(); };
+            chooseModal.querySelector('.cancel-btn').onclick = () => chooseModal.remove();
+        };
+        modal.querySelector('#showBillDetailBtn').onclick = () => {
+            const container = modal.querySelector('#billDetailContainer');
+            if(container.style.display === 'block') { container.style.display='none'; modal.querySelector('#showBillDetailBtn').innerText='📋 查看明细'; return; }
+            if(bills.length===0) container.innerHTML='<div class="empty-state">暂无记录</div>';
+            else {
+                let html='';
+                for(const b of bills) html+=`<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${b.desc}</div><div>${b.amount>0?`+${b.amount}`:b.amount}元</div><div style="font-size:0.7rem;">${b.createdAt?new Date(b.createdAt).toLocaleString():''}</div></div>`;
+                container.innerHTML = html;
+            }
+            container.style.display='block'; modal.querySelector('#showBillDetailBtn').innerText='🔽 收起明细';
+        };
     }
-    
+
     async function showCreditDetail() {
-        let logs = await callApi(`/credit-logs/${currentUser.id}`);
-        if (!logs || logs.error) logs = [{ reason: '注册奖励', change: 60, time: new Date().toLocaleString() }];
+        const logs = await callApi(`/credit-logs/${currentUser.id}`);
         const modal = document.createElement('div');
-        modal.className = 'modal-mask';
-        modal.innerHTML = `<div class="modal-content"><h3>⭐ 信用明细</h3><div style="max-height:300px; overflow:auto;">${logs.map(l => `<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${l.reason}</div><div>${l.change > 0 ? `+${l.change}` : l.change} 分</div><div style="font-size:0.7rem;">${l.time || new Date(l.createdAt).toLocaleString()}</div></div>`).join('') || '<div class="empty-state">暂无记录</div>'}</div><button class="btn-secondary mt-2" onclick="this.closest('.modal-mask').remove()">关闭</button></div>`;
+        modal.className = 'custom-modal';
+        modal.innerHTML = `<div class="custom-modal-content"><h3>⭐ 信用明细</h3><div style="max-height:300px; overflow:auto;">${logs.map(l=>`<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${l.reason}</div><div>${l.change>0?`+${l.change}`:l.change} 分</div><div style="font-size:0.7rem;">${new Date(l.createdAt).toLocaleString()}</div></div>`).join('')||'<div class="empty-state">暂无记录</div>'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;
         document.body.appendChild(modal);
+        modal.querySelector('.confirm-btn').onclick = () => modal.remove();
     }
-    
+
     window.cancelAcceptedTask = async function(taskId) {
-        if (confirm('取消接取将扣除5信用分，确定吗？')) {
-            const result = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT', body: JSON.stringify({ userId: currentUser.id }) });
-            if (result.success) { alert('已取消接取'); loadProfile(); refreshTaskList(); } else alert(result.error || '取消失败');
-        }
+        showConfirm('确认取消', '取消接取将扣除5信用分，确定吗？', async () => {
+            const result = await callApi(`/tasks/${taskId}/cancel-accept`, {method:'PUT', body:JSON.stringify({userId: currentUser.id})});
+            if(result.success) { showToast('已取消接取'); loadProfile(); refreshTaskList(true); }
+            else showAlert('操作失败', result.error || '取消失败');
+        });
     };
-    
+
     function showEditProfileModal() {
+        if(!currentUser) return;
         const modal = document.createElement('div');
-        modal.className = 'modal-mask';
-        modal.innerHTML = `<div class="modal-content"><h3>编辑资料</h3><div class="form-group"><div class="form-label">头像</div><div id="avatarPreview" style="width:80px;height:80px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">${currentUser.avatar ? `<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${(currentUser.nickname || currentUser.username).charAt(0)}</span>`}</div><input type="file" id="avatarInput" accept="image/*" style="display:none;"><button class="btn-secondary" id="uploadAvatarBtn">更换头像</button></div><div class="form-group"><label>昵称</label><input type="text" id="editNickname" class="form-input" value="${escapeHtml(currentUser.nickname || '')}"></div><div class="form-group"><label>个性签名</label><textarea id="editSignature" class="form-textarea" rows="2">${escapeHtml(currentUser.signature || '')}</textarea></div><div class="form-group"><label>家乡</label><input type="text" id="editHometown" class="form-input" value="${escapeHtml(currentUser.hometown || '')}"></div><div class="double-btn-row" style="display:flex; gap:8px;"><button class="btn-primary" id="saveProfileBtn">保存</button><button class="btn-secondary" onclick="this.closest('.modal-mask').remove()">取消</button></div></div>`;
+        modal.className = 'custom-modal';
+        modal.innerHTML = `
+            <div class="custom-modal-content"><h3>编辑资料</h3>
+            <div class="form-group"><div class="form-label">头像</div><div id="avatarPreview" style="width:70px;height:70px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">${currentUser.avatar?`<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div><input type="file" id="avatarInput" accept="image/*" style="display:none;"><button class="btn-secondary" id="uploadAvatarBtn">更换头像</button></div>
+            <div class="form-group"><label>昵称</label><input type="text" id="editNickname" class="form-input" value="${escapeHtml(currentUser.nickname||'')}"></div>
+            <div class="form-group"><label>个性签名</label><textarea id="editSignature" class="form-textarea" rows="2">${escapeHtml(currentUser.signature||'')}</textarea></div>
+            <div class="form-group"><label>家乡</label><input type="text" id="editHometown" class="form-input" value="${escapeHtml(currentUser.hometown||'')}"></div>
+            <div class="double-btn-row" style="display:flex; gap:8px; margin-top:16px;"><button class="btn-primary" id="saveProfileBtn">保存</button><button class="btn-secondary" id="cancelEditBtn">取消</button></div></div>
+        `;
         document.body.appendChild(modal);
         const avatarInput = modal.querySelector('#avatarInput');
         const avatarPreview = modal.querySelector('#avatarPreview');
         modal.querySelector('#uploadAvatarBtn').onclick = () => avatarInput.click();
         avatarInput.onchange = (e) => {
             const file = e.target.files[0];
-            if (file) { const reader = new FileReader(); reader.onload = (ev) => { avatarPreview.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`; currentUser.avatar = ev.target.result; }; reader.readAsDataURL(file); }
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => { avatarPreview.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`; currentUser.avatar = ev.target.result; };
+                reader.readAsDataURL(file);
+            }
         };
         modal.querySelector('#saveProfileBtn').onclick = async () => {
-            const updates = { nickname: modal.querySelector('#editNickname').value.trim() || currentUser.username, signature: modal.querySelector('#editSignature').value, hometown: modal.querySelector('#editHometown').value, avatar: currentUser.avatar || '' };
-            const result = await callApi(`/user/${currentUser.id}`, { method: 'PUT', body: JSON.stringify(updates) });
-            if (result.success !== false) { currentUser = { ...currentUser, ...updates }; localStorage.setItem('user', JSON.stringify(currentUser)); loadProfile(); alert('保存成功'); modal.remove(); } else alert('保存失败');
+            const updates = { nickname: modal.querySelector('#editNickname').value.trim()||currentUser.username, signature: modal.querySelector('#editSignature').value, hometown: modal.querySelector('#editHometown').value, avatar: currentUser.avatar||'' };
+            const result = await callApi(`/user/${currentUser.id}`, {method:'PUT', body:JSON.stringify(updates)});
+            if(result.success!==false) { currentUser={...currentUser,...updates}; localStorage.setItem('user',JSON.stringify(currentUser)); loadProfile(); showToast('保存成功'); modal.remove(); }
+            else showAlert('保存失败','请重试');
         };
+        modal.querySelector('#cancelEditBtn').onclick = () => modal.remove();
     }
-    
+
+    async function showRealNameAuth() {
+        if(currentUser.idCardVerified) { showAlert('提示','您已经实名认证过了'); return; }
+        const modal = document.createElement('div');
+        modal.className = 'custom-modal';
+        modal.innerHTML = `<div class="custom-modal-content"><h3>🆔 实名认证</h3><div class="form-group"><label>真实姓名</label><input id="realNameInput" class="form-input" placeholder="请输入真实姓名"></div><div class="form-group"><label>身份证号</label><input id="idCardInput" class="form-input" placeholder="请输入身份证号"></div><div class="double-btn-row" style="display:flex; gap:8px; margin-top:16px;"><button class="btn-primary" id="submitAuthBtn">提交认证</button><button class="btn-secondary" id="cancelAuthBtn">取消</button></div></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('#submitAuthBtn').onclick = async () => {
+            const realName = modal.querySelector('#realNameInput').value.trim();
+            const idCard = modal.querySelector('#idCardInput').value.trim();
+            if(!realName || idCard.length<15) { showAlert('提示','请填写正确的姓名和身份证号'); return; }
+            const result = await callApi('/verify-id', {method:'POST', body:JSON.stringify({userId: currentUser.id, realName, idCard})});
+            if(result.success) { showToast('实名认证成功'); currentUser.idCardVerified=true; localStorage.setItem('user',JSON.stringify(currentUser)); modal.remove(); loadProfile(); }
+            else showAlert('认证失败', result.error||'信息无效');
+        };
+        modal.querySelector('#cancelAuthBtn').onclick = () => modal.remove();
+    }
+
     function logout() {
-        if (confirm('退出登录？')) { localStorage.removeItem('user'); currentUser = null; document.getElementById('mainApp').style.display = 'none'; document.getElementById('loginPage').classList.add('active'); if (countdownTimer) clearInterval(countdownTimer); if (chatState.pollInterval) clearInterval(chatState.pollInterval); }
+        showConfirm('确认退出', '确定退出登录吗？', () => {
+            localStorage.removeItem('user');
+            currentUser = null;
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('loginPage').classList.add('active');
+            if(countdownTimer) clearInterval(countdownTimer);
+            if(chatState.pollInterval) clearInterval(chatState.pollInterval);
+        });
     }
-    
+
     function switchPage(page) {
-        if (page === 'message') { if (chatState.active) closeChat(); document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('messagePage').classList.add('active'); renderMessageList(); return; }
-        if (page === 'publish') resetPublishForm();
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        if(page === 'message') {
+            if(chatState.active) closeChat();
+            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+            document.getElementById('messagePage').classList.add('active');
+            renderMessageList();
+            return;
+        }
+        if(page === 'publish') resetPublishForm();
+        document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
         document.getElementById(`${page}Page`).classList.add('active');
-        if (page === 'home') refreshTaskList();
-        if (page === 'profile') loadProfile();
+        if(page === 'home') refreshTaskList();
+        if(page === 'profile') loadProfile();
     }
-    
-    async function initData() { const result = await callApi('/init', { method: 'POST' }); alert(result.success ? '初始化成功！\n测试账号：xiaoming/123456' : '初始化失败'); }
-    
+
     // 事件绑定
     document.getElementById('doLoginBtn').onclick = doLogin;
     document.getElementById('doRegisterBtn').onclick = async () => {
@@ -1036,29 +1535,38 @@
         const confirm = document.getElementById('regConfirmPwd').value;
         const nickname = document.getElementById('regNickname').value.trim();
         const phone = document.getElementById('regPhone').value.trim();
-        const errorDiv = document.getElementById('registerError');
-        if (!username || !password) { errorDiv.innerText = '请填写用户名和密码'; return; }
-        if (password !== confirm) { errorDiv.innerText = '两次密码不一致'; return; }
-        const result = await callApi('/register', { method: 'POST', body: JSON.stringify({ username, password, nickname, phone }) });
-        if (result.success) { alert('注册成功，请登录'); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); } else errorDiv.innerText = result.error || '注册失败';
+        if(!username || !password) { showAlert('提示','请填写用户名和密码'); return; }
+        if(password !== confirm) { showAlert('提示','两次密码不一致'); return; }
+        try {
+            const result = await callApi('/register', {method:'POST', body:JSON.stringify({username,password,nickname,phone})});
+            if(result.success) { showToast('注册成功，请登录'); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); }
+            else showAlert('注册失败', result.error);
+        } catch(err) { showAlert('注册失败', err.message); }
     };
     document.getElementById('doPublishBtn').onclick = publishTask;
-    document.getElementById('initDataBtn').onclick = initData;
     document.getElementById('showRegisterBtn').onclick = (e) => { e.preventDefault(); document.getElementById('loginPage').classList.remove('active'); document.getElementById('registerPage').classList.add('active'); };
     document.getElementById('showLoginBtn').onclick = (e) => { e.preventDefault(); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); };
     document.getElementById('getLocationBtn')?.addEventListener('click', getCurrentLocation);
-    document.getElementById('mediaInput')?.addEventListener('change', (e) => { if (e.target.files.length) handleMediaFiles(e.target.files); });
-    
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        document.getElementById('mainApp').style.display = 'block';
-        document.getElementById('loginPage').classList.remove('active');
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(pos => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; refreshTaskList(); }, () => refreshTaskList());
-        } else refreshTaskList();
-        loadProfile(); initPullToRefresh(); initFiltersAndCategories(); renderMessageList();
-    }
+    document.getElementById('mediaInput')?.addEventListener('change', (e) => { if(e.target.files.length) handleMediaFiles(e.target.files); });
+
+    (async () => {
+        const savedUser = localStorage.getItem('user');
+        if(savedUser) {
+            currentUser = JSON.parse(savedUser);
+            document.getElementById('mainApp').style.display = 'block';
+            document.getElementById('loginPage').classList.remove('active');
+            const loc = await getNativeUserLocation();
+            if(loc) userLocation = loc;
+            await refreshTaskList(true);
+            loadProfile();
+            initPullToRefresh();
+            initFiltersAndCategories();
+            renderMessageList();
+            updateUnreadBadge();
+            switchPage('home');
+            initBackButtonHandler();
+        }
+    })();
 </script>
 </body>
 </html>
