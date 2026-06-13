@@ -148,6 +148,7 @@
         .image-preview-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
         .image-preview-modal img{max-width:90%;max-height:90%;object-fit:contain;transition:transform .2s}
         .image-preview-modal .close-preview{position:absolute;top:20px;right:20px;color:#fff;font-size:2rem;background:rgba(0,0,0,0.5);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
+        .network-toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#ffc107;padding:6px 12px;border-radius:30px;font-size:.75rem;z-index:2000;white-space:nowrap}
     </style>
 </head>
 <body>
@@ -229,45 +230,61 @@
     let geocodeCache = new Map();
     let deletedConversations = new Set();
     let tasksCache = { data: null, timestamp: 0, ttl: 5 * 60 * 1000 };
-    let isRefreshingTasks = false;
     let refreshThrottle = false;
+    let networkToast = null;
 
-    // ========== 辅助函数 ==========
-    function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
-    function calculateDistance(lat1,lng1,lat2,lng2) {
-        const R=6371; const dLat=(lat2-lat1)*Math.PI/180; const dLng=(lng2-lng1)*Math.PI/180;
-        const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-        const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); return (R*c).toFixed(1);
+    function showNetworkSlow() {
+        if (networkToast) return;
+        networkToast = document.createElement('div');
+        networkToast.className = 'network-toast';
+        networkToast.innerText = '⚠️ 网络较慢，请稍候...';
+        document.body.appendChild(networkToast);
+        setTimeout(() => {
+            if (networkToast) networkToast.remove();
+            networkToast = null;
+        }, 3000);
     }
 
-    async function fetchWithTimeout(url, options = {}, timeout = 8000) {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeout);
-        try {
-            const response = await fetch(url, { ...options, signal: controller.signal });
-            clearTimeout(id);
-            return response;
-        } catch (err) {
-            clearTimeout(id);
-            if (err.name === 'AbortError') throw new Error('请求超时，请检查网络');
-            throw err;
+    async function fetchWithTimeout(url, options = {}, timeout = 10000, retries = 1) {
+        let lastError;
+        for (let i = 0; i <= retries; i++) {
+            try {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeout);
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response;
+            } catch (err) {
+                lastError = err;
+                if (i < retries) {
+                    await new Promise(r => setTimeout(r, 1000));
+                    showNetworkSlow();
+                }
+            }
         }
+        throw lastError;
     }
 
     async function callApi(url, options={}) {
         const fullUrl = API_BASE + url;
         try {
-            const res = await fetchWithTimeout(fullUrl, { headers: { 'Content-Type': 'application/json' }, ...options }, 8000);
-            if(!res.ok) {
-                let msg = `HTTP ${res.status}`;
-                try { const data = await res.json(); msg = data.error || msg; } catch(e) {}
-                throw new Error(msg);
-            }
-            return await res.json();
+            const res = await fetchWithTimeout(fullUrl, { headers: { 'Content-Type': 'application/json' }, ...options }, 10000, 1);
+            const data = await res.json();
+            if (res.ok) return data;
+            throw new Error(data.error || `HTTP ${res.status}`);
         } catch(err) {
             console.error('[API错误]', err);
+            showNetworkSlow();
             throw err;
         }
+    }
+
+    function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+    function calculateDistance(lat1,lng1,lat2,lng2) {
+        const R=6371; const dLat=(lat2-lat1)*Math.PI/180; const dLng=(lng2-lng1)*Math.PI/180;
+        const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+        const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); return (R*c).toFixed(1);
     }
 
     async function geocodeAddress(address) {
@@ -288,17 +305,17 @@
             } catch(e) {}
         }
         try {
-            const url = `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(address)}&key=${AMAP_KEY}&output=JSON`;
-            const resp = await fetchWithTimeout(url, {}, 5000);
-            const data = await resp.json();
-            if (data.status==='1' && data.geocodes && data.geocodes.length>0) {
-                const loc = data.geocodes[0].location.split(','); const lng=parseFloat(loc[0]), lat=parseFloat(loc[1]);
-                const result={lat,lng};
+            const result = await callApi('/geocode', { method: 'POST', body: JSON.stringify({ address }) });
+            if (result && result.lat && result.lng) {
                 geocodeCache.set(address, result);
-                localStorage.setItem(cacheKey, JSON.stringify({ lat, lng, expire: Date.now() + 7*24*60*60*1000 }));
+                localStorage.setItem(cacheKey, JSON.stringify({ lat: result.lat, lng: result.lng, expire: Date.now() + 7*24*60*60*1000 }));
                 return result;
-            } return null;
-        } catch(e){ console.error('地理编码失败',e); return null; }
+            }
+            return null;
+        } catch(e) {
+            console.error('地理编码失败', e);
+            return null;
+        }
     }
 
     async function enrichTasksWithDistance(tasks) {

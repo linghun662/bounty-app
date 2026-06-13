@@ -3,8 +3,18 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 
+// 确保 fetch 可用（Node 18+ 内置，低版本需要 node-fetch）
+let fetch;
+try {
+  fetch = global.fetch;
+  if (!fetch) throw new Error();
+} catch(e) {
+  fetch = require('node-fetch');
+}
+
 const app = express();
 
+// CORS 配置（支持 Capacitor 原生应用和 file 协议）
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -22,6 +32,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 连接 MongoDB
 mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty', {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
@@ -94,6 +105,16 @@ const CreditLogSchema = new mongoose.Schema({
 });
 const CreditLog = mongoose.model('CreditLog', CreditLogSchema);
 
+// 地理编码缓存 Schema
+const GeocodeCacheSchema = new mongoose.Schema({
+  address: { type: String, unique: true },
+  lat: Number,
+  lng: Number,
+  expires: { type: Date, default: () => Date.now() + 7*24*60*60*1000 }
+});
+const GeocodeCache = mongoose.models.GeocodeCache || mongoose.model('GeocodeCache', GeocodeCacheSchema);
+
+// ==================== 辅助函数 ====================
 async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
   const user = await User.findById(userId);
   if (!user) throw new Error(`用户不存在: ${userId}`);
@@ -105,6 +126,7 @@ async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
   return user;
 }
 
+// ==================== 自动初始化默认数据（仅当数据库为空时） ====================
 async function initDefaultData() {
   const userCount = await User.countDocuments();
   if (userCount === 0) {
@@ -368,7 +390,7 @@ app.get('/api/user/:userId/conversations', async (req, res) => {
         taskId: task._id,
         otherId,
         otherName,
-        lastMsg: lastMsg?.text || null,   // 关键：无消息时为 null
+        lastMsg: lastMsg?.text || null,
         reward: task.reward,
         taskTitle: task.title,
         unread: unreadCount
@@ -415,6 +437,41 @@ app.delete('/api/conversations/:taskId/:userId', async (req, res) => {
   res.json({ success: true });
 });
 
+// 地理编码代理接口（使用缓存）
+app.post('/api/geocode', async (req, res) => {
+  const { address } = req.body;
+  const AMAP_KEY = '30107d62cf0ec682643d1097a48f7da4';
+  if (!address) return res.status(400).json({ error: '地址不能为空' });
+  try {
+    let cached = await GeocodeCache.findOne({ address });
+    if (cached && cached.expires > Date.now()) {
+      return res.json({ lat: cached.lat, lng: cached.lng });
+    }
+    const url = `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(address)}&key=${AMAP_KEY}&output=JSON`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
+      const loc = data.geocodes[0].location.split(',');
+      const lng = parseFloat(loc[0]);
+      const lat = parseFloat(loc[1]);
+      if (cached) {
+        cached.lat = lat;
+        cached.lng = lng;
+        cached.expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
+        await cached.save();
+      } else {
+        await GeocodeCache.create({ address, lat, lng });
+      }
+      res.json({ lat, lng });
+    } else {
+      res.status(404).json({ error: '地址无法解析' });
+    }
+  } catch (err) {
+    console.error('地理编码错误', err);
+    res.status(500).json({ error: '地理编码失败' });
+  }
+});
+
 app.post('/api/verify-id', async (req, res) => {
   const { userId, realName, idCard } = req.body;
   if (realName && idCard.length >= 15) {
@@ -430,6 +487,7 @@ app.get('/api/credit-logs/:userId', async (req, res) => {
   res.json(logs);
 });
 
+// 前端静态文件
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
