@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>赏金集市 · 原生版</title>
     <style>
-        /* 完整样式（与之前一致，确保所有样式存在） */
+        /* 完整样式（与之前一致） */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         body{background:#f5f7fb;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1e293b;padding-bottom:70px}
         .app-container{width:100%;background:#f5f7fb;min-height:100vh}
@@ -974,7 +974,11 @@
         try {
             await callApi(`/conversations/${taskId}/${currentUser.id}`, {method:'DELETE', body:JSON.stringify({userId: currentUser.id})});
             showToast('聊天已删除');
-            await renderMessageList();  // 刷新会话列表，会话框将消失
+            // 立即从 DOM 中移除会话卡片（双保险）
+            const card = document.querySelector(`.task-card[data-taskid="${taskId}"]`);
+            if (card) card.remove();
+            // 重新拉取并渲染消息列表（确保持久化）
+            await renderMessageList();
             updateUnreadBadge();
             if(chatState.active && chatState.taskId === taskId) {
                 closeChat();
@@ -1163,7 +1167,7 @@
         }
         let html = '<div class="card"><strong>📬 消息记录</strong></div>';
         for(let c of convs) {
-            // 关键：如果 lastMsg 为空且未读为0，则跳过（不显示该会话）
+            // 如果 lastMsg 为空且未读为0，则跳过（不显示该会话）
             if (!c.lastMsg && c.unread === 0) continue;
             let unreadHtml = '';
             if(c.unread > 0) {
