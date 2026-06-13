@@ -1,10 +1,31 @@
 {
-  "name": "bounty-api",
+  "name": "bounty-mobile-app",
   "version": "1.0.0",
-  "scripts": { "start": "node server.js" },
+  "description": "赏金集市原生应用",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo '前端已就绪'",
+    "sync": "npx cap sync",
+    "open:android": "npx cap open android",
+    "open:ios": "npx cap open ios"
+  },
   "dependencies": {
-    "express": "^4.18.2",
-    "mongoose": "^7.5.0",
-    "cors": "^2.8.5"
+    "@capacitor/android": "^5.7.0",
+    "@capacitor/app": "^5.0.6",
+    "@capacitor/camera": "^5.0.6",
+    "@capacitor/cli": "^5.7.0",
+    "@capacitor/core": "^5.7.0",
+    "@capacitor/filesystem": "^5.1.4",
+    "@capacitor/geolocation": "^5.0.6",
+    "@capacitor/ios": "^5.7.0",
+    "@capacitor/splash-screen": "^5.0.6",
+    "@capacitor/status-bar": "^5.0.6",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.7.0",
+    "multer": "^2.1.1",
+    "node-fetch": "^2.7.0"
   }
 }
