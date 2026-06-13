@@ -256,6 +256,11 @@
                 return response;
             } catch (err) {
                 lastError = err;
+                if (err.name === 'AbortError') {
+                    console.warn(`请求超时 (${timeout}ms)，第 ${i+1} 次重试`);
+                    if (i < retries) await new Promise(r => setTimeout(r, 1000));
+                    continue;
+                }
                 if (i < retries) {
                     await new Promise(r => setTimeout(r, 1000));
                     showNetworkSlow();
@@ -276,7 +281,7 @@
             headers['Authorization'] = `Bearer ${token}`;
         }
         try {
-            const res = await fetchWithTimeout(fullUrl, { ...options, headers }, 10000, 1);
+            const res = await fetchWithTimeout(fullUrl, { ...options, headers }, 15000, 1);
             if (res.status === 401) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
@@ -291,6 +296,10 @@
             return data;
         } catch (err) {
             console.error('[API错误]', err);
+            if (err.name === 'AbortError') {
+                showToast('请求超时，请检查网络后重试');
+                throw new Error('请求超时');
+            }
             showNetworkSlow();
             throw err;
         }
@@ -1013,7 +1022,11 @@
             }
             switchPage('detail');
         } catch(e) {
-            showAlert('加载失败', e.message);
+            let errMsg = e.message || '未知错误';
+            if (e.name === 'AbortError' || errMsg.includes('aborted') || errMsg.includes('超时')) {
+                errMsg = '请求超时，请检查网络后重试';
+            }
+            showAlert('加载失败', errMsg);
         }
     };
 

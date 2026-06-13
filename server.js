@@ -16,6 +16,20 @@ try {
   fetch = require('node-fetch');
 }
 
+// 带超时的 fetch 封装（用于高德 API）
+async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(id);
+    return response;
+  } catch (err) {
+    clearTimeout(id);
+    throw err;
+  }
+}
+
 const app = express();
 
 // CORS 配置
@@ -96,7 +110,16 @@ const TaskSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
+
+// 添加索引优化查询
+TaskSchema.index({ status: 1, createdAt: -1 });
+TaskSchema.index({ publisherId: 1 });
+TaskSchema.index({ takerId: 1 });
+
 const Task = mongoose.model('Task', TaskSchema);
+
+// 确保索引创建
+Task.ensureIndexes().catch(err => console.error('索引创建失败:', err));
 
 const MessageSchema = new mongoose.Schema({
   taskId: String,
@@ -224,16 +247,14 @@ app.post('/api/login', async (req, res) => {
   if (!user) return res.status(401).json({ error: '用户名或密码错误' });
 
   let isValid = false;
-  // 尝试 bcrypt 验证
   try {
     isValid = await bcrypt.compare(password, user.password);
   } catch(e) { isValid = false; }
 
-  // 如果 bcrypt 失败且旧密码是明文（长度小于 60），尝试明文比对并自动升级
+  // 兼容旧明文密码
   if (!isValid && user.password && user.password.length < 60) {
     if (user.password === password) {
       isValid = true;
-      // 升级为 bcrypt 哈希
       const hashedPassword = await bcrypt.hash(password, 10);
       await User.updateOne({ _id: user._id }, { $set: { password: hashedPassword } });
       console.log(`用户 ${username} 的密码已从明文升级为 bcrypt`);
@@ -506,7 +527,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 地理编码代理（正向）
+// 地理编码代理（正向） - 使用带超时的 fetch
 app.post('/api/geocode', async (req, res) => {
   const { address } = req.body;
   const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
@@ -517,7 +538,7 @@ app.post('/api/geocode', async (req, res) => {
       return res.json({ lat: cached.lat, lng: cached.lng });
     }
     const url = `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(address)}&key=${AMAP_KEY}&output=JSON`;
-    const response = await fetch(url);
+    const response = await fetchWithTimeout(url, {}, 5000);
     const data = await response.json();
     if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
       const loc = data.geocodes[0].location.split(',');
@@ -541,14 +562,14 @@ app.post('/api/geocode', async (req, res) => {
   }
 });
 
-// 逆地理编码
+// 逆地理编码 - 使用带超时的 fetch
 app.post('/api/regeo', async (req, res) => {
   const { lat, lng } = req.body;
   const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
   if (!lat || !lng) return res.status(400).json({ error: '缺少经纬度' });
   try {
     const url = `https://restapi.amap.com/v3/geocode/regeo?output=json&location=${lng},${lat}&key=${AMAP_KEY}&radius=200&extensions=all`;
-    const response = await fetch(url);
+    const response = await fetchWithTimeout(url, {}, 5000);
     const data = await response.json();
     if (data.status === '1' && data.regeocode) {
       let address = data.regeocode.formatted_address;
