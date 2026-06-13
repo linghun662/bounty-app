@@ -18,7 +18,7 @@ try {
 
 const app = express();
 
-// CORS 配置（支持 Capacitor 原生应用和 file 协议）
+// CORS 配置
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -40,7 +40,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-// 配置 multer 存储
+// multer 配置
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
@@ -49,9 +49,8 @@ const storage = multer.diskStorage({
     cb(null, unique + ext);
   }
 });
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } }); // 限制10MB
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// JWT 密钥（生产环境请使用环境变量）
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-me';
 
 // 连接 MongoDB
@@ -73,7 +72,7 @@ const UserSchema = new mongoose.Schema({
   signature: String,
   hometown: String,
   avatar: String,
-  deletedConversations: [{ type: String }] // 软删除会话
+  deletedConversations: [{ type: String }]
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -128,7 +127,6 @@ const CreditLogSchema = new mongoose.Schema({
 });
 const CreditLog = mongoose.model('CreditLog', CreditLogSchema);
 
-// 地理编码缓存 Schema
 const GeocodeCacheSchema = new mongoose.Schema({
   address: { type: String, unique: true },
   lat: Number,
@@ -149,7 +147,6 @@ async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
   return user;
 }
 
-// JWT 鉴权中间件
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: '未提供 token' });
@@ -225,8 +222,26 @@ app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   const user = await User.findOne({ username });
   if (!user) return res.status(401).json({ error: '用户名或密码错误' });
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.status(401).json({ error: '用户名或密码错误' });
+
+  let isValid = false;
+  // 尝试 bcrypt 验证
+  try {
+    isValid = await bcrypt.compare(password, user.password);
+  } catch(e) { isValid = false; }
+
+  // 如果 bcrypt 失败且旧密码是明文（长度小于 60），尝试明文比对并自动升级
+  if (!isValid && user.password && user.password.length < 60) {
+    if (user.password === password) {
+      isValid = true;
+      // 升级为 bcrypt 哈希
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await User.updateOne({ _id: user._id }, { $set: { password: hashedPassword } });
+      console.log(`用户 ${username} 的密码已从明文升级为 bcrypt`);
+    }
+  }
+
+  if (!isValid) return res.status(401).json({ error: '用户名或密码错误' });
+
   const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
   res.json({
     success: true,
@@ -483,17 +498,15 @@ app.delete('/api/conversations/:taskId/:userId', authMiddleware, async (req, res
   res.json({ success: true });
 });
 
-// 上传文件接口
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: '没有文件' });
   const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
   res.json({ url: fileUrl });
 });
 
-// 静态文件服务
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 地理编码代理接口（正向）
+// 地理编码代理（正向）
 app.post('/api/geocode', async (req, res) => {
   const { address } = req.body;
   const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
@@ -528,7 +541,7 @@ app.post('/api/geocode', async (req, res) => {
   }
 });
 
-// 逆地理编码接口（根据经纬度获取地址）
+// 逆地理编码
 app.post('/api/regeo', async (req, res) => {
   const { lat, lng } = req.body;
   const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
@@ -566,7 +579,7 @@ app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
   res.json(logs);
 });
 
-// ==================== 前端静态文件托管（修复 Express 5 通配符语法） ====================
+// ==================== 前端静态文件托管 ====================
 app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
