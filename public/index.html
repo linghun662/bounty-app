@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>赏金集市 · 原生版</title>
     <style>
-        /* 完整样式（与之前一致） */
+        /* ========== 完整样式（与之前一致） ========== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         body{background:#f5f7fb;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1e293b;padding-bottom:70px}
         .app-container{width:100%;background:#f5f7fb;min-height:100vh}
@@ -224,7 +224,6 @@
     let currentUser = null, pendingMedia = [], userLocation = null, allTasks = [], currentCategory = 'all', currentSort = 'time', countdownTimer = null, lastPage = null;
     let chatState = { active: false, taskId: null, otherId: null, otherName: '', reward: 0, title: '', pollInterval: null, messagesArea: null, lastMessageCount: 0 };
     let geocodeCache = new Map();
-    let isLongPressing = false;
 
     // ========== 通用函数 ==========
     function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
@@ -970,21 +969,24 @@
         } catch(err) { showAlert('删除失败', err.message); }
     }
 
+    // ========== 关键修复：删除整个会话（立即移除DOM + 刷新列表）==========
     async function deleteConversation(taskId) {
         try {
             await callApi(`/conversations/${taskId}/${currentUser.id}`, {method:'DELETE', body:JSON.stringify({userId: currentUser.id})});
             showToast('聊天已删除');
-            // 立即从 DOM 中移除会话卡片（双保险）
+            // 立即从DOM中移除对应的卡片（双保险，确保界面立即消失）
             const card = document.querySelector(`.task-card[data-taskid="${taskId}"]`);
             if (card) card.remove();
-            // 重新拉取并渲染消息列表（确保持久化）
+            // 再重新拉取会话列表，确保与后端同步（如果后端还有残留，再次过滤）
             await renderMessageList();
             updateUnreadBadge();
             if(chatState.active && chatState.taskId === taskId) {
                 closeChat();
                 switchPage('message');
             }
-        } catch(err) { showAlert('删除失败', err.message); }
+        } catch(err) {
+            showAlert('删除失败', err.message);
+        }
     }
 
     async function refreshMessagesOnly() {
@@ -1150,7 +1152,7 @@
         chatState.messagesArea = null;
     }
 
-    // ========== 消息列表渲染（关键修复：过滤掉 lastMsg 为空的会话）==========
+    // ========== 消息列表渲染（关键过滤：无消息的会话不显示）==========
     async function renderMessageList() {
         if(!currentUser || !currentUser.id) {
             const container = document.getElementById('messageContainer');
@@ -1167,7 +1169,7 @@
         }
         let html = '<div class="card"><strong>📬 消息记录</strong></div>';
         for(let c of convs) {
-            // 如果 lastMsg 为空且未读为0，则跳过（不显示该会话）
+            // 如果没有消息且未读为0，则跳过该会话（不显示）
             if (!c.lastMsg && c.unread === 0) continue;
             let unreadHtml = '';
             if(c.unread > 0) {
@@ -1220,7 +1222,7 @@
         if(badge) { if(totalUnread>0) { badge.innerText = totalUnread>99?'99+':totalUnread; badge.style.display='inline-block'; } else badge.style.display='none'; }
     }
 
-    // ========== 个人主页 ==========
+    // ========== 个人主页（完整） ==========
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
