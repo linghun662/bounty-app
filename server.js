@@ -7,7 +7,6 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-// 确保 fetch 可用
 let fetch;
 try {
   fetch = global.fetch;
@@ -16,7 +15,6 @@ try {
   fetch = require('node-fetch');
 }
 
-// 带超时的 fetch 封装
 async function fetchWithTimeout(url, options = {}, timeout = 5000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -49,7 +47,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 确保 uploads 目录存在
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -100,8 +97,8 @@ const TaskSchema = new mongoose.Schema({
   takerName: { type: String, default: null },
   takenAt: { type: Date, default: null },
   travelStatus: { type: String, default: 'idle' },
-  travelStartTime: { type: Number, default: null },   // 出发时间戳（毫秒）
-  estimatedMinutes: { type: Number, default: null }, // 预计用时（分钟）
+  travelStartTime: { type: Number, default: null },   // 关键字段：出发时间戳
+  estimatedMinutes: { type: Number, default: null }, // 预计分钟数
   takerCompleted: { type: Boolean, default: false },
   proofMedia: { type: Array, default: [] },
   mediaList: Array,
@@ -353,7 +350,7 @@ app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
   task.takerName = null;
   task.takenAt = null;
   task.travelStatus = 'idle';
-  task.travelStartTime = null;   // 清除出发时间
+  task.travelStartTime = null;
   task.estimatedMinutes = null;
   task.takerCompleted = false;
   await task.save();
@@ -366,7 +363,6 @@ app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
   res.json({ success: true });
 });
 
-// 更新任务状态（出发、到达等），并保存 travelStartTime 和 estimatedMinutes
 app.put('/api/tasks/:id/status', authMiddleware, async (req, res) => {
   const { travelStatus, estimatedMinutes, travelStartTime } = req.body;
   const update = { updatedAt: new Date() };
@@ -603,7 +599,6 @@ app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
   res.json(logs);
 });
 
-// 前端静态文件托管
 app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
