@@ -1262,17 +1262,11 @@
             await callApi(`/tasks/${taskId}/reward`, {method:'PUT', body:JSON.stringify({reward: price})});
             await sendMessage(taskId, `✅ 同意议价，价格调整为 ¥${price}`, false);
             showToast(`已同意议价，新价格 ¥${price}`);
-            // 更新聊天界面的赏金显示
             if(chatState.active && chatState.taskId === taskId) {
                 chatState.reward = price;
-                const headerNameSpan = document.querySelector('.chat-header-name');
-                if(headerNameSpan) {
-                    // 可以更新任务卡片中的价格显示，但简单起见只更新 chatState
-                }
-                // 刷新聊天消息（会显示新消息）
+                // 更新聊天界面中的任务卡片价格显示（可选，简单刷新即可）
                 await refreshMessagesOnly();
             } else {
-                // 如果不在聊天界面，只刷新列表
                 renderMessageList();
                 if(document.getElementById('detailPage').classList.contains('active')) viewTask(taskId, lastPage);
             }
@@ -1393,10 +1387,14 @@
             localStorage.setItem('user', JSON.stringify(currentUser));
             document.getElementById('headerBalance').innerHTML = `余额: ¥${(currentUser.balance||0).toFixed(2)}`;
             const allTasks = await callApi('/tasks/all');
-            const myPub = (allTasks||[]).filter(t => t.publisherId === currentUser.id && t.status !== 'cancelled');
-            const myAcc = (allTasks||[]).filter(t => t.takerId === currentUser.id && t.status !== 'completed' && t.status !== 'cancelled');
-            const myCompleted = (allTasks||[]).filter(t => t.takerId === currentUser.id && t.status === 'completed');
-            const pubHtml = myPub.map(t => {
+            // 我发布的任务（未完成且未取消）
+            const myPubOngoing = (allTasks||[]).filter(t => t.publisherId === currentUser.id && t.status !== 'completed' && t.status !== 'cancelled');
+            // 我接取的任务（未完成且未取消）
+            const myAccOngoing = (allTasks||[]).filter(t => t.takerId === currentUser.id && t.status !== 'completed' && t.status !== 'cancelled');
+            // 已完成的任务（包括我发布完成的和接取完成的）
+            const myCompleted = (allTasks||[]).filter(t => (t.publisherId === currentUser.id || t.takerId === currentUser.id) && t.status === 'completed');
+            
+            const pubHtml = myPubOngoing.map(t => {
                 let progressText = '';
                 if(t.status === 'ongoing') {
                     if(t.takerName) {
@@ -1418,13 +1416,34 @@
                 else if(t.status === 'cancelled') { statusClass='cancelled'; statusText='已取消'; }
                 return `<div class="profile-task-item" onclick="viewTask('${t._id}','profile')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title">${escapeHtml(t.title)}</div><span class="profile-task-status ${statusClass}">${statusText}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div>${progressText}${cancelBtn}</div>`;
             }).join('') || '<div class="empty-state">暂无</div>';
-            const accHtml = myAcc.map(t => `<div class="profile-task-item" onclick="viewTask('${t._id}','profile')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title">${escapeHtml(t.title)}</div><span class="profile-task-status ongoing">${t.travelStatus==='idle'?'待出发':(t.travelStatus==='traveling'?'行程中':'已到达')}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div><div class="task-actions"><button class="btn-danger" onclick="event.stopPropagation(); cancelAcceptedTask('${t._id}')">取消接取</button></div></div>`).join('') || '<div class="empty-state">暂无</div>';
-            const completedHtml = myCompleted.map(t => `<div class="profile-task-item" onclick="viewTask('${t._id}','profile')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title">${escapeHtml(t.title)}</div><span class="profile-task-status completed">已完成</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div></div>`).join('') || '<div class="empty-state">暂无</div>';
+            
+            const accHtml = myAccOngoing.map(t => `<div class="profile-task-item" onclick="viewTask('${t._id}','profile')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title">${escapeHtml(t.title)}</div><span class="profile-task-status ongoing">${t.travelStatus==='idle'?'待出发':(t.travelStatus==='traveling'?'行程中':'已到达')}</span></div><div class="profile-task-amount">💰 ${t.reward}元</div></div><div class="task-actions"><button class="btn-danger" onclick="event.stopPropagation(); cancelAcceptedTask('${t._id}')">取消接取</button></div></div>`).join('') || '<div class="empty-state">暂无</div>';
+            
+            // 已完成的任务（区分角色）
+            let completedHtml = '';
+            if(myCompleted.length === 0) {
+                completedHtml = '<div class="empty-state">暂无</div>';
+            } else {
+                completedHtml = myCompleted.map(t => {
+                    const role = t.publisherId === currentUser.id ? '发布者' : (t.takerId === currentUser.id ? '接取者' : '');
+                    return `<div class="profile-task-item" onclick="viewTask('${t._id}','profile')">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div class="profile-task-title">${escapeHtml(t.title)}</div>
+                                <span class="profile-task-status completed">已完成</span>
+                                ${role ? `<span style="margin-left:6px; font-size:0.6rem; color:#64748b;">(${role})</span>` : ''}
+                            </div>
+                            <div class="profile-task-amount">💰 ${t.reward}元</div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+            
             container.innerHTML = `
                 <div class="profile-header" onclick="showEditProfileModal()"><div class="profile-avatar">${currentUser.avatar?`<img src="${currentUser.avatar}">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div><div><div class="profile-name">${escapeHtml(currentUser.nickname||currentUser.username)}</div><div class="profile-signature">${currentUser.signature||'点击编辑'}</div></div><span>✏️</span></div>
                 <div class="stats-row"><div class="stat-item" onclick="showWalletDetail()"><div class="stat-number">💰</div><div class="stat-label">钱包</div></div><div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit||60}</div><div class="stat-label">信用</div></div><div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div></div>
-                <div class="profile-collapse"><div class="collapse-header" data-target="pub"><div class="collapse-title">📤 我发布 <span style="font-size:0.7rem;">(${myPub.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-pub">${pubHtml}</div></div>
-                <div class="profile-collapse"><div class="collapse-header" data-target="acc"><div class="collapse-title">📥 我接取 <span style="font-size:0.7rem;">(${myAcc.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-acc">${accHtml}</div></div>
+                <div class="profile-collapse"><div class="collapse-header" data-target="pub"><div class="collapse-title">📤 我发布 <span style="font-size:0.7rem;">(${myPubOngoing.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-pub">${pubHtml}</div></div>
+                <div class="profile-collapse"><div class="collapse-header" data-target="acc"><div class="collapse-title">📥 我接取 <span style="font-size:0.7rem;">(${myAccOngoing.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-acc">${accHtml}</div></div>
                 <div class="profile-collapse"><div class="collapse-header" data-target="completed"><div class="collapse-title">✅ 已完成 <span style="font-size:0.7rem;">(${myCompleted.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-completed">${completedHtml}</div></div>
                 <button class="logout-btn" onclick="logout()">退出登录</button>
             `;
