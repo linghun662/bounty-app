@@ -7,7 +7,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-// 确保 fetch 可用（Node 18+ 内置，低版本需要 node-fetch）
+// 确保 fetch 可用
 let fetch;
 try {
   fetch = global.fetch;
@@ -16,7 +16,7 @@ try {
   fetch = require('node-fetch');
 }
 
-// 带超时的 fetch 封装（用于高德 API）
+// 带超时的 fetch 封装
 async function fetchWithTimeout(url, options = {}, timeout = 5000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -32,7 +32,6 @@ async function fetchWithTimeout(url, options = {}, timeout = 5000) {
 
 const app = express();
 
-// CORS 配置
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -54,7 +53,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-// multer 配置
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
@@ -67,7 +65,6 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-me';
 
-// 连接 MongoDB
 mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty', {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
@@ -103,6 +100,8 @@ const TaskSchema = new mongoose.Schema({
   takerName: { type: String, default: null },
   takenAt: { type: Date, default: null },
   travelStatus: { type: String, default: 'idle' },
+  travelStartTime: { type: Number, default: null },   // 出发时间戳（毫秒）
+  estimatedMinutes: { type: Number, default: null }, // 预计用时（分钟）
   takerCompleted: { type: Boolean, default: false },
   proofMedia: { type: Array, default: [] },
   mediaList: Array,
@@ -111,7 +110,6 @@ const TaskSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// 添加索引优化查询
 TaskSchema.index({ status: 1, createdAt: -1 });
 TaskSchema.index({ publisherId: 1 });
 TaskSchema.index({ takerId: 1 });
@@ -181,7 +179,6 @@ function authMiddleware(req, res, next) {
   }
 }
 
-// ==================== 自动初始化默认数据 ====================
 async function initDefaultData() {
   const userCount = await User.countDocuments();
   if (userCount === 0) {
@@ -249,7 +246,6 @@ app.post('/api/login', async (req, res) => {
     isValid = await bcrypt.compare(password, user.password);
   } catch(e) { isValid = false; }
 
-  // 兼容旧明文密码
   if (!isValid && user.password && user.password.length < 60) {
     if (user.password === password) {
       isValid = true;
@@ -357,6 +353,8 @@ app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
   task.takerName = null;
   task.takenAt = null;
   task.travelStatus = 'idle';
+  task.travelStartTime = null;   // 清除出发时间
+  task.estimatedMinutes = null;
   task.takerCompleted = false;
   await task.save();
   const user = await User.findById(userId);
@@ -368,6 +366,7 @@ app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
   res.json({ success: true });
 });
 
+// 更新任务状态（出发、到达等），并保存 travelStartTime 和 estimatedMinutes
 app.put('/api/tasks/:id/status', authMiddleware, async (req, res) => {
   const { travelStatus, estimatedMinutes, travelStartTime } = req.body;
   const update = { updatedAt: new Date() };
@@ -525,7 +524,6 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 地理编码代理（正向） - 使用带超时的 fetch
 app.post('/api/geocode', async (req, res) => {
   const { address } = req.body;
   const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
@@ -560,7 +558,6 @@ app.post('/api/geocode', async (req, res) => {
   }
 });
 
-// 逆地理编码 - 返回详细地址（街道/门牌号/建筑物）
 app.post('/api/regeo', async (req, res) => {
   const { lat, lng } = req.body;
   const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
@@ -575,16 +572,10 @@ app.post('/api/regeo', async (req, res) => {
       let street = addrComp.streetNumber?.street || '';
       let number = addrComp.streetNumber?.number || '';
       let building = addrComp.building?.name || '';
-
       let detailedAddress = formatted;
-      if (street && number && !detailedAddress.includes(street)) {
-        detailedAddress += ` ${street}${number}`;
-      } else if (street && !detailedAddress.includes(street)) {
-        detailedAddress += ` ${street}`;
-      }
-      if (building && !detailedAddress.includes(building)) {
-        detailedAddress += ` ${building}`;
-      }
+      if (street && number && !detailedAddress.includes(street)) detailedAddress += ` ${street}${number}`;
+      else if (street && !detailedAddress.includes(street)) detailedAddress += ` ${street}`;
+      if (building && !detailedAddress.includes(building)) detailedAddress += ` ${building}`;
       res.json({ address: detailedAddress });
     } else {
       res.status(404).json({ error: '无法解析位置' });
@@ -612,12 +603,11 @@ app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
   res.json(logs);
 });
 
-// 前端静态文件托管（Express 5 兼容）
+// 前端静态文件托管
 app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 启动服务器
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
