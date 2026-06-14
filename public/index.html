@@ -1217,7 +1217,6 @@
             renderMessageList();
             updateUnreadBadge();
         };
-        // 修复：发送消息后不再调用 renderMessageList()
         document.getElementById('sendChatBtn').onclick = async () => {
             const txt = document.getElementById('chatInput').value.trim();
             if(!txt) return;
@@ -1263,18 +1262,32 @@
             await callApi(`/tasks/${taskId}/reward`, {method:'PUT', body:JSON.stringify({reward: price})});
             await sendMessage(taskId, `✅ 同意议价，价格调整为 ¥${price}`, false);
             showToast(`已同意议价，新价格 ¥${price}`);
-            if(chatState.taskId === taskId) chatState.reward = price;
+            // 更新聊天界面的赏金显示
+            if(chatState.active && chatState.taskId === taskId) {
+                chatState.reward = price;
+                const headerNameSpan = document.querySelector('.chat-header-name');
+                if(headerNameSpan) {
+                    // 可以更新任务卡片中的价格显示，但简单起见只更新 chatState
+                }
+                // 刷新聊天消息（会显示新消息）
+                await refreshMessagesOnly();
+            } else {
+                // 如果不在聊天界面，只刷新列表
+                renderMessageList();
+                if(document.getElementById('detailPage').classList.contains('active')) viewTask(taskId, lastPage);
+            }
             refreshTaskList(true);
-            if(document.getElementById('detailPage').classList.contains('active')) viewTask(taskId, lastPage);
-            renderMessageList();
             updateUnreadBadge();
         } else {
             await sendMessage(taskId, `❌ 拒绝了议价`, false);
             showToast('已拒绝议价');
-            renderMessageList();
+            if(chatState.active && chatState.taskId === taskId) {
+                await refreshMessagesOnly();
+            } else {
+                renderMessageList();
+            }
             updateUnreadBadge();
         }
-        await refreshMessagesOnly();
     };
 
     function closeChat() {
