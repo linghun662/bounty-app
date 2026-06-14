@@ -463,7 +463,6 @@
         }
     };
 
-    // 修复高德导航 URI（统一使用官方推荐格式）
     async function navigateTo(lat, lng, address) {
         const destLat = lat;
         const destLng = lng;
@@ -471,19 +470,15 @@
         let url = '';
 
         if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
-            // iOS 高德 App 协议
             url = `iosamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${destLat}&lon=${destLng}&dev=1&style=2`;
         } else if (/android/i.test(navigator.userAgent)) {
-            // Android 高德 App 协议
             url = `androidamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${destLat}&lon=${destLng}&dev=1&style=2`;
         } else {
-            // PC 或其他浏览器回退到网页版
             url = `https://uri.amap.com/navigation?to=${destLng},${destLat},${destName}&mode=car&callnative=1`;
         }
 
         window.location.href = url;
 
-        // 兜底：2.5 秒后如果还在当前页面，说明未安装高德 App，跳转网页版
         setTimeout(() => {
             if (document.hasFocus()) {
                 window.location.href = `https://uri.amap.com/navigation?to=${destLng},${destLat},${destName}&mode=car&callnative=1`;
@@ -914,6 +909,16 @@
                 mediaHtml += `</div></div>`;
                 detailHtml += mediaHtml;
             }
+            // 显示接取者提交的凭证（如果有且是发布者或接取者）
+            if(task.proofMedia && task.proofMedia.length > 0 && (isMine || isTaker)) {
+                let proofHtml = `<div class="desc-section"><div class="info-label">📎 接取者提交的凭证（${task.proofMedia.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;
+                for(let media of task.proofMedia) {
+                    if(media.type === 'image') proofHtml += `<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="showImagePreview('${media.url}')"></div>`;
+                    else if(media.type === 'video') proofHtml += `<div class="preview-img-wrapper"><video src="${media.url}" controls style="width:100%;height:100%;object-fit:cover;"></video></div>`;
+                }
+                proofHtml += `</div></div>`;
+                detailHtml += proofHtml;
+            }
             detailHtml += `</div>`;
             if(task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
             if(task.status === 'ongoing' && isTaker) {
@@ -936,7 +941,6 @@
                 }
                 detailHtml += `<div style="margin:8px 12px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
             }
-            // 支付确认改为滑动模式
             if(task.status === 'ongoing' && task.takerCompleted && isMine) {
                 detailHtml += `<div style="margin:8px 12px;"><div class="slide-confirm" id="slidePayWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动确认支付赏金 👈</div></div></div></div>`;
             }
@@ -1037,7 +1041,6 @@
                     else showAlert('操作失败', res.error);
                 });
             };
-            // 滑动支付确认
             const slidePay = document.getElementById('slidePayWrapper');
             if(slidePay) {
                 initSlide(slidePay, async () => {
