@@ -463,7 +463,6 @@
         }
     };
 
-    // 修复高德导航：dev=0 启用真实导航
     async function navigateTo(lat, lng, address) {
         const destLat = lat;
         const destLng = lng;
@@ -471,19 +470,15 @@
         let url = '';
 
         if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
-            // iOS 高德 App 协议
             url = `iosamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${destLat}&lon=${destLng}&dev=0&style=2`;
         } else if (/android/i.test(navigator.userAgent)) {
-            // Android 高德 App 协议，dev=0 表示真实导航
             url = `androidamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${destLat}&lon=${destLng}&dev=0&style=2`;
         } else {
-            // PC 或其他浏览器回退到网页版
             url = `https://uri.amap.com/navigation?to=${destLng},${destLat},${destName}&mode=car&callnative=1`;
         }
 
         window.location.href = url;
 
-        // 兜底：2.5 秒后如果还在当前页面，说明未安装高德 App，跳转网页版
         setTimeout(() => {
             if (document.hasFocus()) {
                 window.location.href = `https://uri.amap.com/navigation?to=${destLng},${destLat},${destName}&mode=car&callnative=1`;
@@ -1222,13 +1217,13 @@
             renderMessageList();
             updateUnreadBadge();
         };
+        // 修复：发送消息后不再调用 renderMessageList()
         document.getElementById('sendChatBtn').onclick = async () => {
             const txt = document.getElementById('chatInput').value.trim();
             if(!txt) return;
             await sendMessage(chatState.taskId, txt, false);
             document.getElementById('chatInput').value = '';
             await refreshMessagesOnly();
-            await renderMessageList();
             updateUnreadBadge();
         };
         document.getElementById('sendNegoBtn').onclick = async () => {
@@ -1238,7 +1233,6 @@
             showToast('议价请求已发送');
             document.getElementById('negoPriceInput').value = '';
             await refreshMessagesOnly();
-            await renderMessageList();
             updateUnreadBadge();
         };
         refreshMessagesOnly();
