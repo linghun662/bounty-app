@@ -463,6 +463,7 @@
         }
     };
 
+    // 修复高德导航：dev=0 启用真实导航
     async function navigateTo(lat, lng, address) {
         const destLat = lat;
         const destLng = lng;
@@ -470,15 +471,19 @@
         let url = '';
 
         if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
-            url = `iosamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${destLat}&lon=${destLng}&dev=1&style=2`;
+            // iOS 高德 App 协议
+            url = `iosamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${destLat}&lon=${destLng}&dev=0&style=2`;
         } else if (/android/i.test(navigator.userAgent)) {
-            url = `androidamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${destLat}&lon=${destLng}&dev=1&style=2`;
+            // Android 高德 App 协议，dev=0 表示真实导航
+            url = `androidamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${destLat}&lon=${destLng}&dev=0&style=2`;
         } else {
+            // PC 或其他浏览器回退到网页版
             url = `https://uri.amap.com/navigation?to=${destLng},${destLat},${destName}&mode=car&callnative=1`;
         }
 
         window.location.href = url;
 
+        // 兜底：2.5 秒后如果还在当前页面，说明未安装高德 App，跳转网页版
         setTimeout(() => {
             if (document.hasFocus()) {
                 window.location.href = `https://uri.amap.com/navigation?to=${destLng},${destLat},${destName}&mode=car&callnative=1`;
@@ -909,7 +914,7 @@
                 mediaHtml += `</div></div>`;
                 detailHtml += mediaHtml;
             }
-            // 显示接取者提交的凭证（如果有且是发布者或接取者）
+            // 显示接取者提交的凭证
             if(task.proofMedia && task.proofMedia.length > 0 && (isMine || isTaker)) {
                 let proofHtml = `<div class="desc-section"><div class="info-label">📎 接取者提交的凭证（${task.proofMedia.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;
                 for(let media of task.proofMedia) {
