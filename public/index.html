@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=no">
     <title>赏金集市 · 双向议价</title>
     <style>
+        /* 全局样式 */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:70px}
         ::-webkit-scrollbar{width:4px;height:4px}
@@ -742,7 +743,6 @@
         container.classList.remove('completed'); setTransform(0);
     }
 
-    // 倒计时函数（基于绝对时间戳）
     function startCountdown(estimatedMinutes, startTimestamp) {
         if(countdownTimer) clearInterval(countdownTimer);
         const countdownDiv = document.getElementById('countdownDisplay');
@@ -797,6 +797,76 @@
         }
         const result = await callApi(`/tasks/${taskId}/submit-proof`, {method:'POST', body:JSON.stringify({userId:currentUser.id, proofMedia})});
         return result;
+    }
+
+    // 选择凭证（相册或拍照）
+    async function chooseProofFiles() {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal';
+            modal.innerHTML = `
+                <div class="custom-modal-content">
+                    <h3>选择凭证</h3>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <button class="btn-primary" id="chooseFromAlbum">📁 从相册选择</button>
+                        <button class="btn-primary" id="takePhoto" style="background:#10b981;">📷 拍照</button>
+                        <button class="btn-secondary" id="cancelChoose">取消</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            const albumBtn = modal.querySelector('#chooseFromAlbum');
+            const cameraBtn = modal.querySelector('#takePhoto');
+            const cancelBtn = modal.querySelector('#cancelChoose');
+            const cleanup = () => modal.remove();
+            albumBtn.onclick = () => {
+                cleanup();
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*,video/*';
+                input.multiple = true;
+                input.onchange = (e) => {
+                    const files = Array.from(e.target.files);
+                    resolve(files);
+                };
+                input.click();
+            };
+            cameraBtn.onclick = async () => {
+                cleanup();
+                if (window.Capacitor && Capacitor.isNativePlatform() && Capacitor.Plugins.Camera) {
+                    try {
+                        const image = await Capacitor.Plugins.Camera.getPhoto({
+                            quality: 80,
+                            allowEditing: false,
+                            resultType: 'uri',
+                            saveToGallery: false
+                        });
+                        const response = await fetch(image.webPath);
+                        const blob = await response.blob();
+                        const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                        resolve([file]);
+                    } catch (err) {
+                        console.error('拍照失败', err);
+                        showToast('拍照失败，请使用相册选择');
+                        resolve([]);
+                    }
+                } else {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.capture = 'environment';
+                    input.onchange = (e) => {
+                        const files = Array.from(e.target.files);
+                        resolve(files);
+                    };
+                    input.click();
+                }
+            };
+            cancelBtn.onclick = () => {
+                cleanup();
+                resolve([]);
+            };
+        });
     }
 
     async function cancelTask(taskId) {
@@ -1024,12 +1094,9 @@
             }
             const slideArrive = document.getElementById('slideArriveWrapper');
             if(slideArrive) {
-                // 关键修复：使用任务中存储的出发时间戳和预计分钟数
                 if(task.travelStartTime && task.estimatedMinutes) {
-                    console.log('使用存储的出发时间:', new Date(task.travelStartTime));
                     startCountdown(task.estimatedMinutes, task.travelStartTime);
                 } else {
-                    console.warn('任务缺少 travelStartTime 或 estimatedMinutes，请确保后端已保存');
                     let est = task.estimatedMinutes || 15;
                     let start = Date.now();
                     startCountdown(est, start);
@@ -1043,16 +1110,17 @@
             const slideComplete = document.getElementById('slideCompleteWrapper');
             if(slideComplete) {
                 initSlide(slideComplete, async () => {
-                    const input = document.createElement('input');
-                    input.type = 'file'; input.accept = 'image/*,video/*'; input.multiple = true;
-                    input.onchange = async (e) => {
-                        const files = Array.from(e.target.files);
-                        if(files.length===0) return;
-                        const result = await submitProof(taskIdStr, files);
-                        if(result.success) { showToast('凭证已提交，等待发布者确认'); refreshTaskList(true); loadProfile(); viewTask(taskId, lastPage); }
-                        else showAlert('提交失败', result.error || '未知错误');
-                    };
-                    input.click();
+                    const files = await chooseProofFiles();
+                    if(files.length === 0) return;
+                    const result = await submitProof(taskIdStr, files);
+                    if(result.success) {
+                        showToast('凭证已提交，等待发布者确认');
+                        refreshTaskList(true);
+                        loadProfile();
+                        viewTask(taskId, lastPage);
+                    } else {
+                        showAlert('提交失败', result.error || '未知错误');
+                    }
                 });
             }
             const cancelAcceptBtn = document.getElementById('cancelAcceptBtn');

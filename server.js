@@ -97,8 +97,8 @@ const TaskSchema = new mongoose.Schema({
   takerName: { type: String, default: null },
   takenAt: { type: Date, default: null },
   travelStatus: { type: String, default: 'idle' },
-  travelStartTime: { type: Number, default: null },   // 关键字段：出发时间戳
-  estimatedMinutes: { type: Number, default: null }, // 预计分钟数
+  travelStartTime: { type: Number, default: null },   // 出发时间戳（毫秒）
+  estimatedMinutes: { type: Number, default: null }, // 预计用时（分钟）
   takerCompleted: { type: Boolean, default: false },
   proofMedia: { type: Array, default: [] },
   mediaList: Array,
