@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=no">
     <title>赏金集市 · 双向议价</title>
     <style>
-        /* 全局样式 */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:70px}
         ::-webkit-scrollbar{width:4px;height:4px}
@@ -799,7 +798,79 @@
         return result;
     }
 
-    // 选择凭证（相册或拍照）
+    // ======== 核心：拍照功能（直接打开相机） ========
+    async function takePhotoWithCamera() {
+        // 优先尝试 Capacitor Camera 插件
+        if (window.Capacitor && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.Camera) {
+            try {
+                const image = await Capacitor.Plugins.Camera.getPhoto({
+                    quality: 80,
+                    allowEditing: false,
+                    resultType: 'uri',
+                    saveToGallery: false
+                });
+                const response = await fetch(image.webPath);
+                const blob = await response.blob();
+                const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                return [file];
+            } catch (err) {
+                console.error('Capacitor 拍照失败，尝试回退', err);
+                // 继续尝试其他方式
+            }
+        }
+
+        // 尝试使用 getUserMedia（直接调用摄像头）
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            return new Promise((resolve) => {
+                // 创建临时视频元素
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+                // 创建 canvas 截图
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                // 等待视频加载后截图
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    // 停止流
+                    stream.getTracks().forEach(track => track.stop());
+                    // 转换为 File
+                    canvas.toBlob((blob) => {
+                        const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                        resolve([file]);
+                    }, 'image/jpeg', 0.8);
+                    // 清理 DOM
+                    video.remove();
+                    canvas.remove();
+                };
+                // 超时处理
+                setTimeout(() => {
+                    stream.getTracks().forEach(track => track.stop());
+                    resolve([]);
+                }, 10000);
+            });
+        } catch (err) {
+            console.warn('getUserMedia 失败，回退到 input capture', err);
+        }
+
+        // 最后回退到 input capture
+        return new Promise((resolve) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.setAttribute('capture', 'environment');
+            input.onchange = (e) => {
+                const files = Array.from(e.target.files);
+                resolve(files);
+            };
+            input.click();
+        });
+    }
+
+    // 选择凭证弹出框（相册 / 拍照）
     async function chooseProofFiles() {
         return new Promise((resolve) => {
             const modal = document.createElement('div');
@@ -819,6 +890,7 @@
             const cameraBtn = modal.querySelector('#takePhoto');
             const cancelBtn = modal.querySelector('#cancelChoose');
             const cleanup = () => modal.remove();
+
             albumBtn.onclick = () => {
                 cleanup();
                 const input = document.createElement('input');
@@ -831,37 +903,14 @@
                 };
                 input.click();
             };
+
             cameraBtn.onclick = async () => {
                 cleanup();
-                if (window.Capacitor && Capacitor.isNativePlatform() && Capacitor.Plugins.Camera) {
-                    try {
-                        const image = await Capacitor.Plugins.Camera.getPhoto({
-                            quality: 80,
-                            allowEditing: false,
-                            resultType: 'uri',
-                            saveToGallery: false
-                        });
-                        const response = await fetch(image.webPath);
-                        const blob = await response.blob();
-                        const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
-                        resolve([file]);
-                    } catch (err) {
-                        console.error('拍照失败', err);
-                        showToast('拍照失败，请使用相册选择');
-                        resolve([]);
-                    }
-                } else {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.capture = 'environment';
-                    input.onchange = (e) => {
-                        const files = Array.from(e.target.files);
-                        resolve(files);
-                    };
-                    input.click();
-                }
+                showToast('正在打开相机...', 1500);
+                const files = await takePhotoWithCamera();
+                resolve(files);
             };
+
             cancelBtn.onclick = () => {
                 cleanup();
                 resolve([]);
