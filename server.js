@@ -97,8 +97,8 @@ const TaskSchema = new mongoose.Schema({
   takerName: { type: String, default: null },
   takenAt: { type: Date, default: null },
   travelStatus: { type: String, default: 'idle' },
-  travelStartTime: { type: Number, default: null },   // 出发时间戳（毫秒）
-  estimatedMinutes: { type: Number, default: null }, // 预计用时（分钟）
+  travelStartTime: { type: Number, default: null },
+  estimatedMinutes: { type: Number, default: null },
   takerCompleted: { type: Boolean, default: false },
   proofMedia: { type: Array, default: [] },
   mediaList: Array,
@@ -150,6 +150,19 @@ const GeocodeCacheSchema = new mongoose.Schema({
   expires: { type: Date, default: () => Date.now() + 7*24*60*60*1000 }
 });
 const GeocodeCache = mongoose.models.GeocodeCache || mongoose.model('GeocodeCache', GeocodeCacheSchema);
+
+// ===== 新增：评价模型 =====
+const RatingSchema = new mongoose.Schema({
+  taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', required: true },
+  fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  toUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  rating: { type: Number, min: 1, max: 5, required: true }, // 1-5 分
+  comment: { type: String, default: '' },
+  createdAt: { type: Date, default: Date.now }
+});
+// 复合唯一索引：一个用户对某个任务只能评价一次
+RatingSchema.index({ taskId: 1, fromUserId: 1, toUserId: 1 }, { unique: true });
+const Rating = mongoose.model('Rating', RatingSchema);
 
 // ==================== 辅助函数 ====================
 async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
@@ -599,6 +612,86 @@ app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
   res.json(logs);
 });
 
+// ==================== 评价 API ====================
+// 获取用户对某个任务的评价（返回 null 或评价对象）
+app.get('/api/ratings/task/:taskId/user/:userId', authMiddleware, async (req, res) => {
+  const { taskId, userId } = req.params;
+  if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
+  const rating = await Rating.findOne({ taskId, fromUserId: userId }).lean();
+  res.json(rating || null);
+});
+
+// 获取用户收到的所有评价（用于展示）
+app.get('/api/ratings/user/:userId', authMiddleware, async (req, res) => {
+  if (req.params.userId !== req.userId) return res.status(403).json({ error: '无权查看' });
+  const ratings = await Rating.find({ toUserId: req.params.userId })
+    .populate('fromUserId', 'nickname')
+    .sort({ createdAt: -1 })
+    .lean();
+  res.json(ratings);
+});
+
+// 提交评价
+app.post('/api/ratings', authMiddleware, async (req, res) => {
+  const { taskId, toUserId, rating, comment } = req.body;
+  const fromUserId = req.userId;
+  
+  if (!taskId || !toUserId || rating === undefined) {
+    return res.status(400).json({ error: '缺少必要参数' });
+  }
+  if (rating < 1 || rating > 5) {
+    return res.status(400).json({ error: '评分必须为1-5' });
+  }
+  if (fromUserId === toUserId) {
+    return res.status(400).json({ error: '不能给自己评价' });
+  }
+
+  // 检查任务是否存在且已完成
+  const task = await Task.findById(taskId);
+  if (!task) return res.status(404).json({ error: '任务不存在' });
+  if (task.status !== 'completed') {
+    return res.status(400).json({ error: '任务尚未完成，不能评价' });
+  }
+  // 验证当前用户是任务的参与者（发布者或接取者）
+  if (task.publisherId.toString() !== fromUserId && task.takerId.toString() !== fromUserId) {
+    return res.status(403).json({ error: '您不是该任务的参与者' });
+  }
+  // 验证被评价人是任务参与者且不是自己
+  if (task.publisherId.toString() !== toUserId && task.takerId.toString() !== toUserId) {
+    return res.status(400).json({ error: '被评价人不是该任务的参与者' });
+  }
+
+  // 检查是否已经评价过
+  const existing = await Rating.findOne({ taskId, fromUserId, toUserId });
+  if (existing) {
+    return res.status(400).json({ error: '您已经评价过该任务了' });
+  }
+
+  // 保存评价
+  const newRating = new Rating({ taskId, fromUserId, toUserId, rating, comment: comment || '' });
+  await newRating.save();
+
+  // 更新信用分：rating >= 4 好评 +2，rating <= 2 差评 -2，其他不变
+  let creditChange = 0;
+  if (rating >= 4) creditChange = 2;
+  else if (rating <= 2) creditChange = -2;
+  if (creditChange !== 0) {
+    const toUser = await User.findById(toUserId);
+    if (toUser) {
+      const newCredit = Math.max(0, toUser.credit + creditChange);
+      await User.findByIdAndUpdate(toUserId, { credit: newCredit });
+      await CreditLog.create({
+        userId: toUserId,
+        reason: `收到${rating >= 4 ? '好评' : '差评'}（任务: ${task.title}）`,
+        change: creditChange
+      });
+    }
+  }
+
+  res.json({ success: true, rating: newRating });
+});
+
+// 前端静态文件托管
 app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
