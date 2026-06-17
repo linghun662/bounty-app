@@ -117,18 +117,6 @@
         .stat-item{text-align:center;flex:1;cursor:pointer;transition:all .2s}
         .stat-item:active{transform:scale(.96)}
         .stat-number{font-size:1.2rem;font-weight:800;color:#1e4a6b}
-        /* 账单明细在个人主页中展开 */
-        .bill-list-container{display:none;padding:12px 0;border-top:1px solid #eef2f8;margin-top:8px;max-height:300px;overflow-y:auto}
-        .bill-list-container.show{display:block}
-        .bill-item{padding:8px 0;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:10px}
-        .bill-item:last-child{border-bottom:none}
-        .bill-icon{font-size:1.2rem;width:28px;text-align:center}
-        .bill-info{flex:1}
-        .bill-desc{font-weight:600;font-size:.85rem}
-        .bill-time{font-size:.65rem;color:#94a3b8}
-        .bill-amount{font-weight:700;font-size:.85rem}
-        .bill-amount.income{color:#059669}
-        .bill-amount.expense{color:#dc2626}
         .profile-collapse{background:#fff;border-radius:24px;margin:12px 16px;overflow:hidden;border:1px solid #eef2f8}
         .collapse-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#fff;cursor:pointer}
         .collapse-header:active{background:#f8fafc}
@@ -193,6 +181,26 @@
         .voice-call-modal .hangup-btn{background:#ef4444;border:none;border-radius:50%;width:64px;height:64px;font-size:2rem;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
         .voice-call-modal .hangup-btn:active{transform:scale(.9)}
         .withdraw-btn-sm{padding:4px 12px;font-size:.7rem;border-radius:20px;background:#1e4a6b;color:#fff;border:none;cursor:pointer}
+        /* 钱包详情弹窗（大尺寸） */
+        .wallet-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}
+        .wallet-modal-content{background:#fff;border-radius:32px;width:100%;max-width:420px;max-height:90vh;padding:24px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+        .wallet-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+        .wallet-modal-title{font-size:1.3rem;font-weight:700;color:#1e4a6b}
+        .wallet-modal-close{background:transparent;border:none;font-size:1.8rem;cursor:pointer;color:#94a3b8;padding:0 8px}
+        .wallet-balance-box{background:#eef2ff;border-radius:20px;padding:16px;margin-bottom:16px;text-align:center}
+        .wallet-balance-box .amount{font-size:2.2rem;font-weight:800;color:#1e4a6b}
+        .wallet-balance-box .frozen{font-size:.75rem;color:#64748b;margin-top:4px}
+        .wallet-bills{flex:1;overflow-y:auto;margin-top:8px;border-top:1px solid #eef2f8;padding-top:12px}
+        .wallet-bills .title{font-weight:600;font-size:.9rem;color:#1e293b;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+        .wallet-bill-item{padding:12px 0;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:14px;cursor:pointer}
+        .wallet-bill-item:active{background:#f8fafc}
+        .wallet-bill-item .icon{font-size:1.5rem;width:36px;text-align:center}
+        .wallet-bill-item .info{flex:1}
+        .wallet-bill-item .info .desc{font-weight:600;font-size:.95rem}
+        .wallet-bill-item .info .time{font-size:.7rem;color:#94a3b8}
+        .wallet-bill-item .amount{font-weight:700;font-size:1rem}
+        .wallet-bill-item .amount.income{color:#059669}
+        .wallet-bill-item .amount.expense{color:#dc2626}
     </style>
 </head>
 <body>
@@ -1014,6 +1022,83 @@
         }, 30000);
     }
 
+    // ==================== 钱包详情弹窗（大尺寸） ====================
+    async function showWalletModal() {
+        const bills = await callApi(`/bills/${currentUser.id}`);
+        const modal = document.createElement('div');
+        modal.className = 'wallet-modal';
+        let billHtml = '';
+        if (bills.length === 0) {
+            billHtml = '<div class="empty-state" style="padding:20px;">暂无账单记录</div>';
+        } else {
+            for (const b of bills) {
+                const icon = b.amount > 0 ? '📈' : '📉';
+                const amountClass = b.amount > 0 ? 'income' : 'expense';
+                const sign = b.amount > 0 ? '+' : '';
+                billHtml += `
+                    <div class="wallet-bill-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
+                        <div class="icon">${icon}</div>
+                        <div class="info">
+                            <div class="desc">${b.desc}</div>
+                            <div class="time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
+                        </div>
+                        <div class="amount ${amountClass}">${sign}${b.amount}元</div>
+                    </div>
+                `;
+            }
+        }
+
+        modal.innerHTML = `
+            <div class="wallet-modal-content">
+                <div class="wallet-modal-header">
+                    <span class="wallet-modal-title">💰 我的钱包</span>
+                    <button class="wallet-modal-close" id="walletModalClose">✕</button>
+                </div>
+                <div class="wallet-balance-box">
+                    <div class="amount">¥${(currentUser.balance||0).toFixed(2)}</div>
+                    <div class="frozen">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div>
+                    <button class="btn-primary" id="walletWithdrawBtn" style="margin-top:10px;padding:8px;font-size:.85rem;">💸 提现</button>
+                </div>
+                <div class="wallet-bills">
+                    <div class="title"><span>📋 账单明细</span></div>
+                    ${billHtml}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // 关闭弹窗
+        modal.querySelector('#walletModalClose').onclick = () => modal.remove();
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+        // 提现
+        modal.querySelector('#walletWithdrawBtn').onclick = () => {
+            const chooseModal = document.createElement('div');
+            chooseModal.className = 'custom-modal';
+            chooseModal.innerHTML = `<div class="custom-modal-content"><h3>选择提现方式</h3><button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button><button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button><div class="custom-modal-buttons"><button class="cancel-btn">取消</button></div></div>`;
+            document.body.appendChild(chooseModal);
+            chooseModal.querySelector('#withdrawWechatBtn').onclick = () => { showToast('提现到微信（演示模式）'); chooseModal.remove(); };
+            chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); };
+            chooseModal.querySelector('.cancel-btn').onclick = () => chooseModal.remove();
+        };
+
+        // 账单条目点击查看详情
+        modal.querySelectorAll('.wallet-bill-item').forEach(item => {
+            item.onclick = () => {
+                const bill = JSON.parse(item.getAttribute('data-bill'));
+                const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
+                showAlert('账单详情', `
+                    <div style="text-align:left;">
+                        <div><strong>说明：</strong>${bill.desc}</div>
+                        <div><strong>金额：</strong>${bill.amount}元</div>
+                        <div><strong>时间：</strong>${new Date(bill.createdAt).toLocaleString()}</div>
+                        <div><strong>类型：</strong>${typeLabel}</div>
+                    </div>
+                `);
+            };
+        });
+    }
+
     // ==================== 任务详情 ====================
     window.viewTask = async function(taskId, fromPage = 'home') {
         lastPage = fromPage;
@@ -1692,7 +1777,7 @@
         } catch(e) {}
     }
 
-    // ==================== 个人主页（含账单明细展开） ====================
+    // ==================== 个人主页 ====================
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -1736,42 +1821,12 @@
                 }).join('');
             }
 
-            // 获取账单明细
-            const bills = await callApi(`/bills/${currentUser.id}`);
-            let billHtml = '';
-            if (bills.length === 0) {
-                billHtml = '<div class="empty-state">暂无记录</div>';
-            } else {
-                for (const b of bills) {
-                    const icon = b.amount > 0 ? '📈' : '📉';
-                    const amountClass = b.amount > 0 ? 'income' : 'expense';
-                    const sign = b.amount > 0 ? '+' : '';
-                    billHtml += `
-                        <div class="bill-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
-                            <div class="bill-icon">${icon}</div>
-                            <div class="bill-info">
-                                <div class="bill-desc">${b.desc}</div>
-                                <div class="bill-time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
-                            </div>
-                            <div class="bill-amount ${amountClass}">${sign}${b.amount}元</div>
-                        </div>
-                    `;
-                }
-            }
-
             container.innerHTML = `
                 <div class="profile-header" onclick="showEditProfileModal()"><div class="profile-avatar">${currentUser.avatar?`<img src="${currentUser.avatar}">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div><div><div class="profile-name">${escapeHtml(currentUser.nickname||currentUser.username)}</div><div class="profile-signature">${currentUser.signature||'点击编辑'}</div></div><span>✏️</span></div>
                 <div class="stats-row" id="walletStats">
-                    <div class="stat-item" id="balanceItem" style="position:relative;">
-                        <div class="stat-number" id="balanceDisplay">¥${(currentUser.balance||0).toFixed(2)}</div>
-                        <div class="stat-label">余额 <span style="font-size:0.6rem;color:#94a3b8;">点击查看明细</span></div>
-                        <div id="billListContainer" class="bill-list-container">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                                <span style="font-weight:600;">账单明细</span>
-                                <button class="withdraw-btn-sm" id="withdrawBtnSmall">💸 提现</button>
-                            </div>
-                            ${billHtml}
-                        </div>
+                    <div class="stat-item" id="walletEntry" style="cursor:pointer;">
+                        <div class="stat-number">👛</div>
+                        <div class="stat-label">钱包</div>
                     </div>
                     <div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit||60}</div><div class="stat-label">信用</div></div>
                     <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div>
@@ -1793,51 +1848,8 @@
                 });
             });
 
-            // 点击余额数字展开/折叠账单明细
-            const billContainer = document.getElementById('billListContainer');
-            const balanceItem = document.getElementById('balanceItem');
-            let billVisible = false;
-            balanceItem.addEventListener('click', (e) => {
-                // 防止点到提现按钮触发关闭
-                if (e.target.closest('#withdrawBtnSmall')) return;
-                billVisible = !billVisible;
-                if (billVisible) {
-                    billContainer.classList.add('show');
-                } else {
-                    billContainer.classList.remove('show');
-                }
-            });
-
-            // 提现按钮（小）
-            const withdrawSmall = document.getElementById('withdrawBtnSmall');
-            if (withdrawSmall) {
-                withdrawSmall.onclick = (e) => {
-                    e.stopPropagation();
-                    const chooseModal = document.createElement('div');
-                    chooseModal.className = 'custom-modal';
-                    chooseModal.innerHTML = `<div class="custom-modal-content"><h3>选择提现方式</h3><button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button><button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button><div class="custom-modal-buttons"><button class="cancel-btn">取消</button></div></div>`;
-                    document.body.appendChild(chooseModal);
-                    chooseModal.querySelector('#withdrawWechatBtn').onclick = () => { showToast('提现到微信（演示模式）'); chooseModal.remove(); };
-                    chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); };
-                    chooseModal.querySelector('.cancel-btn').onclick = () => chooseModal.remove();
-                };
-            }
-
-            // 账单条目点击查看详情
-            document.querySelectorAll('.bill-item').forEach(item => {
-                item.onclick = () => {
-                    const bill = JSON.parse(item.getAttribute('data-bill'));
-                    const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
-                    showAlert('账单详情', `
-                        <div style="text-align:left;">
-                            <div><strong>说明：</strong>${bill.desc}</div>
-                            <div><strong>金额：</strong>${bill.amount}元</div>
-                            <div><strong>时间：</strong>${new Date(bill.createdAt).toLocaleString()}</div>
-                            <div><strong>类型：</strong>${typeLabel}</div>
-                        </div>
-                    `);
-                };
-            });
+            // 点击钱包图标打开钱包详情弹窗
+            document.getElementById('walletEntry').addEventListener('click', showWalletModal);
 
         } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
