@@ -94,15 +94,19 @@
         .chat-bubble-other{align-self:flex-start}
         .bubble-text{padding:10px 16px;border-radius:20px;font-size:.85rem;line-height:1.4;word-break:break-word;background:#fff;border:1px solid #e2e8f0;border-bottom-left-radius:4px}
         .chat-bubble-mine .bubble-text{background:#1e4a6b;color:#fff;border-bottom-right-radius:4px;border:none}
+        /* 图片消息样式 */
+        .bubble-image { max-width: 100%; border-radius: 16px; margin-top: 4px; display: block; cursor: zoom-in; }
+        .bubble-image-wrapper { background: transparent; border: none; }
         .bubble-time{font-size:.6rem;color:#94a3b8;margin-top:4px;margin-left:10px;margin-right:10px}
         .chat-bubble-mine .bubble-time{text-align:right}
         .chat-input-wrapper{background:rgba(255,255,255,0.96);backdrop-filter:blur(12px);border-top:1px solid #eef2f8;padding:12px 16px;border-radius:24px 24px 0 0}
-        .flex-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-        .nego-input{flex:1;padding:10px 14px;border-radius:40px;border:1px solid #e2e8f0;background:#fff}
-        .nego-send-btn{background:#f59e0b;border:none;border-radius:40px;padding:8px 16px;font-weight:600;color:#fff}
         .chat-action-row{display:flex;gap:10px;align-items:center}
         .chat-message-input{flex:1;padding:10px 16px;border-radius:40px;border:1px solid #e2e8f0;background:#fff}
         .send-btn{background:#1e4a6b;border:none;border-radius:40px;padding:10px 20px;font-weight:600;color:#fff}
+        .chat-extra-row{display:flex;gap:10px;margin-top:8px;align-items:center;justify-content:flex-end}
+        .chat-icon-btn{background:transparent;border:none;font-size:1.5rem;cursor:pointer;padding:4px 8px;border-radius:40px;transition:all .2s}
+        .chat-icon-btn:active{background:rgba(0,0,0,0.05);transform:scale(0.95)}
+        .nego-send-btn{background:#f59e0b;border:none;border-radius:40px;padding:6px 16px;font-weight:600;color:#fff;cursor:pointer}
         .profile-header{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px;padding:20px;color:#fff;display:flex;align-items:center;gap:16px;cursor:pointer}
         .profile-avatar{width:64px;height:64px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:600;overflow:hidden}
         .profile-name{font-weight:700;font-size:1.1rem}
@@ -151,12 +155,7 @@
         .task-card-in-chat{background:#f8fafc;border-radius:20px;padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;border:1px solid #e2e8f0}
         .chat-refresh-indicator{text-align:center;padding:10px;font-size:.75rem;color:#64748b}
         .network-toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#ffc107;padding:6px 14px;border-radius:40px;font-size:.7rem;z-index:2000;white-space:nowrap}
-        /* 评价样式 */
         .rating-section{background:#fff;border-radius:24px;padding:16px;margin:12px 16px;border:1px solid #eef2f8}
-        .rating-stars{display:flex;gap:8px;justify-content:center;margin:8px 0}
-        .rating-star{font-size:2rem;cursor:pointer;color:#d1d5db;transition:color .2s}
-        .rating-star.active{color:#f59e0b}
-        .rating-star:hover{color:#fbbf24}
         .rating-buttons{display:flex;gap:12px;justify-content:center;margin:8px 0}
         .rating-buttons button{padding:8px 24px;border-radius:40px;border:none;font-weight:600;cursor:pointer;transition:all .2s}
         .rating-buttons button:active{transform:scale(0.96)}
@@ -168,6 +167,7 @@
         .rating-submit{margin-top:12px;padding:10px;background:#1e4a6b;color:#fff;border:none;border-radius:40px;font-weight:600;width:100%;cursor:pointer}
         .rating-submit:disabled{opacity:0.5;cursor:not-allowed}
         .already-rated{text-align:center;color:#64748b;padding:12px}
+        .prompt-input{width:100%;padding:10px;border-radius:20px;border:1px solid #e2e8f0;margin:12px 0;font-size:1rem}
     </style>
 </head>
 <body>
@@ -349,6 +349,22 @@
         }
     }
 
+    // 文件上传（用于图片消息）
+    async function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const fullUrl = API_BASE + '/upload';
+        const token = localStorage.getItem('token');
+        const res = await fetch(fullUrl, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        if (!res.ok) throw new Error('上传失败');
+        const data = await res.json();
+        return data.url;
+    }
+
     function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
     function calculateDistance(lat1,lng1,lat2,lng2) {
         const R=6371; const dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
@@ -422,6 +438,38 @@
         document.body.appendChild(modal);
         modal.querySelector('.confirm-btn').onclick = () => { modal.remove(); if(onConfirm) onConfirm(); };
         modal.querySelector('.cancel-btn').onclick = () => { modal.remove(); if(onCancel) onCancel(); };
+    }
+    // 自定义 prompt
+    function showPrompt(title, placeholder, callback) {
+        const modal = document.createElement('div');
+        modal.className = 'custom-modal';
+        modal.innerHTML = `
+            <div class="custom-modal-content">
+                <h3>${escapeHtml(title)}</h3>
+                <input type="number" id="promptInput" class="prompt-input" placeholder="${escapeHtml(placeholder)}" step="1" min="1">
+                <div class="custom-modal-buttons">
+                    <button class="confirm-btn" id="promptOk">确定</button>
+                    <button class="cancel-btn" id="promptCancel">取消</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const input = modal.querySelector('#promptInput');
+        const ok = modal.querySelector('#promptOk');
+        const cancel = modal.querySelector('#promptCancel');
+        const cleanup = () => modal.remove();
+        ok.onclick = () => {
+            const val = parseFloat(input.value);
+            if (!isNaN(val) && val > 0) {
+                cleanup();
+                callback(val);
+            } else {
+                showAlert('提示', '请输入有效的金额');
+            }
+        };
+        cancel.onclick = cleanup;
+        input.focus();
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok.click(); });
     }
     window.alert = function(msg){ showAlert('提示',msg); };
     window.confirm = function(msg,onOk,onCancel){ showConfirm('确认',msg,onOk,onCancel); return true; };
@@ -1145,7 +1193,21 @@
                 const isNego = m.text && m.text.includes('💰议价请求:');
                 const priceMatch = m.text.match(/¥(\d+)/);
                 const negoPrice = priceMatch ? parseInt(priceMatch[1]) : null;
-                html += `<div class="chat-bubble ${isMine?'chat-bubble-mine':'chat-bubble-other'}" data-message-id="${m._id}" data-is-mine="${isMine}"><div class="bubble-text">${escapeHtml(m.text)}</div><div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div></div>`;
+                // 检测图片消息：[img]url[/img]
+                const imgMatch = m.text.match(/\[img\](.*?)\[\/img\]/);
+                let contentHtml = '';
+                if (imgMatch) {
+                    const imgUrl = imgMatch[1];
+                    contentHtml = `<div class="bubble-text ${isMine?'':'bubble-image-wrapper'}" style="background:${isMine?'#1e4a6b':'#fff'}; padding:4px 4px; border:${isMine?'none':'1px solid #e2e8f0'};">
+                        <img src="${imgUrl}" class="bubble-image" onclick="event.stopPropagation(); showImagePreview('${imgUrl}')">
+                    </div>`;
+                } else {
+                    contentHtml = `<div class="bubble-text">${escapeHtml(m.text)}</div>`;
+                }
+                html += `<div class="chat-bubble ${isMine?'chat-bubble-mine':'chat-bubble-other'}" data-message-id="${m._id}" data-is-mine="${isMine}">
+                    ${contentHtml}
+                    <div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div>
+                </div>`;
                 if(!isMine && isNego && negoPrice && m.senderId !== 'system') {
                     html += `<div style="display:flex; gap:8px; margin:4px 0 8px 12px;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
                 }
@@ -1180,6 +1242,7 @@
             });
         } catch(e) { console.error('刷新消息失败', e); }
     }
+
     function initChatPullToRefresh() {
         const messagesArea = document.getElementById('chatMsgsArea');
         if(!messagesArea) return;
@@ -1213,6 +1276,7 @@
             }
         });
     }
+
     function showChatView() {
         document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
         document.getElementById('messagePage').classList.add('active');
@@ -1222,7 +1286,16 @@
                 <div class="chat-header-bar"><button class="chat-back-btn" id="chatBackBtn">←</button><span class="chat-header-name">${escapeHtml(chatState.otherName)}</span></div>
                 <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div>
                 <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
-                <div class="chat-input-wrapper"><div class="flex-row"><input type="number" id="negoPriceInput" class="nego-input" placeholder="💰议价 (当前¥${chatState.reward})" step="1"><button class="nego-send-btn" id="sendNegoBtn">发起议价</button></div><div class="chat-action-row"><input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息..."><button class="send-btn" id="sendChatBtn">发送</button></div></div>
+                <div class="chat-input-wrapper">
+                    <div class="chat-action-row">
+                        <button class="chat-icon-btn" id="imageBtn">🖼️</button>
+                        <input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息...">
+                        <button class="send-btn" id="sendChatBtn">发送</button>
+                    </div>
+                    <div class="chat-extra-row">
+                        <button class="nego-send-btn" id="sendNegoBtn">💰 议价</button>
+                    </div>
+                </div>
             </div>
         `;
         chatState.messagesArea = document.getElementById('chatMsgsArea');
@@ -1234,6 +1307,7 @@
             renderMessageList();
             updateUnreadBadge();
         };
+        // 发送文本消息
         document.getElementById('sendChatBtn').onclick = async () => {
             const txt = document.getElementById('chatInput').value.trim();
             if(!txt) return;
@@ -1242,14 +1316,34 @@
             await refreshMessagesOnly();
             updateUnreadBadge();
         };
-        document.getElementById('sendNegoBtn').onclick = async () => {
-            const price = parseFloat(document.getElementById('negoPriceInput').value);
-            if(isNaN(price) || price<=0) { showAlert('提示','输入有效价格'); return; }
-            await sendMessage(chatState.taskId, `💰议价请求:¥${price}`, true);
-            showToast('议价请求已发送');
-            document.getElementById('negoPriceInput').value = '';
-            await refreshMessagesOnly();
-            updateUnreadBadge();
+        // 发送图片
+        document.getElementById('imageBtn').onclick = () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    showToast('上传图片中...', 1500);
+                    const url = await uploadFile(file);
+                    await sendMessage(chatState.taskId, `[img]${url}[/img]`, false);
+                    await refreshMessagesOnly();
+                    updateUnreadBadge();
+                } catch (err) {
+                    showAlert('发送图片失败', err.message);
+                }
+            };
+            input.click();
+        };
+        // 议价按钮
+        document.getElementById('sendNegoBtn').onclick = () => {
+            showPrompt('请输入议价金额', '金额（元）', async (price) => {
+                await sendMessage(chatState.taskId, `💰议价请求:¥${price}`, true);
+                showToast('议价请求已发送');
+                await refreshMessagesOnly();
+                updateUnreadBadge();
+            });
         };
         refreshMessagesOnly();
         initChatPullToRefresh();
@@ -1258,6 +1352,7 @@
             if(chatState.active && chatState.taskId && document.visibilityState === 'visible') await refreshMessagesOnly();
         }, 5000);
     }
+
     async function openChat(taskId, otherId, otherName, reward, title) {
         if(chatState.pollInterval) clearInterval(chatState.pollInterval);
         await callApi(`/messages/read/${taskId}/${currentUser.id}`, {method:'PUT'});
@@ -1270,6 +1365,7 @@
         showChatView();
         updateUnreadBadge();
     }
+
     window.respondToNego = async function(taskId, price, isAccept) {
         const task = await callApi(`/tasks/${taskId}`);
         if(task.status !== 'available') { showAlert('提示','任务已被接取'); return; }
@@ -1294,12 +1390,14 @@
             updateUnreadBadge();
         }
     };
+
     function closeChat() {
         if(chatState.pollInterval) clearInterval(chatState.pollInterval);
         chatState.active = false;
         chatState.taskId = null;
         chatState.messagesArea = null;
     }
+
     async function renderMessageList() {
         if(!currentUser || !currentUser.id) {
             const container = document.getElementById('messageContainer');
@@ -1356,6 +1454,7 @@
             updateUnreadBadge();
         } catch(e) { console.error('加载消息列表失败', e); }
     }
+
     async function updateUnreadBadge() {
         if(!currentUser) return;
         try {
