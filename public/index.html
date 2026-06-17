@@ -11,22 +11,22 @@
         ::-webkit-scrollbar-track{background:#e2e8f0;border-radius:4px}
         ::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:4px}
         .app-container{max-width:500px;margin:0 auto;background:#f8fafc;min-height:100vh;position:relative;box-shadow:0 0 20px rgba(0,0,0,0.05)}
-        .page{display:none;animation:fadeInUp 0.25s cubic-bezier(0.2,0.9,0.4,1.1)}
+        .page{display:none;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1)}
         .page.active{display:block}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        .nav-header{background:rgba(255,255,255,0.96);backdrop-filter:blur(12px);padding:12px 18px;border-bottom:1px solid rgba(226,232,240,0.6);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20}
+        .nav-header{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 18px;border-bottom:1px solid rgba(226,232,240,.6);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20}
         .logo{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,#0f2b3d,#1e4a6b);background-clip:text;-webkit-background-clip:text;color:transparent}
-        .header-balance{background:rgba(30,74,107,0.1);padding:6px 14px;border-radius:40px;font-size:.75rem;font-weight:600;color:#1e4a6b;cursor:pointer;transition:all .2s}
-        .header-balance:active{background:rgba(30,74,107,0.2);transform:scale(0.96)}
-        .bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:rgba(255,255,255,0.96);backdrop-filter:blur(12px);display:flex;justify-content:space-around;padding:8px 20px 18px;border-top:1px solid rgba(226,232,240,0.6);z-index:20}
+        .header-balance{background:rgba(30,74,107,.1);padding:6px 14px;border-radius:40px;font-size:.75rem;font-weight:600;color:#1e4a6b;cursor:pointer;transition:all .2s}
+        .header-balance:active{background:rgba(30,74,107,.2);transform:scale(.96)}
+        .bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);display:flex;justify-content:space-around;padding:8px 20px 18px;border-top:1px solid rgba(226,232,240,.6);z-index:20}
         .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.7rem;color:#94a3b8;cursor:pointer;transition:all .2s;position:relative}
         .nav-item.active{color:#1e4a6b;font-weight:500;transform:translateY(-2px)}
         .nav-icon{font-size:1.5rem}
         .msg-badge{position:absolute;top:-5px;right:-12px;background:#ef4444;color:#fff;border-radius:20px;padding:2px 6px;font-size:.6rem;min-width:18px;text-align:center;display:none;font-weight:600}
-        .card{background:#fff;border-radius:24px;padding:16px;margin:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.03),0 1px 2px rgba(0,0,0,0.05);border:1px solid #eef2f8;transition:all .2s ease;cursor:pointer}
-        .card:active{transform:scale(0.98);box-shadow:0 1px 4px rgba(0,0,0,0.05)}
+        .card{background:#fff;border-radius:24px;padding:16px;margin:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.03),0 1px 2px rgba(0,0,0,.05);border:1px solid #eef2f8;transition:all .2s ease;cursor:pointer}
+        .card:active{transform:scale(.98);box-shadow:0 1px 4px rgba(0,0,0,.05)}
         .skeleton-card{background:#fff;border-radius:24px;padding:16px;margin:12px 16px;border:1px solid #eef2f8;animation:pulse 1.2s infinite}
-        @keyframes pulse{0%{opacity:0.6}50%{opacity:1}100%{opacity:0.6}}
+        @keyframes pulse{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}
         .skeleton-title{height:20px;background:#e2e8f0;border-radius:12px;width:60%;margin-bottom:12px}
         .skeleton-desc{height:16px;background:#e2e8f0;border-radius:12px;width:90%;margin-bottom:8px}
         .skeleton-meta{height:14px;background:#e2e8f0;border-radius:12px;width:40%}
@@ -37,13 +37,13 @@
         .task-meta{display:flex;gap:12px;font-size:.65rem;color:#6c7a91;flex-wrap:wrap}
         .distance-badge{background:#e6f7e6;color:#2b6e2f;padding:2px 10px;border-radius:20px;font-weight:500}
         .category-bar,.sort-bar{display:flex;gap:12px;padding:12px 16px;background:#fff;border-bottom:1px solid #eef2f8;overflow-x:auto;white-space:nowrap;scrollbar-width:thin}
-        .category-chip,.sort-chip{background:#f1f5f9;padding:6px 16px;border-radius:40px;font-size:.8rem;font-weight:500;color:#475569;cursor:pointer;display:inline-block;transition:all .25s ease;opacity:0.85}
-        .category-chip.active,.sort-chip.active{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);color:#fff;font-weight:700;opacity:1;box-shadow:0 4px 12px rgba(0,0,0,0.2);transform:scale(1.02);position:relative}
-        .category-chip.active::after,.sort-chip.active::after{content:'';position:absolute;bottom:-6px;left:25%;width:50%;height:3px;background:#fff;border-radius:3px;box-shadow:0 0 4px rgba(255,255,255,0.5)}
+        .category-chip,.sort-chip{background:#f1f5f9;padding:6px 16px;border-radius:40px;font-size:.8rem;font-weight:500;color:#475569;cursor:pointer;display:inline-block;transition:all .25s ease;opacity:.85}
+        .category-chip.active,.sort-chip.active{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);color:#fff;font-weight:700;opacity:1;box-shadow:0 4px 12px rgba(0,0,0,.2);transform:scale(1.02);position:relative}
+        .category-chip.active::after,.sort-chip.active::after{content:'';position:absolute;bottom:-6px;left:25%;width:50%;height:3px;background:#fff;border-radius:3px;box-shadow:0 0 4px rgba(255,255,255,.5)}
         .detail-hero{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px 16px 0;padding:24px 20px;color:#fff;position:relative;overflow:hidden}
-        .detail-hero::before{content:"💰";position:absolute;right:-20px;bottom:-20px;font-size:80px;opacity:0.15}
+        .detail-hero::before{content:"💰";position:absolute;right:-20px;bottom:-20px;font-size:80px;opacity:.15}
         .detail-reward{font-size:1.8rem;font-weight:800;margin-top:8px}
-        .detail-status{display:inline-block;padding:4px 12px;border-radius:40px;font-size:.65rem;font-weight:600;background:rgba(255,255,255,0.2);backdrop-filter:blur(4px)}
+        .detail-status{display:inline-block;padding:4px 12px;border-radius:40px;font-size:.65rem;font-weight:600;background:rgba(255,255,255,.2);backdrop-filter:blur(4px)}
         .info-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #eef2f8}
         .info-icon{width:32px;font-size:1.1rem;text-align:center}
         .info-label{font-size:.7rem;color:#64748b;margin-bottom:2px}
@@ -52,67 +52,69 @@
         .form-group{margin-bottom:18px}
         .form-label{font-size:.85rem;font-weight:600;color:#1e293b;margin-bottom:6px;display:block}
         .form-input,.form-textarea,select.form-input{width:100%;padding:12px 16px;border-radius:24px;border:1px solid #e2e8f0;font-size:.9rem;outline:none;background:#fff;transition:all .2s}
-        .form-input:focus,.form-textarea:focus{border-color:#1e4a6b;box-shadow:0 0 0 3px rgba(30,74,107,0.1)}
-        .btn-primary{background:linear-gradient(95deg,#059669,#047857);border:none;border-radius:60px;padding:14px;font-weight:600;color:#fff;width:100%;text-align:center;cursor:pointer;font-size:1rem;transition:all .2s;box-shadow:0 2px 6px rgba(5,150,105,0.2)}
-        .btn-primary:active{transform:scale(0.97);box-shadow:0 1px 3px rgba(5,150,105,0.2)}
-        .btn-primary:disabled{opacity:0.6;transform:none;cursor:not-allowed}
+        .form-input:focus,.form-textarea:focus{border-color:#1e4a6b;box-shadow:0 0 0 3px rgba(30,74,107,.1)}
+        .btn-primary{background:linear-gradient(95deg,#059669,#047857);border:none;border-radius:60px;padding:14px;font-weight:600;color:#fff;width:100%;text-align:center;cursor:pointer;font-size:1rem;transition:all .2s;box-shadow:0 2px 6px rgba(5,150,105,.2)}
+        .btn-primary:active{transform:scale(.97);box-shadow:0 1px 3px rgba(5,150,105,.2)}
+        .btn-primary:disabled{opacity:.6;transform:none;cursor:not-allowed}
         .btn-secondary{background:#f1f5f9;color:#1e4a6b;border-radius:60px;padding:12px;font-weight:600;border:none;width:100%;cursor:pointer;transition:all .2s}
-        .btn-secondary:active{background:#e2e8f0;transform:scale(0.98)}
+        .btn-secondary:active{background:#e2e8f0;transform:scale(.98)}
         .btn-danger{background:#fee2e2;color:#b91c1c;border-radius:60px;padding:8px 16px;font-weight:600;border:none;cursor:pointer;transition:all .2s}
-        .btn-danger:active{background:#fecaca;transform:scale(0.96)}
+        .btn-danger:active{background:#fecaca;transform:scale(.96)}
         .btn-phone,.btn-nav,.btn-location{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:60px;font-weight:500;border:none;cursor:pointer;transition:all .2s}
         .btn-phone{background:#10b981;color:#fff}
         .btn-nav{background:#3b82f6;color:#fff}
         .btn-location{background:#eef2ff;color:#1e4a6b}
-        .btn-phone:active,.btn-nav:active,.btn-location:active{transform:scale(0.96)}
+        .btn-phone:active,.btn-nav:active,.btn-location:active{transform:scale(.96)}
         .slide-confirm,.slide-action{margin:16px 0;user-select:none}
         .slide-track{position:relative;width:100%;height:52px;background:#eef2ff;border-radius:60px;overflow:hidden;border:1px solid #cbd5e1;touch-action:none}
-        .slide-thumb{position:absolute;left:0;top:0;width:70px;height:52px;background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:60px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.8rem;touch-action:none;transition:none;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+        .slide-thumb{position:absolute;left:0;top:0;width:70px;height:52px;background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:60px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.8rem;touch-action:none;transition:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}
         .slide-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1e4a6b;pointer-events:none;font-size:.9rem;gap:8px;z-index:1;text-align:center}
         .slide-confirm.completed .slide-track,.slide-action.completed .slide-track{background:#d1fae5;border-color:#059669}
         .countdown-timer{background:#fef3c7;border-radius:60px;padding:10px 16px;text-align:center;margin:16px 0;font-weight:700;color:#b45309;display:flex;align-items:center;justify-content:center;gap:8px}
         .countdown-timer.warning{background:#fee2e2;color:#dc2626;animation:pulseWarning 1s infinite}
-        @keyframes pulseWarning{0%,100%{opacity:1}50%{opacity:0.7}}
-        .custom-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000}
-        .custom-modal-content{background:#fff;border-radius:32px;width:85%;max-width:320px;padding:24px;text-align:center;box-shadow:0 20px 35px -12px rgba(0,0,0,0.3)}
+        @keyframes pulseWarning{0%,100%{opacity:1}50%{opacity:.7}}
+        .custom-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000}
+        .custom-modal-content{background:#fff;border-radius:32px;width:85%;max-width:320px;padding:24px;text-align:center;box-shadow:0 20px 35px -12px rgba(0,0,0,.3)}
         .custom-modal-content h3{margin-bottom:12px;font-size:1.25rem}
         .custom-modal-buttons{display:flex;gap:12px;margin-top:24px;justify-content:center}
         .custom-modal-buttons button{flex:1;padding:10px;border-radius:40px;border:none;font-weight:600;cursor:pointer}
         .confirm-btn{background:#1e4a6b;color:#fff}
         .cancel-btn{background:#e2e8f0;color:#1e293b}
-        .toast-message{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:8px 20px;border-radius:60px;font-size:.85rem;z-index:1100;pointer-events:none;animation:fadeOut 2s forwards;backdrop-filter:blur(8px)}
+        .toast-message{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:8px 20px;border-radius:60px;font-size:.85rem;z-index:1100;pointer-events:none;animation:fadeOut 2s forwards;backdrop-filter:blur(8px)}
         @keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
         .chat-container{display:flex;flex-direction:column;height:calc(100vh - 120px);background:#f8fafc}
-        .chat-header-bar{background:rgba(255,255,255,0.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+        .chat-header-bar{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
         .chat-back-btn{background:#f1f5f9;border:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer;transition:all .2s}
-        .chat-back-btn:active{background:#e2e8f0;transform:scale(0.94)}
+        .chat-back-btn:active{background:#e2e8f0;transform:scale(.94)}
         .chat-header-name{font-weight:700;font-size:1rem;flex:1}
         .chat-messages-area{flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
         .chat-bubble{max-width:80%;display:flex;flex-direction:column;cursor:pointer;transition:background .1s}
-        .chat-bubble:active{background:rgba(0,0,0,0.03);border-radius:16px}
+        .chat-bubble:active{background:rgba(0,0,0,.03);border-radius:16px}
         .chat-bubble-mine{align-self:flex-end}
         .chat-bubble-other{align-self:flex-start}
         .bubble-text{padding:10px 16px;border-radius:20px;font-size:.85rem;line-height:1.4;word-break:break-word;background:#fff;border:1px solid #e2e8f0;border-bottom-left-radius:4px}
         .chat-bubble-mine .bubble-text{background:#1e4a6b;color:#fff;border-bottom-right-radius:4px;border:none}
         .bubble-image{max-width:100%;border-radius:16px;margin-top:4px;display:block;cursor:zoom-in}
         .bubble-image-wrapper{background:transparent;border:none}
+        .bubble-audio{max-width:100%;margin-top:4px;border-radius:16px;display:block}
         .bubble-time{font-size:.6rem;color:#94a3b8;margin-top:4px;margin-left:10px;margin-right:10px}
         .chat-bubble-mine .bubble-time{text-align:right}
-        .chat-input-wrapper{background:rgba(255,255,255,0.96);backdrop-filter:blur(12px);border-top:1px solid #eef2f8;padding:12px 16px;border-radius:24px 24px 0 0}
-        .chat-action-row{display:flex;gap:10px;align-items:center}
-        .chat-message-input{flex:1;padding:10px 16px;border-radius:40px;border:1px solid #e2e8f0;background:#fff}
-        .send-btn{background:#1e4a6b;border:none;border-radius:40px;padding:10px 20px;font-weight:600;color:#fff}
-        .chat-extra-row{display:flex;gap:10px;margin-top:8px;align-items:center;justify-content:flex-end}
-        .chat-icon-btn{background:transparent;border:none;font-size:1.5rem;cursor:pointer;padding:4px 8px;border-radius:40px;transition:all .2s}
-        .chat-icon-btn:active{background:rgba(0,0,0,0.05);transform:scale(0.95)}
+        .chat-input-wrapper{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid #eef2f8;padding:12px 16px;border-radius:24px 24px 0 0}
+        .chat-action-row{display:flex;gap:8px;align-items:center;flex-wrap:nowrap}
+        .chat-message-input{flex:1;min-width:0;padding:10px 16px;border-radius:40px;border:1px solid #e2e8f0;background:#fff;font-size:.9rem}
+        .send-btn{background:#1e4a6b;border:none;border-radius:40px;padding:10px 16px;font-weight:600;color:#fff;flex-shrink:0}
+        .chat-extra-row{display:flex;gap:8px;margin-top:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+        .chat-icon-btn{background:transparent;border:none;font-size:1.5rem;cursor:pointer;padding:4px 8px;border-radius:40px;transition:all .2s;display:inline-flex;align-items:center;justify-content:center}
+        .chat-icon-btn:active{background:rgba(0,0,0,.05);transform:scale(.95)}
+        .chat-icon-btn svg{width:24px;height:24px;fill:currentColor}
         .nego-send-btn{background:#f59e0b;border:none;border-radius:40px;padding:6px 16px;font-weight:600;color:#fff;cursor:pointer}
         .profile-header{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px;padding:20px;color:#fff;display:flex;align-items:center;gap:16px;cursor:pointer}
-        .profile-avatar{width:64px;height:64px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:600;overflow:hidden}
+        .profile-avatar{width:64px;height:64px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:600;overflow:hidden}
         .profile-name{font-weight:700;font-size:1.1rem}
-        .profile-signature{font-size:.75rem;opacity:0.8}
-        .stats-row{display:flex;background:#fff;margin:0 16px 16px;border-radius:28px;padding:14px;justify-content:space-around;box-shadow:0 2px 6px rgba(0,0,0,0.03)}
+        .profile-signature{font-size:.75rem;opacity:.8}
+        .stats-row{display:flex;background:#fff;margin:0 16px 16px;border-radius:28px;padding:14px;justify-content:space-around;box-shadow:0 2px 6px rgba(0,0,0,.03);cursor:pointer}
         .stat-item{text-align:center;flex:1;cursor:pointer;transition:all .2s}
-        .stat-item:active{transform:scale(0.96)}
+        .stat-item:active{transform:scale(.96)}
         .stat-number{font-size:1.2rem;font-weight:800;color:#1e4a6b}
         .profile-collapse{background:#fff;border-radius:24px;margin:12px 16px;overflow:hidden;border:1px solid #eef2f8}
         .collapse-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#fff;cursor:pointer}
@@ -130,10 +132,10 @@
         .profile-task-status.completed{background:#e2e8f0;color:#334155}
         .profile-task-status.cancelled{background:#fee2e2;color:#b91c1c}
         .logout-btn{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:60px;padding:14px;font-weight:600;width:calc(100% - 32px);margin:16px;cursor:pointer;transition:all .2s}
-        .logout-btn:active{transform:scale(0.97)}
-        .image-preview-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
+        .logout-btn:active{transform:scale(.97)}
+        .image-preview-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
         .image-preview-modal img{max-width:90%;max-height:90%;object-fit:contain}
-        .close-preview{position:absolute;top:20px;right:20px;color:#fff;font-size:2rem;background:rgba(0,0,0,0.5);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
+        .close-preview{position:absolute;top:20px;right:20px;color:#fff;font-size:2rem;background:rgba(0,0,0,.5);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
         .empty-state{text-align:center;padding:40px 20px;color:#94a3b8}
         .loading{text-align:center;padding:40px;color:#94a3b8}
         .flex-between{display:flex;justify-content:space-between;align-items:center}
@@ -142,7 +144,7 @@
         .image-preview-grid{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
         .preview-img-wrapper{position:relative;width:80px;height:80px;border-radius:16px;overflow:hidden;background:#f1f5f9;border:1px solid #e2e8f0}
         .preview-img-wrapper img,.preview-img-wrapper video{width:100%;height:100%;object-fit:cover}
-        .remove-img-btn{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px}
+        .remove-img-btn{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px}
         .upload-btn{background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:20px;padding:12px;text-align:center;cursor:pointer;margin-top:8px;font-size:.85rem;transition:all .2s}
         .upload-btn:active{background:#e2e8f0}
         .progress-steps{display:flex;justify-content:space-between;margin:20px 0;position:relative}
@@ -153,22 +155,27 @@
         .step.completed .step-dot{background:#059669;border-color:#059669;color:#fff}
         .task-card-in-chat{background:#f8fafc;border-radius:20px;padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;border:1px solid #e2e8f0}
         .chat-refresh-indicator{text-align:center;padding:10px;font-size:.75rem;color:#64748b}
-        .network-toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#ffc107;padding:6px 14px;border-radius:40px;font-size:.7rem;z-index:2000;white-space:nowrap}
+        .network-toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#ffc107;padding:6px 14px;border-radius:40px;font-size:.7rem;z-index:2000;white-space:nowrap}
         .rating-section{background:#fff;border-radius:24px;padding:16px;margin:12px 16px;border:1px solid #eef2f8}
         .rating-buttons{display:flex;gap:12px;justify-content:center;margin:8px 0}
         .rating-buttons button{padding:8px 24px;border-radius:40px;border:none;font-weight:600;cursor:pointer;transition:all .2s}
-        .rating-buttons button:active{transform:scale(0.96)}
+        .rating-buttons button:active{transform:scale(.96)}
         .rating-buttons .btn-good{background:#d1fae5;color:#065f46}
         .rating-buttons .btn-bad{background:#fee2e2;color:#b91c1c}
         .rating-buttons .btn-good.selected{background:#059669;color:#fff}
         .rating-buttons .btn-bad.selected{background:#dc2626;color:#fff}
         .rating-comment{width:100%;padding:8px 12px;border-radius:20px;border:1px solid #e2e8f0;margin-top:8px;font-size:.9rem}
         .rating-submit{margin-top:12px;padding:10px;background:#1e4a6b;color:#fff;border:none;border-radius:40px;font-weight:600;width:100%;cursor:pointer}
-        .rating-submit:disabled{opacity:0.5;cursor:not-allowed}
+        .rating-submit:disabled{opacity:.5;cursor:not-allowed}
         .already-rated{text-align:center;color:#64748b;padding:12px}
         .prompt-input{width:100%;padding:10px;border-radius:20px;border:1px solid #e2e8f0;margin:12px 0;font-size:1rem}
         .contact-row{display:flex;gap:12px;margin:8px 16px}
         .contact-row .btn{flex:1;min-width:0;padding:10px 8px;font-size:.85rem;text-align:center}
+        .pull-refresh-container{text-align:center;padding:10px 0;color:#94a3b8;font-size:.8rem;position:relative;transition:transform .2s}
+        .wallet-detail-item{padding:8px 0;border-bottom:1px solid #eef2f8;cursor:pointer}
+        .wallet-detail-item:last-child{border-bottom:none}
+        .wallet-detail-item:active{background:#f8fafc}
+        .audio-player{max-width:100%;margin-top:4px;border-radius:16px}
     </style>
 </head>
 <body>
@@ -177,24 +184,23 @@
         <!-- 登录页 -->
         <div id="loginPage" class="page active">
             <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
-                <div class="card" style="width:100%; cursor:default; text-align:center;">
+                <div class="card" style="width:100%;cursor:default;text-align:center;">
                     <div style="font-size:3rem;">💰</div>
-                    <h2 style="color:#1e4a6b; margin:12px 0 4px;">赏金集市</h2>
-                    <p style="color:#64748b; margin-bottom:24px;">双向议价 · 轻松赚钱</p>
+                    <h2 style="color:#1e4a6b;margin:12px 0 4px;">赏金集市</h2>
+                    <p style="color:#64748b;margin-bottom:24px;">双向议价 · 轻松赚钱</p>
                     <div class="form-group"><input type="text" id="loginUsername" class="form-input" placeholder="用户名" value="xiaoming"></div>
                     <div class="form-group"><input type="password" id="loginPassword" class="form-input" placeholder="密码" value="123456"></div>
                     <button class="btn-primary" id="doLoginBtn">登录</button>
                     <div class="mt-2"><a href="#" id="showRegisterBtn" style="color:#1e4a6b;">注册账号</a></div>
-                    <div class="mt-2" style="font-size:0.7rem;">测试: xiaoming/123456 | hong/123456</div>
-                    <div id="loginError" style="color:#ef4444; font-size:0.8rem; margin-top:12px;"></div>
+                    <div class="mt-2" style="font-size:.7rem;">测试: xiaoming/123456 | hong/123456</div>
+                    <div id="loginError" style="color:#ef4444;font-size:.8rem;margin-top:12px;"></div>
                 </div>
             </div>
         </div>
-
         <!-- 注册页 -->
         <div id="registerPage" class="page">
             <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
-                <div class="card" style="width:100%; cursor:default;">
+                <div class="card" style="width:100%;cursor:default;">
                     <h3 class="text-center">注册账号</h3>
                     <div class="form-group"><input type="text" id="regUsername" class="form-input" placeholder="用户名"></div>
                     <div class="form-group"><input type="password" id="regPassword" class="form-input" placeholder="密码"></div>
@@ -203,20 +209,18 @@
                     <div class="form-group"><input type="tel" id="regPhone" class="form-input" placeholder="手机号"></div>
                     <button class="btn-primary" id="doRegisterBtn">注册</button>
                     <div class="mt-2 text-center"><a href="#" id="showLoginBtn" style="color:#1e4a6b;">返回登录</a></div>
-                    <div id="registerError" style="color:#ef4444; font-size:0.8rem; text-align:center; margin-top:8px;"></div>
+                    <div id="registerError" style="color:#ef4444;font-size:.8rem;text-align:center;margin-top:8px;"></div>
                 </div>
             </div>
         </div>
-
         <!-- 主应用 -->
         <div id="mainApp" style="display:none;">
             <div class="nav-header">
                 <span class="logo">💰 赏金集市</span>
                 <div><span class="header-balance" id="headerBalance">余额: ¥0</span></div>
             </div>
-
             <!-- 首页 -->
-            <div id="homePage" class="page" style="overflow-y:auto; height:calc(100vh - 120px);">
+            <div id="homePage" class="page" style="overflow-y:auto;height:calc(100vh - 120px);">
                 <div class="category-bar" id="categoryBar">
                     <span class="category-chip active" data-cat="all">全部</span>
                     <span class="category-chip" data-cat="取件">取件</span>
@@ -228,13 +232,11 @@
                     <span class="sort-chip" data-sort="reward">赏金最高</span>
                     <span class="sort-chip active" data-sort="time">最新发布</span>
                 </div>
-                <div id="refreshIndicator" class="refresh-container" style="display:none;">↓ 下拉刷新</div>
+                <div id="refreshIndicator" class="pull-refresh-container" style="display:none;">↓ 下拉刷新</div>
                 <div id="homeContent" class="loading">加载中...</div>
             </div>
-
             <!-- 详情页 -->
             <div id="detailPage" class="page"><div id="detailContainer"></div><div class="back-button" style="margin:8px 16px 20px;"><button class="btn-secondary" id="detailBackBtn" style="margin:0;">← 返回上一页</button></div></div>
-
             <!-- 发布页 -->
             <div id="publishPage" class="page">
                 <div class="card" style="cursor:default;">
@@ -244,11 +246,11 @@
                     <div class="form-group"><label class="form-label">任务类目</label><select id="pubCategory" class="form-input"><option value="取件">取件</option><option value="调试">调试</option><option value="跑腿">跑腿</option><option value="其他">其他</option></select></div>
                     <div class="form-group"><input type="number" id="pubReward" class="form-input" placeholder="赏金 (¥)" min="0" step="1"></div>
                     <div class="form-group">
-                        <div class="location-row" style="display:flex; gap:8px;">
+                        <div class="location-row" style="display:flex;gap:8px;">
                             <input type="text" id="pubAddress" class="form-input" placeholder="任务地点">
                             <button class="btn-location" id="getLocationBtn" type="button">📍 定位</button>
                         </div>
-                        <div style="font-size:0.7rem; color:#64748b; margin-top:4px;" id="locationHint">点击定位自动填入详细地址</div>
+                        <div style="font-size:.7rem;color:#64748b;margin-top:4px;" id="locationHint">点击定位自动填入详细地址</div>
                     </div>
                     <div class="form-group">
                         <div class="form-label">📎 图片/视频（最多3个）</div>
@@ -259,14 +261,14 @@
                     <button class="btn-primary" id="doPublishBtn">🚀 发布任务</button>
                 </div>
             </div>
-
             <!-- 消息页 -->
-            <div id="messagePage" class="page"><div id="messageContainer" class="loading">加载中...</div></div>
-
+            <div id="messagePage" class="page" style="overflow-y:auto;height:calc(100vh - 120px);">
+                <div id="refreshMessageIndicator" class="pull-refresh-container" style="display:none;">↓ 下拉刷新</div>
+                <div id="messageContainer" class="loading">加载中...</div>
+            </div>
             <!-- 我的页面 -->
             <div id="profilePage" class="page"><div id="profileContainer" class="loading">加载中...</div></div>
-
-            <!-- 底部导航栏 -->
+            <!-- 底部导航 -->
             <div class="bottom-nav">
                 <div class="nav-item" onclick="switchPage('home')"><span class="nav-icon">🏠</span><span>首页</span></div>
                 <div class="nav-item" onclick="switchPage('publish')"><span class="nav-icon">✏️</span><span>发布</span></div>
@@ -291,6 +293,7 @@
     let deletedConversations = new Set();
     let tasksCache = { data: null, timestamp: 0, ttl: 5 * 60 * 1000 };
     let refreshThrottle = false, networkToast = null;
+    let mediaRecorder = null, audioChunks = [], isRecording = false;
 
     function showNetworkSlow() {
         if (networkToast) return;
@@ -350,7 +353,6 @@
         }
     }
 
-    // 文件上传（用于图片消息）
     async function uploadFile(file) {
         const formData = new FormData();
         formData.append('file', file);
@@ -631,6 +633,7 @@
         return '其他';
     }
 
+    // ==================== 首页 ====================
     async function refreshTaskList(force = false) {
         if (refreshThrottle) return;
         refreshThrottle = true;
@@ -703,6 +706,36 @@
                 isRefreshing = true;
                 indicator.innerText = '刷新中...'; indicator.style.display = 'block';
                 await refreshTaskList(true);
+                isRefreshing = false;
+                indicator.style.display = 'none';
+                indicator.innerText = '↓ 下拉刷新';
+            }
+        });
+    }
+
+    function initMessagePullToRefresh() {
+        const messagePage = document.getElementById('messagePage');
+        const indicator = document.getElementById('refreshMessageIndicator');
+        if (!messagePage || !indicator) return;
+        let startY = 0, isRefreshing = false;
+        messagePage.addEventListener('touchstart', (e) => {
+            if (messagePage.scrollTop === 0) startY = e.touches[0].clientY;
+        });
+        messagePage.addEventListener('touchmove', (e) => {
+            if (isRefreshing || messagePage.scrollTop > 0) return;
+            const diff = e.touches[0].clientY - startY;
+            if (diff > 30) {
+                e.preventDefault();
+                indicator.style.display = 'block';
+                indicator.style.transform = `translateY(${Math.min(diff - 30, 60)}px)`;
+            }
+        });
+        messagePage.addEventListener('touchend', async () => {
+            if (indicator.style.display === 'block') {
+                indicator.style.transform = ''; indicator.style.display = 'none';
+                isRefreshing = true;
+                indicator.innerText = '刷新中...'; indicator.style.display = 'block';
+                await renderMessageList();
                 isRefreshing = false;
                 indicator.style.display = 'none';
                 indicator.innerText = '↓ 下拉刷新';
@@ -815,7 +848,6 @@
         return result;
     }
 
-    // 简化凭证选择：直接使用 input 同时支持拍照和相册
     async function chooseProofFiles() {
         return new Promise((resolve) => {
             const modal = document.createElement('div');
@@ -824,23 +856,24 @@
                 <div class="custom-modal-content">
                     <h3>选择凭证</h3>
                     <div style="display:flex; flex-direction:column; gap:12px;">
-                        <button class="btn-primary" id="selectFileBtn">📷 拍照/选择照片</button>
+                        <button class="btn-primary" id="takePhotoBtn">📷 拍照</button>
+                        <button class="btn-primary" id="chooseFromAlbumBtn" style="background:#3b82f6;">📁 从相册选择</button>
                         <button class="btn-secondary" id="cancelChoose">取消</button>
                     </div>
                 </div>
             `;
             document.body.appendChild(modal);
-            const selectBtn = modal.querySelector('#selectFileBtn');
+            const takePhotoBtn = modal.querySelector('#takePhotoBtn');
+            const albumBtn = modal.querySelector('#chooseFromAlbumBtn');
             const cancelBtn = modal.querySelector('#cancelChoose');
             const cleanup = () => modal.remove();
 
-            selectBtn.onclick = () => {
+            takePhotoBtn.onclick = () => {
                 cleanup();
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = 'image/*,video/*';
                 input.setAttribute('capture', 'environment');
-                input.multiple = true;
                 input.onchange = (e) => {
                     const files = Array.from(e.target.files);
                     resolve(files);
@@ -848,7 +881,22 @@
                 input.click();
             };
 
-            cancelBtn.onclick = () => { cleanup(); resolve([]); };
+            albumBtn.onclick = () => {
+                cleanup();
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*,video/*';
+                input.onchange = (e) => {
+                    const files = Array.from(e.target.files);
+                    resolve(files);
+                };
+                input.click();
+            };
+
+            cancelBtn.onclick = () => {
+                cleanup();
+                resolve([]);
+            };
         });
     }
 
@@ -862,6 +910,44 @@
         try {
             return await callApi('/ratings', { method: 'POST', body: JSON.stringify({ taskId, toUserId, rating, comment }) });
         } catch(e) { showAlert('评价失败', e.message); return null; }
+    }
+
+    // ==================== 录音功能 ====================
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const file = new File([audioBlob], `audio_${Date.now()}.webm`, { type: 'audio/webm' });
+                try {
+                    showToast('上传语音中...', 1500);
+                    const url = await uploadFile(file);
+                    await sendMessage(chatState.taskId, `[audio]${url}[/audio]`, false);
+                    await refreshMessagesOnly();
+                    updateUnreadBadge();
+                } catch (err) {
+                    showAlert('发送语音失败', err.message);
+                }
+                stream.getTracks().forEach(track => track.stop());
+            };
+            mediaRecorder.start();
+            isRecording = true;
+            showToast('录音中...点击停止', 3000);
+        } catch (err) {
+            showAlert('无法访问麦克风', err.message);
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            isRecording = false;
+        }
     }
 
     // ==================== 任务详情 ====================
@@ -909,7 +995,7 @@
             }
             detailHtml += `</div>`;
 
-            // 联系与电话按钮放在同一行
+            // 联系与电话（仅 ongoing 和 available）
             if(task.status === 'available' && !isMine) {
                 detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
             }
@@ -925,9 +1011,7 @@
                     <button class="btn-phone btn" id="callTakerBtn">📞 电话</button>
                 </div>`;
             }
-            if(task.status === 'available' && !isMine) {
-                // 已添加联系发布者按钮
-            }
+            // 已完成任务无聊天按钮
             if(task.status === 'available' && !isMine) {
                 detailHtml += `<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
             }
@@ -1027,7 +1111,14 @@
             if(slideComplete) {
                 initSlide(slideComplete, async () => {
                     const files = await chooseProofFiles();
-                    if(files.length === 0) return;
+                    if(files.length === 0) {
+                        // 取消时重置滑块
+                        const track = slideComplete.querySelector('.slide-track');
+                        const thumb = slideComplete.querySelector('.slide-thumb');
+                        thumb.style.transform = 'translateX(0)';
+                        slideComplete.classList.remove('completed');
+                        return;
+                    }
                     const result = await submitProof(taskIdStr, files);
                     if(result.success) {
                         showToast('凭证已提交，等待发布者确认');
@@ -1133,7 +1224,6 @@
     });
 
     // ==================== 聊天功能 ====================
-    // 轮询间隔改为3秒
     const CHAT_POLL_INTERVAL = 3000;
 
     async function sendMessage(taskId, text, isNego = false) {
@@ -1181,11 +1271,17 @@
                 const priceMatch = m.text.match(/¥(\d+)/);
                 const negoPrice = priceMatch ? parseInt(priceMatch[1]) : null;
                 const imgMatch = m.text.match(/\[img\](.*?)\[\/img\]/);
+                const audioMatch = m.text.match(/\[audio\](.*?)\[\/audio\]/);
                 let contentHtml = '';
                 if (imgMatch) {
                     const imgUrl = imgMatch[1];
                     contentHtml = `<div class="bubble-text ${isMine?'':'bubble-image-wrapper'}" style="background:${isMine?'#1e4a6b':'#fff'}; padding:4px 4px; border:${isMine?'none':'1px solid #e2e8f0'};">
                         <img src="${imgUrl}" class="bubble-image" onclick="event.stopPropagation(); showImagePreview('${imgUrl}')">
+                    </div>`;
+                } else if (audioMatch) {
+                    const audioUrl = audioMatch[1];
+                    contentHtml = `<div class="bubble-text ${isMine?'':'bubble-image-wrapper'}" style="background:${isMine?'#1e4a6b':'#fff'}; padding:4px 4px; border:${isMine?'none':'1px solid #e2e8f0'};">
+                        <audio controls class="audio-player" src="${audioUrl}"></audio>
                     </div>`;
                 } else {
                     contentHtml = `<div class="bubble-text">${escapeHtml(m.text)}</div>`;
@@ -1194,6 +1290,7 @@
                     ${contentHtml}
                     <div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div>
                 </div>`;
+                // 议价按钮显示（不论任务状态，只要不是系统消息）
                 if(!isMine && isNego && negoPrice && m.senderId !== 'system') {
                     html += `<div style="display:flex; gap:8px; margin:4px 0 8px 12px;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
                 }
@@ -1269,12 +1366,19 @@
         const container = document.getElementById('messageContainer');
         container.innerHTML = `
             <div class="chat-container">
-                <div class="chat-header-bar"><button class="chat-back-btn" id="chatBackBtn">←</button><span class="chat-header-name">${escapeHtml(chatState.otherName)}</span></div>
+                <div class="chat-header-bar">
+                    <button class="chat-back-btn" id="chatBackBtn">←</button>
+                    <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
+                    <button class="chat-icon-btn" id="chatPhoneBtn" style="font-size:1.2rem;">📞</button>
+                </div>
                 <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div>
                 <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
                 <div class="chat-input-wrapper">
                     <div class="chat-action-row">
-                        <button class="chat-icon-btn" id="imageBtn">🖼️</button>
+                        <button class="chat-icon-btn" id="imageBtn" title="发送图片/视频">
+                            <svg viewBox="0 0 24 24" width="24" height="24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+                        </button>
+                        <button class="chat-icon-btn" id="micBtn" title="语音消息">🎤</button>
                         <input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息...">
                         <button class="send-btn" id="sendChatBtn">发送</button>
                     </div>
@@ -1293,6 +1397,16 @@
             renderMessageList();
             updateUnreadBadge();
         };
+        document.getElementById('chatPhoneBtn').onclick = async () => {
+            const task = await callApi(`/tasks/${chatState.taskId}`);
+            const otherId = chatState.otherId;
+            const userInfo = await callApi(`/user/${otherId}`);
+            if (userInfo.phone) {
+                window.location.href = `tel:${userInfo.phone}`;
+            } else {
+                showAlert('提示', '对方未绑定手机号');
+            }
+        };
         document.getElementById('sendChatBtn').onclick = async () => {
             const txt = document.getElementById('chatInput').value.trim();
             if(!txt) return;
@@ -1304,22 +1418,32 @@
         document.getElementById('imageBtn').onclick = () => {
             const input = document.createElement('input');
             input.type = 'file';
-            input.accept = 'image/*';
-            input.capture = 'environment';
+            input.accept = 'image/*,video/*';
             input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 try {
-                    showToast('上传图片中...', 1500);
+                    showToast('上传中...', 1500);
                     const url = await uploadFile(file);
                     await sendMessage(chatState.taskId, `[img]${url}[/img]`, false);
                     await refreshMessagesOnly();
                     updateUnreadBadge();
                 } catch (err) {
-                    showAlert('发送图片失败', err.message);
+                    showAlert('发送失败', err.message);
                 }
             };
             input.click();
+        };
+        let micBtn = document.getElementById('micBtn');
+        micBtn.onclick = () => {
+            if (isRecording) {
+                stopRecording();
+                micBtn.textContent = '🎤';
+                showToast('录音已停止', 1000);
+            } else {
+                startRecording();
+                micBtn.textContent = '⏹️';
+            }
         };
         document.getElementById('sendNegoBtn').onclick = () => {
             showPrompt('请输入议价金额', '金额（元）', async (price) => {
@@ -1332,7 +1456,6 @@
         refreshMessagesOnly();
         initChatPullToRefresh();
         if(chatState.pollInterval) clearInterval(chatState.pollInterval);
-        // 轮询间隔改为3秒，且不检查页面可见性，只要聊天激活就持续轮询
         chatState.pollInterval = setInterval(async () => {
             if(chatState.active && chatState.taskId) {
                 await refreshMessagesOnly();
@@ -1353,22 +1476,43 @@
         updateUnreadBadge();
     }
 
+    // ===== 议价响应：支持 ongoing 状态修改赏金 =====
     window.respondToNego = async function(taskId, price, isAccept) {
         const task = await callApi(`/tasks/${taskId}`);
-        if(task.status !== 'available') { showAlert('提示','任务已被接取'); return; }
-        if(isAccept) {
-            await callApi(`/tasks/${taskId}/reward`, {method:'PUT', body:JSON.stringify({reward: price})});
-            await sendMessage(taskId, `✅ 同意议价，价格调整为 ¥${price}`, false);
-            showToast(`已同意议价，新价格 ¥${price}`);
-            if(chatState.active && chatState.taskId === taskId) {
-                chatState.reward = price;
-                await refreshMessagesOnly();
-            } else {
-                renderMessageList();
-                if(document.getElementById('detailPage').classList.contains('active')) viewTask(taskId, lastPage);
+        if (task.status === 'completed' || task.status === 'cancelled') {
+            showAlert('提示', '任务已结束，无法议价');
+            return;
+        }
+        if (isAccept) {
+            // 尝试修改赏金（无论 available 还是 ongoing）
+            try {
+                const result = await callApi(`/tasks/${taskId}/reward`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ reward: price })
+                });
+                if (result.success) {
+                    await sendMessage(taskId, `✅ 同意议价，价格调整为 ¥${price}`, false);
+                    showToast(`已同意议价，新价格 ¥${price}`);
+                    if(chatState.active && chatState.taskId === taskId) {
+                        chatState.reward = price;
+                        await refreshMessagesOnly();
+                    } else {
+                        renderMessageList();
+                        if(document.getElementById('detailPage').classList.contains('active')) viewTask(taskId, lastPage);
+                    }
+                    refreshTaskList(true);
+                    updateUnreadBadge();
+                } else {
+                    showAlert('修改价格失败', result.error || '可能任务已被接取且后端不允许修改');
+                    // 发送消息但不改价格
+                    await sendMessage(taskId, `✅ 同意议价（但价格修改失败）`, false);
+                    if(chatState.active && chatState.taskId === taskId) await refreshMessagesOnly();
+                }
+            } catch (err) {
+                showAlert('修改价格失败', err.message);
+                await sendMessage(taskId, `✅ 同意议价（但价格修改失败）`, false);
+                if(chatState.active && chatState.taskId === taskId) await refreshMessagesOnly();
             }
-            refreshTaskList(true);
-            updateUnreadBadge();
         } else {
             await sendMessage(taskId, `❌ 拒绝了议价`, false);
             showToast('已拒绝议价');
@@ -1383,8 +1527,13 @@
         chatState.active = false;
         chatState.taskId = null;
         chatState.messagesArea = null;
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            isRecording = false;
+        }
     }
 
+    // ==================== 消息列表 ====================
     async function renderMessageList() {
         if(!currentUser || !currentUser.id) {
             const container = document.getElementById('messageContainer');
@@ -1498,7 +1647,11 @@
             }
             container.innerHTML = `
                 <div class="profile-header" onclick="showEditProfileModal()"><div class="profile-avatar">${currentUser.avatar?`<img src="${currentUser.avatar}">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div><div><div class="profile-name">${escapeHtml(currentUser.nickname||currentUser.username)}</div><div class="profile-signature">${currentUser.signature||'点击编辑'}</div></div><span>✏️</span></div>
-                <div class="stats-row"><div class="stat-item" onclick="showWalletDetail()"><div class="stat-number">💰</div><div class="stat-label">钱包</div></div><div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit||60}</div><div class="stat-label">信用</div></div><div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div></div>
+                <div class="stats-row" id="walletStats">
+                    <div class="stat-item" id="balanceItem"><div class="stat-number" id="balanceDisplay">¥${(currentUser.balance||0).toFixed(2)}</div><div class="stat-label">余额</div></div>
+                    <div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit||60}</div><div class="stat-label">信用</div></div>
+                    <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div>
+                </div>
                 <div class="profile-collapse"><div class="collapse-header" data-target="pub"><div class="collapse-title">📤 我发布 <span style="font-size:0.7rem;">(${myPubOngoing.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-pub">${pubHtml}</div></div>
                 <div class="profile-collapse"><div class="collapse-header" data-target="acc"><div class="collapse-title">📥 我接取 <span style="font-size:0.7rem;">(${myAccOngoing.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-acc">${accHtml}</div></div>
                 <div class="profile-collapse"><div class="collapse-header" data-target="completed"><div class="collapse-title">✅ 已完成 <span style="font-size:0.7rem;">(${myCompleted.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-completed">${completedHtml}</div></div>
@@ -1513,6 +1666,7 @@
                     else { content.classList.add('show'); icon.classList.add('open'); }
                 });
             });
+            document.getElementById('balanceItem').onclick = () => showWalletDetail();
         } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
 
@@ -1524,12 +1678,14 @@
             <div class="custom-modal-content"><h3>💰 钱包明细</h3>
             <div style="background:#eef2ff; padding:12px; border-radius:16px; margin-bottom:12px;"><div>可用余额</div><div style="font-size:1.6rem;">¥${(currentUser.balance||0).toFixed(2)}</div><div style="font-size:0.7rem; color:#64748b;">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div></div>
             <div><strong>提现</strong></div><button class="btn-primary" id="withdrawBtn" style="margin:6px 0;">💸 提现</button>
-            <div><strong>账单明细</strong></div><button class="btn-secondary" id="showBillDetailBtn" style="margin-bottom:8px;">📋 查看明细</button>
+            <div><strong>账单明细</strong></div>
             <div id="billDetailContainer" style="max-height:200px; overflow:auto; display:none;"></div>
+            <button class="btn-secondary" id="showBillDetailBtn" style="margin-bottom:8px;">📋 查看明细</button>
             <div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>
         `;
         document.body.appendChild(modal);
-        modal.querySelector('.confirm-btn').onclick = () => modal.remove();
+        const closeModal = () => modal.remove();
+        modal.querySelector('.confirm-btn').onclick = closeModal;
         modal.querySelector('#withdrawBtn').onclick = () => {
             const chooseModal = document.createElement('div');
             chooseModal.className = 'custom-modal';
@@ -1545,12 +1701,31 @@
             if(bills.length===0) container.innerHTML='<div class="empty-state">暂无记录</div>';
             else {
                 let html='';
-                for(const b of bills) html+=`<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${b.desc}</div><div>${b.amount>0?`+${b.amount}`:b.amount}元</div><div style="font-size:0.7rem;">${b.createdAt?new Date(b.createdAt).toLocaleString():''}</div></div>`;
+                for(const b of bills) {
+                    html += `<div class="wallet-detail-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
+                        <div><strong>${b.desc}</strong></div>
+                        <div style="display:flex; justify-content:space-between;"><span>${b.amount>0?`+${b.amount}`:b.amount}元</span><span style="font-size:0.7rem;color:#94a3b8;">${b.createdAt?new Date(b.createdAt).toLocaleString():''}</span></div>
+                    </div>`;
+                }
                 container.innerHTML = html;
+                container.querySelectorAll('.wallet-detail-item').forEach(item => {
+                    item.onclick = () => {
+                        const bill = JSON.parse(item.getAttribute('data-bill'));
+                        showAlert('账单详情', `
+                            <div style="text-align:left;">
+                                <div><strong>说明：</strong>${bill.desc}</div>
+                                <div><strong>金额：</strong>${bill.amount}元</div>
+                                <div><strong>时间：</strong>${new Date(bill.createdAt).toLocaleString()}</div>
+                                <div><strong>类型：</strong>${bill.type}</div>
+                            </div>
+                        `);
+                    };
+                });
             }
             container.style.display='block'; modal.querySelector('#showBillDetailBtn').innerText='🔽 收起明细';
         };
     }
+
     async function showCreditDetail() {
         const logs = await callApi(`/credit-logs/${currentUser.id}`);
         const modal = document.createElement('div');
@@ -1622,6 +1797,7 @@
             document.getElementById('loginPage').classList.add('active');
             if(countdownTimer) clearInterval(countdownTimer);
             if(chatState.pollInterval) clearInterval(chatState.pollInterval);
+            if (mediaRecorder && isRecording) { mediaRecorder.stop(); isRecording = false; }
         });
     }
     function switchPage(page) {
@@ -1764,6 +1940,7 @@
             await refreshTaskList(true);
             loadProfile();
             initPullToRefresh();
+            initMessagePullToRefresh();
             initFiltersAndCategories();
             renderMessageList();
             updateUnreadBadge();
