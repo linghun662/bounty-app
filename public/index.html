@@ -117,6 +117,18 @@
         .stat-item{text-align:center;flex:1;cursor:pointer;transition:all .2s}
         .stat-item:active{transform:scale(.96)}
         .stat-number{font-size:1.2rem;font-weight:800;color:#1e4a6b}
+        /* 账单明细在个人主页中展开 */
+        .bill-list-container{display:none;padding:12px 0;border-top:1px solid #eef2f8;margin-top:8px;max-height:300px;overflow-y:auto}
+        .bill-list-container.show{display:block}
+        .bill-item{padding:8px 0;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:10px}
+        .bill-item:last-child{border-bottom:none}
+        .bill-icon{font-size:1.2rem;width:28px;text-align:center}
+        .bill-info{flex:1}
+        .bill-desc{font-weight:600;font-size:.85rem}
+        .bill-time{font-size:.65rem;color:#94a3b8}
+        .bill-amount{font-weight:700;font-size:.85rem}
+        .bill-amount.income{color:#059669}
+        .bill-amount.expense{color:#dc2626}
         .profile-collapse{background:#fff;border-radius:24px;margin:12px 16px;overflow:hidden;border:1px solid #eef2f8}
         .collapse-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#fff;cursor:pointer}
         .collapse-header:active{background:#f8fafc}
@@ -173,15 +185,6 @@
         .contact-row{display:flex;gap:12px;margin:8px 16px}
         .contact-row .btn{flex:1;min-width:0;padding:10px 8px;font-size:.85rem;text-align:center}
         .pull-refresh-container{text-align:center;padding:10px 0;color:#94a3b8;font-size:.8rem;position:relative;transition:transform .2s}
-        .wallet-detail-item{padding:8px 0;border-bottom:1px solid #eef2f8;cursor:pointer;display:flex;align-items:center;gap:12px}
-        .wallet-detail-item:last-child{border-bottom:none}
-        .wallet-detail-item:active{background:#f8fafc}
-        .wallet-icon{font-size:1.5rem;width:32px;text-align:center}
-        .wallet-info{flex:1}
-        .wallet-amount{font-weight:700;font-size:1rem}
-        .wallet-amount.income{color:#059669}
-        .wallet-amount.expense{color:#dc2626}
-        .wallet-time{font-size:.7rem;color:#94a3b8}
         .audio-player{max-width:100%;margin-top:4px;border-radius:16px}
         .voice-call-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff}
         .voice-call-modal .avatar{font-size:4rem;background:rgba(255,255,255,.1);border-radius:50%;width:100px;height:100px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
@@ -189,6 +192,7 @@
         .voice-call-modal .status{font-size:.9rem;opacity:.7;margin-bottom:30px}
         .voice-call-modal .hangup-btn{background:#ef4444;border:none;border-radius:50%;width:64px;height:64px;font-size:2rem;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
         .voice-call-modal .hangup-btn:active{transform:scale(.9)}
+        .withdraw-btn-sm{padding:4px 12px;font-size:.7rem;border-radius:20px;background:#1e4a6b;color:#fff;border:none;cursor:pointer}
     </style>
 </head>
 <body>
@@ -926,7 +930,7 @@
         } catch(e) { showAlert('评价失败', e.message); return null; }
     }
 
-    // ==================== 语音相关（含权限检测） ====================
+    // ==================== 语音相关 ====================
     async function requestMicrophonePermission() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1457,7 +1461,6 @@
             updateUnreadBadge();
         };
 
-        // 网络语音通话按钮
         document.getElementById('voiceCallBtn').onclick = () => {
             showVoiceCallModal(chatState.otherName);
         };
@@ -1499,7 +1502,6 @@
         const startPress = async (e) => {
             e.preventDefault();
             if (isPressed) return;
-            // 先检测权限
             const hasPermission = await requestMicrophonePermission();
             if (!hasPermission) {
                 showAlert('麦克风权限', '请允许浏览器访问麦克风后重试，您可在浏览器设置中开启');
@@ -1690,7 +1692,7 @@
         } catch(e) {}
     }
 
-    // ==================== 个人主页 ====================
+    // ==================== 个人主页（含账单明细展开） ====================
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -1733,10 +1735,44 @@
                     return `<div class="profile-task-item" onclick="viewTask('${t._id}','profile')"><div style="display:flex; justify-content:space-between; align-items:center;"><div><div class="profile-task-title">${escapeHtml(t.title)}</div><span class="profile-task-status completed">已完成</span>${role ? `<span style="margin-left:6px; font-size:0.6rem; color:#64748b;">(${role})</span>` : ''}</div><div class="profile-task-amount">💰 ${t.reward}元</div></div></div>`;
                 }).join('');
             }
+
+            // 获取账单明细
+            const bills = await callApi(`/bills/${currentUser.id}`);
+            let billHtml = '';
+            if (bills.length === 0) {
+                billHtml = '<div class="empty-state">暂无记录</div>';
+            } else {
+                for (const b of bills) {
+                    const icon = b.amount > 0 ? '📈' : '📉';
+                    const amountClass = b.amount > 0 ? 'income' : 'expense';
+                    const sign = b.amount > 0 ? '+' : '';
+                    billHtml += `
+                        <div class="bill-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
+                            <div class="bill-icon">${icon}</div>
+                            <div class="bill-info">
+                                <div class="bill-desc">${b.desc}</div>
+                                <div class="bill-time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
+                            </div>
+                            <div class="bill-amount ${amountClass}">${sign}${b.amount}元</div>
+                        </div>
+                    `;
+                }
+            }
+
             container.innerHTML = `
                 <div class="profile-header" onclick="showEditProfileModal()"><div class="profile-avatar">${currentUser.avatar?`<img src="${currentUser.avatar}">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div><div><div class="profile-name">${escapeHtml(currentUser.nickname||currentUser.username)}</div><div class="profile-signature">${currentUser.signature||'点击编辑'}</div></div><span>✏️</span></div>
                 <div class="stats-row" id="walletStats">
-                    <div class="stat-item" id="balanceItem"><div class="stat-number" id="balanceDisplay">¥${(currentUser.balance||0).toFixed(2)}</div><div class="stat-label">余额</div></div>
+                    <div class="stat-item" id="balanceItem" style="position:relative;">
+                        <div class="stat-number" id="balanceDisplay">¥${(currentUser.balance||0).toFixed(2)}</div>
+                        <div class="stat-label">余额 <span style="font-size:0.6rem;color:#94a3b8;">点击查看明细</span></div>
+                        <div id="billListContainer" class="bill-list-container">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                <span style="font-weight:600;">账单明细</span>
+                                <button class="withdraw-btn-sm" id="withdrawBtnSmall">💸 提现</button>
+                            </div>
+                            ${billHtml}
+                        </div>
+                    </div>
                     <div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit||60}</div><div class="stat-label">信用</div></div>
                     <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div>
                 </div>
@@ -1745,6 +1781,8 @@
                 <div class="profile-collapse"><div class="collapse-header" data-target="completed"><div class="collapse-title">✅ 已完成 <span style="font-size:0.7rem;">(${myCompleted.length})</span></div><span class="collapse-icon">▶</span></div><div class="collapse-content" id="collapse-completed">${completedHtml}</div></div>
                 <button class="logout-btn" onclick="logout()">退出登录</button>
             `;
+
+            // 折叠面板交互
             document.querySelectorAll('.collapse-header').forEach(header => {
                 header.addEventListener('click', () => {
                     const targetId = header.getAttribute('data-target');
@@ -1754,65 +1792,39 @@
                     else { content.classList.add('show'); icon.classList.add('open'); }
                 });
             });
-            // 点击余额数字直接打开账单明细（不再需要二次点击）
-            document.getElementById('balanceItem').onclick = () => showWalletDetail();
-        } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
-    }
 
-    // 账单明细（直接显示，无需再点击“查看明细”）
-    async function showWalletDetail() {
-        const bills = await callApi(`/bills/${currentUser.id}`);
-        const modal = document.createElement('div');
-        modal.className = 'custom-modal';
-        modal.innerHTML = `
-            <div class="custom-modal-content" style="max-width:360px;">
-                <h3>💰 账单明细</h3>
-                <div style="background:#eef2ff; padding:12px; border-radius:16px; margin-bottom:12px;">
-                    <div>当前余额</div>
-                    <div style="font-size:1.6rem;">¥${(currentUser.balance||0).toFixed(2)}</div>
-                    <div style="font-size:0.7rem; color:#64748b;">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div>
-                </div>
-                <button class="btn-primary" id="withdrawBtn" style="margin:6px 0; padding:8px;">💸 提现</button>
-                <div id="billDetailContainer" style="max-height:250px; overflow:auto; margin-top:8px;"></div>
-                <div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        const closeModal = () => modal.remove();
-        modal.querySelector('.confirm-btn').onclick = closeModal;
+            // 点击余额数字展开/折叠账单明细
+            const billContainer = document.getElementById('billListContainer');
+            const balanceItem = document.getElementById('balanceItem');
+            let billVisible = false;
+            balanceItem.addEventListener('click', (e) => {
+                // 防止点到提现按钮触发关闭
+                if (e.target.closest('#withdrawBtnSmall')) return;
+                billVisible = !billVisible;
+                if (billVisible) {
+                    billContainer.classList.add('show');
+                } else {
+                    billContainer.classList.remove('show');
+                }
+            });
 
-        modal.querySelector('#withdrawBtn').onclick = () => {
-            const chooseModal = document.createElement('div');
-            chooseModal.className = 'custom-modal';
-            chooseModal.innerHTML = `<div class="custom-modal-content"><h3>选择提现方式</h3><button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button><button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button><div class="custom-modal-buttons"><button class="cancel-btn">取消</button></div></div>`;
-            document.body.appendChild(chooseModal);
-            chooseModal.querySelector('#withdrawWechatBtn').onclick = () => { showToast('提现到微信（演示模式）'); chooseModal.remove(); modal.remove(); };
-            chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); modal.remove(); };
-            chooseModal.querySelector('.cancel-btn').onclick = () => chooseModal.remove();
-        };
-
-        const container = modal.querySelector('#billDetailContainer');
-        if (bills.length === 0) {
-            container.innerHTML = '<div class="empty-state">暂无记录</div>';
-        } else {
-            let html = '';
-            for (const b of bills) {
-                const icon = b.amount > 0 ? '📈' : '📉';
-                const amountClass = b.amount > 0 ? 'income' : 'expense';
-                const sign = b.amount > 0 ? '+' : '';
-                html += `
-                    <div class="wallet-detail-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
-                        <div class="wallet-icon">${icon}</div>
-                        <div class="wallet-info">
-                            <div><strong>${b.desc}</strong></div>
-                            <div class="wallet-time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
-                        </div>
-                        <div class="wallet-amount ${amountClass}">${sign}${b.amount}元</div>
-                    </div>
-                `;
+            // 提现按钮（小）
+            const withdrawSmall = document.getElementById('withdrawBtnSmall');
+            if (withdrawSmall) {
+                withdrawSmall.onclick = (e) => {
+                    e.stopPropagation();
+                    const chooseModal = document.createElement('div');
+                    chooseModal.className = 'custom-modal';
+                    chooseModal.innerHTML = `<div class="custom-modal-content"><h3>选择提现方式</h3><button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button><button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button><div class="custom-modal-buttons"><button class="cancel-btn">取消</button></div></div>`;
+                    document.body.appendChild(chooseModal);
+                    chooseModal.querySelector('#withdrawWechatBtn').onclick = () => { showToast('提现到微信（演示模式）'); chooseModal.remove(); };
+                    chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); };
+                    chooseModal.querySelector('.cancel-btn').onclick = () => chooseModal.remove();
+                };
             }
-            container.innerHTML = html;
-            container.querySelectorAll('.wallet-detail-item').forEach(item => {
+
+            // 账单条目点击查看详情
+            document.querySelectorAll('.bill-item').forEach(item => {
                 item.onclick = () => {
                     const bill = JSON.parse(item.getAttribute('data-bill'));
                     const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
@@ -1826,9 +1838,11 @@
                     `);
                 };
             });
-        }
+
+        } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
 
+    // ==================== 信用明细等辅助函数 ====================
     async function showCreditDetail() {
         const logs = await callApi(`/credit-logs/${currentUser.id}`);
         const modal = document.createElement('div');
@@ -1837,6 +1851,7 @@
         document.body.appendChild(modal);
         modal.querySelector('.confirm-btn').onclick = () => modal.remove();
     }
+
     window.cancelAcceptedTask = async function(taskId) {
         showConfirm('确认取消', '取消接取将扣除5信用分，确定吗？', async () => {
             const result = await callApi(`/tasks/${taskId}/cancel-accept`, {method:'PUT', body:JSON.stringify({})});
