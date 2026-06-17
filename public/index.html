@@ -83,10 +83,13 @@
         .toast-message{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:8px 20px;border-radius:60px;font-size:.85rem;z-index:1100;pointer-events:none;animation:fadeOut 2s forwards;backdrop-filter:blur(8px)}
         @keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
         .chat-container{display:flex;flex-direction:column;height:calc(100vh - 120px);background:#f8fafc}
-        .chat-header-bar{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+        .chat-header-bar{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:10}
         .chat-back-btn{background:#f1f5f9;border:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer;transition:all .2s}
         .chat-back-btn:active{background:#e2e8f0;transform:scale(.94)}
         .chat-header-name{font-weight:700;font-size:1rem;flex:1}
+        .chat-header-actions{display:flex;gap:6px;align-items:center}
+        .chat-icon-btn{background:transparent;border:none;font-size:1.3rem;cursor:pointer;padding:4px 6px;border-radius:40px;transition:all .2s;display:inline-flex;align-items:center;justify-content:center}
+        .chat-icon-btn:active{background:rgba(0,0,0,.05);transform:scale(.95)}
         .chat-messages-area{flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
         .chat-bubble{max-width:80%;display:flex;flex-direction:column;cursor:pointer;transition:background .1s}
         .chat-bubble:active{background:rgba(0,0,0,.03);border-radius:16px}
@@ -104,9 +107,7 @@
         .chat-message-input{flex:1;min-width:0;padding:10px 16px;border-radius:40px;border:1px solid #e2e8f0;background:#fff;font-size:.9rem}
         .send-btn{background:#1e4a6b;border:none;border-radius:40px;padding:10px 16px;font-weight:600;color:#fff;flex-shrink:0}
         .chat-extra-row{display:flex;gap:8px;margin-top:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
-        .chat-icon-btn{background:transparent;border:none;font-size:1.5rem;cursor:pointer;padding:4px 8px;border-radius:40px;transition:all .2s;display:inline-flex;align-items:center;justify-content:center}
-        .chat-icon-btn:active{background:rgba(0,0,0,.05);transform:scale(.95)}
-        .chat-icon-btn svg{width:24px;height:24px;fill:currentColor}
+        .chat-icon-btn svg{width:22px;height:22px;fill:currentColor}
         .nego-send-btn{background:#f59e0b;border:none;border-radius:40px;padding:6px 16px;font-weight:600;color:#fff;cursor:pointer}
         .profile-header{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px;padding:20px;color:#fff;display:flex;align-items:center;gap:16px;cursor:pointer}
         .profile-avatar{width:64px;height:64px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:600;overflow:hidden}
@@ -939,7 +940,13 @@
             isRecording = true;
             showToast('录音中...点击停止', 3000);
         } catch (err) {
-            showAlert('无法访问麦克风', err.message);
+            let msg = '无法访问麦克风，请检查浏览器权限或在 HTTPS 环境下使用';
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                msg = '麦克风权限被拒绝，请在浏览器设置中允许访问麦克风';
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                msg = '未检测到麦克风设备';
+            }
+            showAlert('录音失败', msg);
         }
     }
 
@@ -995,7 +1002,7 @@
             }
             detailHtml += `</div>`;
 
-            // 联系与电话（仅 ongoing 和 available）
+            // 联系与电话
             if(task.status === 'available' && !isMine) {
                 detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
             }
@@ -1011,7 +1018,6 @@
                     <button class="btn-phone btn" id="callTakerBtn">📞 电话</button>
                 </div>`;
             }
-            // 已完成任务无聊天按钮
             if(task.status === 'available' && !isMine) {
                 detailHtml += `<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
             }
@@ -1112,7 +1118,6 @@
                 initSlide(slideComplete, async () => {
                     const files = await chooseProofFiles();
                     if(files.length === 0) {
-                        // 取消时重置滑块
                         const track = slideComplete.querySelector('.slide-track');
                         const thumb = slideComplete.querySelector('.slide-thumb');
                         thumb.style.transform = 'translateX(0)';
@@ -1290,7 +1295,6 @@
                     ${contentHtml}
                     <div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div>
                 </div>`;
-                // 议价按钮显示（不论任务状态，只要不是系统消息）
                 if(!isMine && isNego && negoPrice && m.senderId !== 'system') {
                     html += `<div style="display:flex; gap:8px; margin:4px 0 8px 12px;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
                 }
@@ -1369,7 +1373,10 @@
                 <div class="chat-header-bar">
                     <button class="chat-back-btn" id="chatBackBtn">←</button>
                     <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
-                    <button class="chat-icon-btn" id="chatPhoneBtn" style="font-size:1.2rem;">📞</button>
+                    <div class="chat-header-actions">
+                        <button class="chat-icon-btn" id="chatVoiceCallBtn" title="语音通话">📞</button>
+                        <button class="chat-icon-btn" id="chatPhoneBtn" style="font-size:1.2rem;">📱</button>
+                    </div>
                 </div>
                 <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div>
                 <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
@@ -1397,6 +1404,20 @@
             renderMessageList();
             updateUnreadBadge();
         };
+        // 语音通话按钮（类似于微信电话）
+        document.getElementById('chatVoiceCallBtn').onclick = async () => {
+            const task = await callApi(`/tasks/${chatState.taskId}`);
+            const otherId = chatState.otherId;
+            const userInfo = await callApi(`/user/${otherId}`);
+            if (userInfo.phone) {
+                showConfirm('语音通话', `将拨打对方手机号 ${userInfo.phone} 进行通话`, () => {
+                    window.location.href = `tel:${userInfo.phone}`;
+                });
+            } else {
+                showAlert('提示', '对方未绑定手机号，无法拨打电话');
+            }
+        };
+        // 电话拨号（直接拨打）
         document.getElementById('chatPhoneBtn').onclick = async () => {
             const task = await callApi(`/tasks/${chatState.taskId}`);
             const otherId = chatState.otherId;
@@ -1476,7 +1497,6 @@
         updateUnreadBadge();
     }
 
-    // ===== 议价响应：支持 ongoing 状态修改赏金 =====
     window.respondToNego = async function(taskId, price, isAccept) {
         const task = await callApi(`/tasks/${taskId}`);
         if (task.status === 'completed' || task.status === 'cancelled') {
@@ -1484,7 +1504,6 @@
             return;
         }
         if (isAccept) {
-            // 尝试修改赏金（无论 available 还是 ongoing）
             try {
                 const result = await callApi(`/tasks/${taskId}/reward`, {
                     method: 'PUT',
@@ -1504,7 +1523,6 @@
                     updateUnreadBadge();
                 } else {
                     showAlert('修改价格失败', result.error || '可能任务已被接取且后端不允许修改');
-                    // 发送消息但不改价格
                     await sendMessage(taskId, `✅ 同意议价（但价格修改失败）`, false);
                     if(chatState.active && chatState.taskId === taskId) await refreshMessagesOnly();
                 }
@@ -1702,21 +1720,24 @@
             else {
                 let html='';
                 for(const b of bills) {
+                    const typeLabel = b.type === 'income' ? '收入' : (b.type === 'expense' ? '支出' : b.type);
                     html += `<div class="wallet-detail-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
                         <div><strong>${b.desc}</strong></div>
                         <div style="display:flex; justify-content:space-between;"><span>${b.amount>0?`+${b.amount}`:b.amount}元</span><span style="font-size:0.7rem;color:#94a3b8;">${b.createdAt?new Date(b.createdAt).toLocaleString():''}</span></div>
+                        <div style="font-size:0.7rem;color:#94a3b8;">类型：${typeLabel}</div>
                     </div>`;
                 }
                 container.innerHTML = html;
                 container.querySelectorAll('.wallet-detail-item').forEach(item => {
                     item.onclick = () => {
                         const bill = JSON.parse(item.getAttribute('data-bill'));
+                        const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
                         showAlert('账单详情', `
                             <div style="text-align:left;">
                                 <div><strong>说明：</strong>${bill.desc}</div>
                                 <div><strong>金额：</strong>${bill.amount}元</div>
                                 <div><strong>时间：</strong>${new Date(bill.createdAt).toLocaleString()}</div>
-                                <div><strong>类型：</strong>${bill.type}</div>
+                                <div><strong>类型：</strong>${typeLabel}</div>
                             </div>
                         `);
                     };
