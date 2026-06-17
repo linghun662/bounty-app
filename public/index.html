@@ -68,7 +68,7 @@
         .slide-confirm,.slide-action{margin:16px 0;user-select:none}
         .slide-track{position:relative;width:100%;height:52px;background:#eef2ff;border-radius:60px;overflow:hidden;border:1px solid #cbd5e1;touch-action:none}
         .slide-thumb{position:absolute;left:0;top:0;width:70px;height:52px;background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:60px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.8rem;touch-action:none;transition:none;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
-        .slide-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1e4a6b;pointer-events:none;font-size:.9rem;gap:8px;z-index:1}
+        .slide-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1e4a6b;pointer-events:none;font-size:.9rem;gap:8px;z-index:1;text-align:center}
         .slide-confirm.completed .slide-track,.slide-action.completed .slide-track{background:#d1fae5;border-color:#059669}
         .countdown-timer{background:#fef3c7;border-radius:60px;padding:10px 16px;text-align:center;margin:16px 0;font-weight:700;color:#b45309;display:flex;align-items:center;justify-content:center;gap:8px}
         .countdown-timer.warning{background:#fee2e2;color:#dc2626;animation:pulseWarning 1s infinite}
@@ -94,9 +94,8 @@
         .chat-bubble-other{align-self:flex-start}
         .bubble-text{padding:10px 16px;border-radius:20px;font-size:.85rem;line-height:1.4;word-break:break-word;background:#fff;border:1px solid #e2e8f0;border-bottom-left-radius:4px}
         .chat-bubble-mine .bubble-text{background:#1e4a6b;color:#fff;border-bottom-right-radius:4px;border:none}
-        /* 图片消息样式 */
-        .bubble-image { max-width: 100%; border-radius: 16px; margin-top: 4px; display: block; cursor: zoom-in; }
-        .bubble-image-wrapper { background: transparent; border: none; }
+        .bubble-image{max-width:100%;border-radius:16px;margin-top:4px;display:block;cursor:zoom-in}
+        .bubble-image-wrapper{background:transparent;border:none}
         .bubble-time{font-size:.6rem;color:#94a3b8;margin-top:4px;margin-left:10px;margin-right:10px}
         .chat-bubble-mine .bubble-time{text-align:right}
         .chat-input-wrapper{background:rgba(255,255,255,0.96);backdrop-filter:blur(12px);border-top:1px solid #eef2f8;padding:12px 16px;border-radius:24px 24px 0 0}
@@ -168,6 +167,8 @@
         .rating-submit:disabled{opacity:0.5;cursor:not-allowed}
         .already-rated{text-align:center;color:#64748b;padding:12px}
         .prompt-input{width:100%;padding:10px;border-radius:20px;border:1px solid #e2e8f0;margin:12px 0;font-size:1rem}
+        .contact-row{display:flex;gap:12px;margin:8px 16px}
+        .contact-row .btn{flex:1;min-width:0;padding:10px 8px;font-size:.85rem;text-align:center}
     </style>
 </head>
 <body>
@@ -439,7 +440,6 @@
         modal.querySelector('.confirm-btn').onclick = () => { modal.remove(); if(onConfirm) onConfirm(); };
         modal.querySelector('.cancel-btn').onclick = () => { modal.remove(); if(onCancel) onCancel(); };
     }
-    // 自定义 prompt
     function showPrompt(title, placeholder, callback) {
         const modal = document.createElement('div');
         modal.className = 'custom-modal';
@@ -815,34 +815,7 @@
         return result;
     }
 
-    async function takePhotoWithCamera() {
-        if (window.Capacitor && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.Camera) {
-            try {
-                const image = await Capacitor.Plugins.Camera.getPhoto({
-                    quality: 80,
-                    allowEditing: false,
-                    resultType: 'uri',
-                    saveToGallery: false
-                });
-                const response = await fetch(image.webPath);
-                const blob = await response.blob();
-                const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
-                return [file];
-            } catch (err) { console.error('Capacitor 拍照失败，尝试回退', err); }
-        }
-        return new Promise((resolve) => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.setAttribute('capture', 'environment');
-            input.onchange = (e) => {
-                const files = Array.from(e.target.files);
-                resolve(files);
-            };
-            input.click();
-        });
-    }
-
+    // 简化凭证选择：直接使用 input 同时支持拍照和相册
     async function chooseProofFiles() {
         return new Promise((resolve) => {
             const modal = document.createElement('div');
@@ -851,33 +824,28 @@
                 <div class="custom-modal-content">
                     <h3>选择凭证</h3>
                     <div style="display:flex; flex-direction:column; gap:12px;">
-                        <button class="btn-primary" id="chooseFromAlbum">📁 从相册选择</button>
-                        <button class="btn-primary" id="takePhoto" style="background:#10b981;">📷 拍照</button>
+                        <button class="btn-primary" id="selectFileBtn">📷 拍照/选择照片</button>
                         <button class="btn-secondary" id="cancelChoose">取消</button>
                     </div>
                 </div>
             `;
             document.body.appendChild(modal);
-            const albumBtn = modal.querySelector('#chooseFromAlbum');
-            const cameraBtn = modal.querySelector('#takePhoto');
+            const selectBtn = modal.querySelector('#selectFileBtn');
             const cancelBtn = modal.querySelector('#cancelChoose');
             const cleanup = () => modal.remove();
 
-            albumBtn.onclick = () => {
+            selectBtn.onclick = () => {
                 cleanup();
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = 'image/*,video/*';
+                input.setAttribute('capture', 'environment');
                 input.multiple = true;
-                input.onchange = (e) => { resolve(Array.from(e.target.files)); };
+                input.onchange = (e) => {
+                    const files = Array.from(e.target.files);
+                    resolve(files);
+                };
                 input.click();
-            };
-
-            cameraBtn.onclick = async () => {
-                cleanup();
-                showToast('正在打开相机...', 1500);
-                const files = await takePhotoWithCamera();
-                resolve(files);
             };
 
             cancelBtn.onclick = () => { cleanup(); resolve([]); };
@@ -940,30 +908,46 @@
                 detailHtml += proofHtml;
             }
             detailHtml += `</div>`;
-            if(task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
+
+            // 联系与电话按钮放在同一行
+            if(task.status === 'available' && !isMine) {
+                detailHtml += `<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;
+            }
             if(task.status === 'ongoing' && isTaker) {
-                detailHtml += `<div style="display: flex; gap: 12px; margin: 8px 12px;"><button class="btn-primary" id="contactPublisherBtn" style="flex:1; background:#3b82f6;">💬 联系发布者</button>${task.publisherPhone?`<button class="btn-phone" id="callPublisherPhoneBtn" style="flex:1;">📞 拨打电话</button>`:`<button class="btn-phone" disabled style="flex:1; opacity:0.6;">📞 无手机号</button>`}</div>`;
+                detailHtml += `<div class="contact-row">
+                    <button class="btn-primary btn" id="contactPublisherBtn" style="background:#3b82f6;">💬 联系发布者</button>
+                    ${task.publisherPhone ? `<button class="btn-phone btn" id="callPublisherPhoneBtn">📞 电话</button>` : `<button class="btn-phone btn" disabled style="opacity:0.6;">📞 无电话</button>`}
+                </div>`;
             }
             if(task.status === 'ongoing' && isMine && task.takerId) {
-                detailHtml += `<div class="contact-buttons"><button class="btn-primary" id="contactTakerBtn">💬 联系接取者</button><button class="btn-phone" id="callTakerBtn">📞 拨打接取者电话</button></div>`;
+                detailHtml += `<div class="contact-row">
+                    <button class="btn-primary btn" id="contactTakerBtn" style="background:#3b82f6;">💬 联系接取者</button>
+                    <button class="btn-phone btn" id="callTakerBtn">📞 电话</button>
+                </div>`;
             }
-            if(task.status === 'available' && !isMine) detailHtml += `<div style="margin:8px 12px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
+            if(task.status === 'available' && !isMine) {
+                // 已添加联系发布者按钮
+            }
+            if(task.status === 'available' && !isMine) {
+                detailHtml += `<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;
+            }
             if(task.status === 'ongoing' && isTaker) {
                 if(task.locationAddress) {
                     const coords = await geocodeAddress(task.locationAddress) || { lat: 31.2304, lng: 121.4737 };
-                    detailHtml += `<div style="margin:8px 12px;"><button class="btn-nav" id="navigateBtn" data-task-lat="${coords.lat}" data-task-lng="${coords.lng}" data-task-addr="${escapeHtml(task.locationAddress)}">🧭 高德导航</button></div>`;
+                    detailHtml += `<div style="margin:8px 16px;"><button class="btn-nav" id="navigateBtn" data-task-lat="${coords.lat}" data-task-lng="${coords.lng}" data-task-addr="${escapeHtml(task.locationAddress)}">🧭 高德导航</button></div>`;
                 }
-                if(task.travelStatus === 'idle') detailHtml += `<div class="slide-action" id="slideStartWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
+                if(task.travelStatus === 'idle') detailHtml += `<div class="slide-action" id="slideStartWrapper" style="margin:8px 16px;"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;
                 else if(task.travelStatus === 'traveling') {
-                    detailHtml += `<div id="countdownDisplay" class="countdown-timer">计算中...</div><div class="slide-action" id="slideArriveWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📍 滑动到达 📍</div></div></div>`;
+                    detailHtml += `<div id="countdownDisplay" class="countdown-timer" style="margin:8px 16px;">计算中...</div><div class="slide-action" id="slideArriveWrapper" style="margin:8px 16px;"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📍 滑动到达 📍</div></div></div>`;
                 }else if(task.travelStatus === 'arrived' && !task.takerCompleted){
-                    detailHtml += `<div class="slide-action" id="slideCompleteWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📎 滑动并上传凭证完成 ✅</div></div></div>`;
+                    detailHtml += `<div class="slide-action" id="slideCompleteWrapper" style="margin:8px 16px;"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📎 滑动并上传凭证完成 ✅</div></div></div>`;
                 }
-                detailHtml += `<div style="margin:8px 12px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
+                detailHtml += `<div style="margin:8px 16px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;
             }
             if(task.status === 'ongoing' && task.takerCompleted && isMine) {
-                detailHtml += `<div style="margin:8px 12px;"><div class="slide-confirm" id="slidePayWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动确认支付赏金 👈</div></div></div></div>`;
+                detailHtml += `<div style="margin:8px 16px;"><div class="slide-confirm" id="slidePayWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动确认支付赏金 👈</div></div></div></div>`;
             }
+
             document.getElementById('detailContainer').innerHTML = detailHtml;
             const taskIdStr = task._id.toString();
 
@@ -1149,6 +1133,9 @@
     });
 
     // ==================== 聊天功能 ====================
+    // 轮询间隔改为3秒
+    const CHAT_POLL_INTERVAL = 3000;
+
     async function sendMessage(taskId, text, isNego = false) {
         await callApi('/messages', {method:'POST', body:JSON.stringify({taskId, senderId: currentUser.id, senderName: currentUser.nickname, text, isNego})});
     }
@@ -1193,7 +1180,6 @@
                 const isNego = m.text && m.text.includes('💰议价请求:');
                 const priceMatch = m.text.match(/¥(\d+)/);
                 const negoPrice = priceMatch ? parseInt(priceMatch[1]) : null;
-                // 检测图片消息：[img]url[/img]
                 const imgMatch = m.text.match(/\[img\](.*?)\[\/img\]/);
                 let contentHtml = '';
                 if (imgMatch) {
@@ -1307,7 +1293,6 @@
             renderMessageList();
             updateUnreadBadge();
         };
-        // 发送文本消息
         document.getElementById('sendChatBtn').onclick = async () => {
             const txt = document.getElementById('chatInput').value.trim();
             if(!txt) return;
@@ -1316,11 +1301,11 @@
             await refreshMessagesOnly();
             updateUnreadBadge();
         };
-        // 发送图片
         document.getElementById('imageBtn').onclick = () => {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
+            input.capture = 'environment';
             input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -1336,7 +1321,6 @@
             };
             input.click();
         };
-        // 议价按钮
         document.getElementById('sendNegoBtn').onclick = () => {
             showPrompt('请输入议价金额', '金额（元）', async (price) => {
                 await sendMessage(chatState.taskId, `💰议价请求:¥${price}`, true);
@@ -1348,9 +1332,12 @@
         refreshMessagesOnly();
         initChatPullToRefresh();
         if(chatState.pollInterval) clearInterval(chatState.pollInterval);
+        // 轮询间隔改为3秒，且不检查页面可见性，只要聊天激活就持续轮询
         chatState.pollInterval = setInterval(async () => {
-            if(chatState.active && chatState.taskId && document.visibilityState === 'visible') await refreshMessagesOnly();
-        }, 5000);
+            if(chatState.active && chatState.taskId) {
+                await refreshMessagesOnly();
+            }
+        }, CHAT_POLL_INTERVAL);
     }
 
     async function openChat(taskId, otherId, otherName, reward, title) {
