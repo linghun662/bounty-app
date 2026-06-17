@@ -104,7 +104,8 @@
         .chat-bubble-mine .bubble-time{text-align:right}
         .chat-input-wrapper{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid #eef2f8;padding:12px 16px;border-radius:24px 24px 0 0}
         .chat-action-row{display:flex;gap:8px;align-items:center;flex-wrap:nowrap}
-        .chat-message-input{flex:1;min-width:0;padding:10px 16px;border-radius:40px;border:1px solid #e2e8f0;background:#fff;font-size:.9rem}
+        .chat-message-input{flex:1;min-width:0;padding:10px 16px;border-radius:40px;border:1px solid #e2e8f0;background:#fff;font-size:.9rem;transition:all .2s}
+        .chat-message-input.recording{background:#fee2e2;border-color:#ef4444}
         .send-btn{background:#1e4a6b;border:none;border-radius:40px;padding:10px 16px;font-weight:600;color:#fff;flex-shrink:0}
         .chat-extra-row{display:flex;gap:8px;margin-top:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
         .chat-icon-btn svg{width:22px;height:22px;fill:currentColor}
@@ -173,10 +174,22 @@
         .contact-row{display:flex;gap:12px;margin:8px 16px}
         .contact-row .btn{flex:1;min-width:0;padding:10px 8px;font-size:.85rem;text-align:center}
         .pull-refresh-container{text-align:center;padding:10px 0;color:#94a3b8;font-size:.8rem;position:relative;transition:transform .2s}
-        .wallet-detail-item{padding:8px 0;border-bottom:1px solid #eef2f8;cursor:pointer}
+        .wallet-detail-item{padding:8px 0;border-bottom:1px solid #eef2f8;cursor:pointer;display:flex;align-items:center;gap:12px}
         .wallet-detail-item:last-child{border-bottom:none}
         .wallet-detail-item:active{background:#f8fafc}
+        .wallet-icon{font-size:1.5rem;width:32px;text-align:center}
+        .wallet-info{flex:1}
+        .wallet-amount{font-weight:700;font-size:1rem}
+        .wallet-amount.income{color:#059669}
+        .wallet-amount.expense{color:#dc2626}
+        .wallet-time{font-size:.7rem;color:#94a3b8}
         .audio-player{max-width:100%;margin-top:4px;border-radius:16px}
+        .voice-call-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff}
+        .voice-call-modal .avatar{font-size:4rem;background:rgba(255,255,255,.1);border-radius:50%;width:100px;height:100px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+        .voice-call-modal .name{font-size:1.5rem;font-weight:600;margin-bottom:8px}
+        .voice-call-modal .status{font-size:.9rem;opacity:.7;margin-bottom:30px}
+        .voice-call-modal .hangup-btn{background:#ef4444;border:none;border-radius:50%;width:64px;height:64px;font-size:2rem;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+        .voice-call-modal .hangup-btn:active{transform:scale(.9)}
     </style>
 </head>
 <body>
@@ -295,6 +308,7 @@
     let tasksCache = { data: null, timestamp: 0, ttl: 5 * 60 * 1000 };
     let refreshThrottle = false, networkToast = null;
     let mediaRecorder = null, audioChunks = [], isRecording = false;
+    let longPressTimer = null;
 
     function showNetworkSlow() {
         if (networkToast) return;
@@ -913,7 +927,7 @@
         } catch(e) { showAlert('评价失败', e.message); return null; }
     }
 
-    // ==================== 录音功能 ====================
+    // ==================== 语音相关 ====================
     async function startRecording() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -938,7 +952,6 @@
             };
             mediaRecorder.start();
             isRecording = true;
-            showToast('录音中...点击停止', 3000);
         } catch (err) {
             let msg = '无法访问麦克风，请检查浏览器权限或在 HTTPS 环境下使用';
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
@@ -947,14 +960,47 @@
                 msg = '未检测到麦克风设备';
             }
             showAlert('录音失败', msg);
+            isRecording = false;
         }
     }
 
-    function stopRecording() {
+    function stopRecordingAndSend() {
         if (mediaRecorder && isRecording) {
             mediaRecorder.stop();
             isRecording = false;
         }
+    }
+
+    // ==================== 网络语音通话（模拟） ====================
+    function showVoiceCallModal(otherName) {
+        const modal = document.createElement('div');
+        modal.className = 'voice-call-modal';
+        modal.innerHTML = `
+            <div class="avatar">📞</div>
+            <div class="name">${escapeHtml(otherName)}</div>
+            <div class="status">正在呼叫...</div>
+            <button class="hangup-btn" id="hangupCallBtn">✕</button>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('#hangupCallBtn').onclick = () => {
+            modal.remove();
+            showToast('已挂断');
+        };
+        // 模拟接通
+        setTimeout(() => {
+            const statusEl = modal.querySelector('.status');
+            if (statusEl) {
+                statusEl.textContent = '通话中...';
+                statusEl.style.color = '#4ade80';
+            }
+        }, 2000);
+        // 自动挂断（模拟）
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+                showToast('通话结束');
+            }
+        }, 30000);
     }
 
     // ==================== 任务详情 ====================
@@ -1364,6 +1410,7 @@
         });
     }
 
+    // ==================== 聊天界面 ====================
     function showChatView() {
         document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
         document.getElementById('messagePage').classList.add('active');
@@ -1374,8 +1421,7 @@
                     <button class="chat-back-btn" id="chatBackBtn">←</button>
                     <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
                     <div class="chat-header-actions">
-                        <button class="chat-icon-btn" id="chatVoiceCallBtn" title="语音通话">📞</button>
-                        <button class="chat-icon-btn" id="chatPhoneBtn" style="font-size:1.2rem;">📱</button>
+                        <button class="chat-icon-btn" id="voiceCallBtn" title="网络语音通话">📞</button>
                     </div>
                 </div>
                 <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div>
@@ -1385,7 +1431,7 @@
                         <button class="chat-icon-btn" id="imageBtn" title="发送图片/视频">
                             <svg viewBox="0 0 24 24" width="24" height="24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
                         </button>
-                        <button class="chat-icon-btn" id="micBtn" title="语音消息">🎤</button>
+                        <button class="chat-icon-btn" id="voiceBtn" title="按住说话">🔊</button>
                         <input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息...">
                         <button class="send-btn" id="sendChatBtn">发送</button>
                     </div>
@@ -1397,6 +1443,8 @@
         `;
         chatState.messagesArea = document.getElementById('chatMsgsArea');
         chatState.lastMessageCount = 0;
+
+        // 返回按钮
         document.getElementById('chatBackBtn').onclick = () => {
             closeChat();
             document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1404,30 +1452,13 @@
             renderMessageList();
             updateUnreadBadge();
         };
-        // 语音通话按钮（类似于微信电话）
-        document.getElementById('chatVoiceCallBtn').onclick = async () => {
-            const task = await callApi(`/tasks/${chatState.taskId}`);
-            const otherId = chatState.otherId;
-            const userInfo = await callApi(`/user/${otherId}`);
-            if (userInfo.phone) {
-                showConfirm('语音通话', `将拨打对方手机号 ${userInfo.phone} 进行通话`, () => {
-                    window.location.href = `tel:${userInfo.phone}`;
-                });
-            } else {
-                showAlert('提示', '对方未绑定手机号，无法拨打电话');
-            }
+
+        // 网络语音通话按钮
+        document.getElementById('voiceCallBtn').onclick = () => {
+            showVoiceCallModal(chatState.otherName);
         };
-        // 电话拨号（直接拨打）
-        document.getElementById('chatPhoneBtn').onclick = async () => {
-            const task = await callApi(`/tasks/${chatState.taskId}`);
-            const otherId = chatState.otherId;
-            const userInfo = await callApi(`/user/${otherId}`);
-            if (userInfo.phone) {
-                window.location.href = `tel:${userInfo.phone}`;
-            } else {
-                showAlert('提示', '对方未绑定手机号');
-            }
-        };
+
+        // 发送文本
         document.getElementById('sendChatBtn').onclick = async () => {
             const txt = document.getElementById('chatInput').value.trim();
             if(!txt) return;
@@ -1436,6 +1467,8 @@
             await refreshMessagesOnly();
             updateUnreadBadge();
         };
+
+        // 发送图片/视频
         document.getElementById('imageBtn').onclick = () => {
             const input = document.createElement('input');
             input.type = 'file';
@@ -1455,17 +1488,44 @@
             };
             input.click();
         };
-        let micBtn = document.getElementById('micBtn');
-        micBtn.onclick = () => {
+
+        // 语音按钮：按住说话
+        const voiceBtn = document.getElementById('voiceBtn');
+        const chatInput = document.getElementById('chatInput');
+        let pressTimer = null;
+        let isPressed = false;
+
+        const startPress = (e) => {
+            e.preventDefault();
+            if (isPressed) return;
+            isPressed = true;
+            chatInput.placeholder = '录音中...松开发送';
+            chatInput.classList.add('recording');
+            // 开始录音
+            startRecording();
+            // 震动反馈（可选）
+            if (navigator.vibrate) navigator.vibrate(10);
+        };
+
+        const endPress = (e) => {
+            e.preventDefault();
+            if (!isPressed) return;
+            isPressed = false;
+            chatInput.placeholder = '输入消息...';
+            chatInput.classList.remove('recording');
             if (isRecording) {
-                stopRecording();
-                micBtn.textContent = '🎤';
-                showToast('录音已停止', 1000);
-            } else {
-                startRecording();
-                micBtn.textContent = '⏹️';
+                stopRecordingAndSend();
             }
         };
+
+        voiceBtn.addEventListener('mousedown', startPress);
+        voiceBtn.addEventListener('mouseup', endPress);
+        voiceBtn.addEventListener('mouseleave', endPress);
+        voiceBtn.addEventListener('touchstart', startPress);
+        voiceBtn.addEventListener('touchend', endPress);
+        voiceBtn.addEventListener('touchcancel', endPress);
+
+        // 议价按钮
         document.getElementById('sendNegoBtn').onclick = () => {
             showPrompt('请输入议价金额', '金额（元）', async (price) => {
                 await sendMessage(chatState.taskId, `💰议价请求:¥${price}`, true);
@@ -1474,6 +1534,7 @@
                 updateUnreadBadge();
             });
         };
+
         refreshMessagesOnly();
         initChatPullToRefresh();
         if(chatState.pollInterval) clearInterval(chatState.pollInterval);
@@ -1548,6 +1609,12 @@
         if (mediaRecorder && isRecording) {
             mediaRecorder.stop();
             isRecording = false;
+        }
+        // 清理录音状态
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            chatInput.classList.remove('recording');
+            chatInput.placeholder = '输入消息...';
         }
     }
 
@@ -1684,10 +1751,12 @@
                     else { content.classList.add('show'); icon.classList.add('open'); }
                 });
             });
+            // 点击余额数字打开账单明细
             document.getElementById('balanceItem').onclick = () => showWalletDetail();
         } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
 
+    // 账单明细（图文样式，去除英文）
     async function showWalletDetail() {
         const bills = await callApi(`/bills/${currentUser.id}`);
         const modal = document.createElement('div');
@@ -1720,12 +1789,19 @@
             else {
                 let html='';
                 for(const b of bills) {
+                    const icon = b.amount > 0 ? '📈' : '📉';
+                    const amountClass = b.amount > 0 ? 'income' : 'expense';
                     const typeLabel = b.type === 'income' ? '收入' : (b.type === 'expense' ? '支出' : b.type);
-                    html += `<div class="wallet-detail-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
-                        <div><strong>${b.desc}</strong></div>
-                        <div style="display:flex; justify-content:space-between;"><span>${b.amount>0?`+${b.amount}`:b.amount}元</span><span style="font-size:0.7rem;color:#94a3b8;">${b.createdAt?new Date(b.createdAt).toLocaleString():''}</span></div>
-                        <div style="font-size:0.7rem;color:#94a3b8;">类型：${typeLabel}</div>
-                    </div>`;
+                    html += `
+                        <div class="wallet-detail-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
+                            <div class="wallet-icon">${icon}</div>
+                            <div class="wallet-info">
+                                <div><strong>${b.desc}</strong></div>
+                                <div class="wallet-time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
+                            </div>
+                            <div class="wallet-amount ${amountClass}">${b.amount > 0 ? '+' : ''}${b.amount}元</div>
+                        </div>
+                    `;
                 }
                 container.innerHTML = html;
                 container.querySelectorAll('.wallet-detail-item').forEach(item => {
