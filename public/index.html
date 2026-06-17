@@ -87,9 +87,6 @@
         .chat-back-btn{background:#f1f5f9;border:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer;transition:all .2s}
         .chat-back-btn:active{background:#e2e8f0;transform:scale(.94)}
         .chat-header-name{font-weight:700;font-size:1rem;flex:1}
-        .chat-header-actions{display:flex;gap:6px;align-items:center}
-        .chat-icon-btn{background:transparent;border:none;font-size:1.3rem;cursor:pointer;padding:4px 6px;border-radius:40px;transition:all .2s;display:inline-flex;align-items:center;justify-content:center}
-        .chat-icon-btn:active{background:rgba(0,0,0,.05);transform:scale(.95)}
         .chat-messages-area{flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
         .chat-bubble{max-width:80%;display:flex;flex-direction:column;cursor:pointer;transition:background .1s}
         .chat-bubble:active{background:rgba(0,0,0,.03);border-radius:16px}
@@ -103,11 +100,13 @@
         .bubble-time{font-size:.6rem;color:#94a3b8;margin-top:4px;margin-left:10px;margin-right:10px}
         .chat-bubble-mine .bubble-time{text-align:right}
         .chat-input-wrapper{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid #eef2f8;padding:12px 16px;border-radius:24px 24px 0 0}
-        .chat-action-row{display:flex;gap:8px;align-items:center;flex-wrap:nowrap}
+        .chat-action-row{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}
         .chat-message-input{flex:1;min-width:0;padding:10px 16px;border-radius:40px;border:1px solid #e2e8f0;background:#fff;font-size:.9rem;transition:all .2s}
         .chat-message-input.recording{background:#fee2e2;border-color:#ef4444}
         .send-btn{background:#1e4a6b;border:none;border-radius:40px;padding:10px 16px;font-weight:600;color:#fff;flex-shrink:0}
         .chat-extra-row{display:flex;gap:8px;margin-top:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+        .chat-icon-btn{background:transparent;border:none;font-size:1.3rem;cursor:pointer;padding:4px 6px;border-radius:40px;transition:all .2s;display:inline-flex;align-items:center;justify-content:center}
+        .chat-icon-btn:active{background:rgba(0,0,0,.05);transform:scale(.95)}
         .chat-icon-btn svg{width:22px;height:22px;fill:currentColor}
         .nego-send-btn{background:#f59e0b;border:none;border-radius:40px;padding:6px 16px;font-weight:600;color:#fff;cursor:pointer}
         .profile-header{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px;padding:20px;color:#fff;display:flex;align-items:center;gap:16px;cursor:pointer}
@@ -927,7 +926,17 @@
         } catch(e) { showAlert('评价失败', e.message); return null; }
     }
 
-    // ==================== 语音相关 ====================
+    // ==================== 语音相关（含权限检测） ====================
+    async function requestMicrophonePermission() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
+
     async function startRecording() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -955,7 +964,7 @@
         } catch (err) {
             let msg = '无法访问麦克风，请检查浏览器权限或在 HTTPS 环境下使用';
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                msg = '麦克风权限被拒绝，请在浏览器设置中允许访问麦克风';
+                msg = '麦克风权限被拒绝，请在浏览器设置中允许访问麦克风后重试';
             } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
                 msg = '未检测到麦克风设备';
             }
@@ -986,7 +995,6 @@
             modal.remove();
             showToast('已挂断');
         };
-        // 模拟接通
         setTimeout(() => {
             const statusEl = modal.querySelector('.status');
             if (statusEl) {
@@ -994,7 +1002,6 @@
                 statusEl.style.color = '#4ade80';
             }
         }, 2000);
-        // 自动挂断（模拟）
         setTimeout(() => {
             if (modal.parentNode) {
                 modal.remove();
@@ -1420,9 +1427,6 @@
                 <div class="chat-header-bar">
                     <button class="chat-back-btn" id="chatBackBtn">←</button>
                     <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
-                    <div class="chat-header-actions">
-                        <button class="chat-icon-btn" id="voiceCallBtn" title="网络语音通话">📞</button>
-                    </div>
                 </div>
                 <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div>
                 <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
@@ -1431,6 +1435,7 @@
                         <button class="chat-icon-btn" id="imageBtn" title="发送图片/视频">
                             <svg viewBox="0 0 24 24" width="24" height="24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
                         </button>
+                        <button class="chat-icon-btn" id="voiceCallBtn" title="网络语音通话">📞</button>
                         <button class="chat-icon-btn" id="voiceBtn" title="按住说话">🔊</button>
                         <input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息...">
                         <button class="send-btn" id="sendChatBtn">发送</button>
@@ -1444,7 +1449,6 @@
         chatState.messagesArea = document.getElementById('chatMsgsArea');
         chatState.lastMessageCount = 0;
 
-        // 返回按钮
         document.getElementById('chatBackBtn').onclick = () => {
             closeChat();
             document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1458,7 +1462,6 @@
             showVoiceCallModal(chatState.otherName);
         };
 
-        // 发送文本
         document.getElementById('sendChatBtn').onclick = async () => {
             const txt = document.getElementById('chatInput').value.trim();
             if(!txt) return;
@@ -1468,7 +1471,6 @@
             updateUnreadBadge();
         };
 
-        // 发送图片/视频
         document.getElementById('imageBtn').onclick = () => {
             const input = document.createElement('input');
             input.type = 'file';
@@ -1492,18 +1494,21 @@
         // 语音按钮：按住说话
         const voiceBtn = document.getElementById('voiceBtn');
         const chatInput = document.getElementById('chatInput');
-        let pressTimer = null;
         let isPressed = false;
 
-        const startPress = (e) => {
+        const startPress = async (e) => {
             e.preventDefault();
             if (isPressed) return;
+            // 先检测权限
+            const hasPermission = await requestMicrophonePermission();
+            if (!hasPermission) {
+                showAlert('麦克风权限', '请允许浏览器访问麦克风后重试，您可在浏览器设置中开启');
+                return;
+            }
             isPressed = true;
             chatInput.placeholder = '录音中...松开发送';
             chatInput.classList.add('recording');
-            // 开始录音
             startRecording();
-            // 震动反馈（可选）
             if (navigator.vibrate) navigator.vibrate(10);
         };
 
@@ -1525,7 +1530,6 @@
         voiceBtn.addEventListener('touchend', endPress);
         voiceBtn.addEventListener('touchcancel', endPress);
 
-        // 议价按钮
         document.getElementById('sendNegoBtn').onclick = () => {
             showPrompt('请输入议价金额', '金额（元）', async (price) => {
                 await sendMessage(chatState.taskId, `💰议价请求:¥${price}`, true);
@@ -1610,7 +1614,6 @@
             mediaRecorder.stop();
             isRecording = false;
         }
-        // 清理录音状态
         const chatInput = document.getElementById('chatInput');
         if (chatInput) {
             chatInput.classList.remove('recording');
@@ -1751,28 +1754,33 @@
                     else { content.classList.add('show'); icon.classList.add('open'); }
                 });
             });
-            // 点击余额数字打开账单明细
+            // 点击余额数字直接打开账单明细（不再需要二次点击）
             document.getElementById('balanceItem').onclick = () => showWalletDetail();
         } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
 
-    // 账单明细（图文样式，去除英文）
+    // 账单明细（直接显示，无需再点击“查看明细”）
     async function showWalletDetail() {
         const bills = await callApi(`/bills/${currentUser.id}`);
         const modal = document.createElement('div');
         modal.className = 'custom-modal';
         modal.innerHTML = `
-            <div class="custom-modal-content"><h3>💰 钱包明细</h3>
-            <div style="background:#eef2ff; padding:12px; border-radius:16px; margin-bottom:12px;"><div>可用余额</div><div style="font-size:1.6rem;">¥${(currentUser.balance||0).toFixed(2)}</div><div style="font-size:0.7rem; color:#64748b;">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div></div>
-            <div><strong>提现</strong></div><button class="btn-primary" id="withdrawBtn" style="margin:6px 0;">💸 提现</button>
-            <div><strong>账单明细</strong></div>
-            <div id="billDetailContainer" style="max-height:200px; overflow:auto; display:none;"></div>
-            <button class="btn-secondary" id="showBillDetailBtn" style="margin-bottom:8px;">📋 查看明细</button>
-            <div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>
+            <div class="custom-modal-content" style="max-width:360px;">
+                <h3>💰 账单明细</h3>
+                <div style="background:#eef2ff; padding:12px; border-radius:16px; margin-bottom:12px;">
+                    <div>当前余额</div>
+                    <div style="font-size:1.6rem;">¥${(currentUser.balance||0).toFixed(2)}</div>
+                    <div style="font-size:0.7rem; color:#64748b;">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div>
+                </div>
+                <button class="btn-primary" id="withdrawBtn" style="margin:6px 0; padding:8px;">💸 提现</button>
+                <div id="billDetailContainer" style="max-height:250px; overflow:auto; margin-top:8px;"></div>
+                <div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div>
+            </div>
         `;
         document.body.appendChild(modal);
         const closeModal = () => modal.remove();
         modal.querySelector('.confirm-btn').onclick = closeModal;
+
         modal.querySelector('#withdrawBtn').onclick = () => {
             const chooseModal = document.createElement('div');
             chooseModal.className = 'custom-modal';
@@ -1782,45 +1790,43 @@
             chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); modal.remove(); };
             chooseModal.querySelector('.cancel-btn').onclick = () => chooseModal.remove();
         };
-        modal.querySelector('#showBillDetailBtn').onclick = () => {
-            const container = modal.querySelector('#billDetailContainer');
-            if(container.style.display === 'block') { container.style.display='none'; modal.querySelector('#showBillDetailBtn').innerText='📋 查看明细'; return; }
-            if(bills.length===0) container.innerHTML='<div class="empty-state">暂无记录</div>';
-            else {
-                let html='';
-                for(const b of bills) {
-                    const icon = b.amount > 0 ? '📈' : '📉';
-                    const amountClass = b.amount > 0 ? 'income' : 'expense';
-                    const typeLabel = b.type === 'income' ? '收入' : (b.type === 'expense' ? '支出' : b.type);
-                    html += `
-                        <div class="wallet-detail-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
-                            <div class="wallet-icon">${icon}</div>
-                            <div class="wallet-info">
-                                <div><strong>${b.desc}</strong></div>
-                                <div class="wallet-time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
-                            </div>
-                            <div class="wallet-amount ${amountClass}">${b.amount > 0 ? '+' : ''}${b.amount}元</div>
+
+        const container = modal.querySelector('#billDetailContainer');
+        if (bills.length === 0) {
+            container.innerHTML = '<div class="empty-state">暂无记录</div>';
+        } else {
+            let html = '';
+            for (const b of bills) {
+                const icon = b.amount > 0 ? '📈' : '📉';
+                const amountClass = b.amount > 0 ? 'income' : 'expense';
+                const sign = b.amount > 0 ? '+' : '';
+                html += `
+                    <div class="wallet-detail-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
+                        <div class="wallet-icon">${icon}</div>
+                        <div class="wallet-info">
+                            <div><strong>${b.desc}</strong></div>
+                            <div class="wallet-time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
                         </div>
-                    `;
-                }
-                container.innerHTML = html;
-                container.querySelectorAll('.wallet-detail-item').forEach(item => {
-                    item.onclick = () => {
-                        const bill = JSON.parse(item.getAttribute('data-bill'));
-                        const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
-                        showAlert('账单详情', `
-                            <div style="text-align:left;">
-                                <div><strong>说明：</strong>${bill.desc}</div>
-                                <div><strong>金额：</strong>${bill.amount}元</div>
-                                <div><strong>时间：</strong>${new Date(bill.createdAt).toLocaleString()}</div>
-                                <div><strong>类型：</strong>${typeLabel}</div>
-                            </div>
-                        `);
-                    };
-                });
+                        <div class="wallet-amount ${amountClass}">${sign}${b.amount}元</div>
+                    </div>
+                `;
             }
-            container.style.display='block'; modal.querySelector('#showBillDetailBtn').innerText='🔽 收起明细';
-        };
+            container.innerHTML = html;
+            container.querySelectorAll('.wallet-detail-item').forEach(item => {
+                item.onclick = () => {
+                    const bill = JSON.parse(item.getAttribute('data-bill'));
+                    const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
+                    showAlert('账单详情', `
+                        <div style="text-align:left;">
+                            <div><strong>说明：</strong>${bill.desc}</div>
+                            <div><strong>金额：</strong>${bill.amount}元</div>
+                            <div><strong>时间：</strong>${new Date(bill.createdAt).toLocaleString()}</div>
+                            <div><strong>类型：</strong>${typeLabel}</div>
+                        </div>
+                    `);
+                };
+            });
+        }
     }
 
     async function showCreditDetail() {
