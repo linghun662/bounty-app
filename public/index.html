@@ -104,10 +104,40 @@
         .chat-message-input{flex:1;min-width:0;padding:10px 16px;border-radius:40px;border:1px solid #e2e8f0;background:#fff;font-size:.9rem;transition:all .2s}
         .chat-message-input.recording{background:#fee2e2;border-color:#ef4444}
         .send-btn{background:#1e4a6b;border:none;border-radius:40px;padding:10px 16px;font-weight:600;color:#fff;flex-shrink:0}
-        .chat-extra-row{display:flex;gap:8px;margin-top:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
         .chat-icon-btn{background:transparent;border:none;font-size:1.3rem;cursor:pointer;padding:4px 6px;border-radius:40px;transition:all .2s;display:inline-flex;align-items:center;justify-content:center}
         .chat-icon-btn:active{background:rgba(0,0,0,.05);transform:scale(.95)}
         .chat-icon-btn svg{width:22px;height:22px;fill:currentColor}
+        /* 新增 + 号面板样式 */
+        .chat-plus-panel {
+            display: none;
+            padding: 8px 4px 4px 4px;
+            gap: 10px;
+            flex-wrap: wrap;
+            border-top: 1px solid #eef2f8;
+            margin-top: 6px;
+            background: #fff;
+            border-radius: 12px;
+        }
+        .chat-plus-panel.show {
+            display: flex;
+        }
+        .plus-item {
+            background: #f1f5f9;
+            border-radius: 30px;
+            padding: 6px 14px;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .plus-item:active {
+            background: #e2e8f0;
+            transform: scale(0.96);
+        }
+        /* 原其他样式保留 */
         .nego-send-btn{background:#f59e0b;border:none;border-radius:40px;padding:6px 16px;font-weight:600;color:#fff;cursor:pointer}
         .profile-header{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px;padding:20px;color:#fff;display:flex;align-items:center;gap:16px;cursor:pointer}
         .profile-avatar{width:64px;height:64px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:600;overflow:hidden}
@@ -181,7 +211,6 @@
         .voice-call-modal .hangup-btn{background:#ef4444;border:none;border-radius:50%;width:64px;height:64px;font-size:2rem;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
         .voice-call-modal .hangup-btn:active{transform:scale(.9)}
         .withdraw-btn-sm{padding:4px 12px;font-size:.7rem;border-radius:20px;background:#1e4a6b;color:#fff;border:none;cursor:pointer}
-        /* 钱包详情弹窗（大尺寸） */
         .wallet-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}
         .wallet-modal-content{background:#fff;border-radius:32px;width:100%;max-width:420px;max-height:90vh;padding:24px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
         .wallet-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
@@ -1521,16 +1550,15 @@
                 <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
                 <div class="chat-input-wrapper">
                     <div class="chat-action-row">
-                        <button class="chat-icon-btn" id="imageBtn" title="发送图片/视频">
-                            <svg viewBox="0 0 24 24" width="24" height="24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
-                        </button>
-                        <button class="chat-icon-btn" id="voiceCallBtn" title="网络语音通话">📞</button>
-                        <button class="chat-icon-btn" id="voiceBtn" title="按住说话">🔊</button>
+                        <button class="chat-icon-btn" id="chatPlusBtn">➕</button>
+                        <button class="chat-icon-btn" id="voiceBtn" title="按住说话">🎤</button>
                         <input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息...">
                         <button class="send-btn" id="sendChatBtn">发送</button>
                     </div>
-                    <div class="chat-extra-row">
-                        <button class="nego-send-btn" id="sendNegoBtn">💰 议价</button>
+                    <div class="chat-plus-panel" id="chatPlusPanel">
+                        <button class="chat-icon-btn plus-item" id="imageBtn">🖼️ 图片</button>
+                        <button class="chat-icon-btn plus-item" id="voiceCallBtn">📞 通话</button>
+                        <button class="chat-icon-btn plus-item" id="sendNegoBtn">💰 议价</button>
                     </div>
                 </div>
             </div>
@@ -1626,6 +1654,33 @@
             });
         };
 
+        // ===== 新增：+ 号面板控制 =====
+        // 移除旧的 outside 监听（如果存在）
+        if (window.__plusOutsideHandler) {
+            document.removeEventListener('click', window.__plusOutsideHandler);
+            window.__plusOutsideHandler = null;
+        }
+        const plusBtn = document.getElementById('chatPlusBtn');
+        const plusPanel = document.getElementById('chatPlusPanel');
+        let plusOpen = false;
+
+        plusBtn.addEventListener('click', () => {
+            plusOpen = !plusOpen;
+            plusPanel.classList.toggle('show', plusOpen);
+            plusBtn.textContent = plusOpen ? '✖️' : '➕';
+        });
+
+        // 点击外部收起面板
+        const outsideClickHandler = function(e) {
+            if (plusOpen && !e.target.closest('.chat-input-wrapper')) {
+                plusOpen = false;
+                plusPanel.classList.remove('show');
+                plusBtn.textContent = '➕';
+            }
+        };
+        window.__plusOutsideHandler = outsideClickHandler;
+        document.addEventListener('click', outsideClickHandler);
+
         refreshMessagesOnly();
         initChatPullToRefresh();
         if(chatState.pollInterval) clearInterval(chatState.pollInterval);
@@ -1700,6 +1755,11 @@
         if (mediaRecorder && isRecording) {
             mediaRecorder.stop();
             isRecording = false;
+        }
+        // 清理 + 面板监听
+        if (window.__plusOutsideHandler) {
+            document.removeEventListener('click', window.__plusOutsideHandler);
+            window.__plusOutsideHandler = null;
         }
         const chatInput = document.getElementById('chatInput');
         if (chatInput) {
@@ -1928,6 +1988,11 @@
             if(countdownTimer) clearInterval(countdownTimer);
             if(chatState.pollInterval) clearInterval(chatState.pollInterval);
             if (mediaRecorder && isRecording) { mediaRecorder.stop(); isRecording = false; }
+            // 清理 plus 监听
+            if (window.__plusOutsideHandler) {
+                document.removeEventListener('click', window.__plusOutsideHandler);
+                window.__plusOutsideHandler = null;
+            }
         });
     }
     function switchPage(page) {
