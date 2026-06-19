@@ -7,7 +7,7 @@
     <style>
         /* 全局重置与自适应基座 */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-        html{font-size:calc(16px + 0.2vw);} /* 根据屏幕宽度微调 */
+        html{font-size:calc(16px + 0.2vw);}
         body{
             background:#f8fafc;
             font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
@@ -31,15 +31,21 @@
             display:flex;
             flex-direction:column;
         }
-        .page{
-            display:none;
+        /* 页面容器 – 默认隐藏 */
+        .page {
+            display: none;
             animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1);
-            flex:1;
-            overflow-y:auto;
-            -webkit-overflow-scrolling:touch;
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            flex-direction: column;
         }
-        .page.active{display:flex;flex-direction:column;}
+        /* 激活的页面 – 显示为 flex 列 */
+        .page.active {
+            display: flex;
+        }
         @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        
         .nav-header{
             background:rgba(255,255,255,.96);
             backdrop-filter:blur(12px);
@@ -306,26 +312,12 @@
         @media (min-width: 600px) {
             .app-container{max-width:600px;}
         }
-        /* 修复滚动和全屏 */
-        #homePage, #messagePage, #profilePage, #detailPage, #publishPage {
-            height: 100%;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        #homePage > *, #messagePage > *, #profilePage > * {
-            flex-shrink: 0;
-        }
+        /* 内容区域占满剩余空间，避免底部空白 */
         #homeContent, #messageContainer, #profileContainer, #detailContainer {
             flex: 1;
-            overflow-y: auto;
-            padding-bottom: 20px;
         }
-        /* 聊天界面全屏 */
+        /* 确保聊天容器占满 */
         .chat-container {
-            height: 100%;
             flex: 1;
         }
     </style>
@@ -372,7 +364,7 @@
                 <div><span class="header-balance" id="headerBalance">余额: ¥0</span></div>
             </div>
             <!-- 首页 -->
-            <div id="homePage" class="page" style="overflow-y:auto;height:100%;">
+            <div id="homePage" class="page">
                 <div class="category-bar" id="categoryBar">
                     <span class="category-chip active" data-cat="all">全部</span>
                     <span class="category-chip" data-cat="取件">取件</span>
@@ -385,12 +377,15 @@
                     <span class="sort-chip active" data-sort="time">最新发布</span>
                 </div>
                 <div id="refreshIndicator" class="pull-refresh-container" style="display:none;">↓ 下拉刷新</div>
-                <div id="homeContent" class="loading" style="flex:1;">加载中...</div>
+                <div id="homeContent" class="loading">加载中...</div>
             </div>
             <!-- 详情页 -->
-            <div id="detailPage" class="page"><div id="detailContainer" style="flex:1;overflow-y:auto;"></div><div class="back-button" style="margin:8px 16px 20px;"><button class="btn-secondary" id="detailBackBtn" style="margin:0;">← 返回上一页</button></div></div>
+            <div id="detailPage" class="page">
+                <div id="detailContainer"></div>
+                <div class="back-button" style="margin:8px 16px 20px;"><button class="btn-secondary" id="detailBackBtn" style="margin:0;">← 返回上一页</button></div>
+            </div>
             <!-- 发布页 -->
-            <div id="publishPage" class="page" style="overflow-y:auto;">
+            <div id="publishPage" class="page">
                 <div class="card" style="cursor:default;">
                     <h3>✨ 发布悬赏</h3>
                     <div class="form-group"><input type="text" id="pubTitle" class="form-input" placeholder="标题"></div>
@@ -414,12 +409,12 @@
                 </div>
             </div>
             <!-- 消息页 -->
-            <div id="messagePage" class="page" style="overflow-y:auto;height:100%;">
+            <div id="messagePage" class="page">
                 <div id="refreshMessageIndicator" class="pull-refresh-container" style="display:none;">↓ 下拉刷新</div>
-                <div id="messageContainer" class="loading" style="flex:1;">加载中...</div>
+                <div id="messageContainer" class="loading">加载中...</div>
             </div>
             <!-- 我的页面 -->
-            <div id="profilePage" class="page" style="overflow-y:auto;height:100%;"><div id="profileContainer" class="loading" style="flex:1;">加载中...</div></div>
+            <div id="profilePage" class="page"><div id="profileContainer" class="loading">加载中...</div></div>
             <!-- 底部导航 -->
             <div class="bottom-nav">
                 <div class="nav-item" onclick="switchPage('home')"><span class="nav-icon">🏠</span><span>首页</span></div>
@@ -1752,7 +1747,7 @@
             });
         };
 
-        // ===== 新增：+ 号面板控制 =====
+        // ===== + 号面板控制 =====
         if (window.__plusOutsideHandler) {
             document.removeEventListener('click', window.__plusOutsideHandler);
             window.__plusOutsideHandler = null;
