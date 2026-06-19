@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=no">
     <title>赏金集市 · 双向议价</title>
-    <!-- 高德地图 JS API（请将 YOUR_AMAP_KEY 替换为您的 Key） -->
-    <script src="https://webapi.amap.com/maps?v=2.0&key=YOUR_AMAP_KEY&plugin=AMap.PlaceSearch,AMap.Geocoder"></script>
+    <!-- 高德地图 JS API（使用您提供的 Key） -->
+    <script src="https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder"></script>
     <style>
-        /* ===== 全局重置 ===== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html{font-size:calc(16px + 0.2vw);}
         body{
@@ -21,9 +20,7 @@
             flex-direction:column;
             transition:padding-bottom .2s;
         }
-        body.hide-bottom-nav {
-            padding-bottom:0;
-        }
+        body.hide-bottom-nav{padding-bottom:0}
         ::-webkit-scrollbar{width:4px;height:4px}
         ::-webkit-scrollbar-track{background:#e2e8f0;border-radius:4px}
         ::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:4px}
@@ -38,75 +35,20 @@
             flex-direction:column;
             flex:1;
         }
-        .page {
-            display: none;
-            animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1);
-            flex: 1;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            flex-direction: column;
-        }
-        .page.active {
-            display: flex;
-        }
+        .page{display:none;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1);flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;flex-direction:column}
+        .page.active{display:flex}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        
-        /* ===== 导航 ===== */
-        .nav-header{
-            background:rgba(255,255,255,.96);
-            backdrop-filter:blur(12px);
-            padding:12px 18px;
-            border-bottom:1px solid rgba(226,232,240,.6);
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            position:sticky;
-            top:0;
-            z-index:20;
-            flex-shrink:0;
-        }
+        .nav-header{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 18px;border-bottom:1px solid rgba(226,232,240,.6);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20;flex-shrink:0}
         .logo{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,#0f2b3d,#1e4a6b);background-clip:text;-webkit-background-clip:text;color:transparent}
         .header-balance{background:rgba(30,74,107,.1);padding:6px 14px;border-radius:40px;font-size:.75rem;font-weight:600;color:#1e4a6b;cursor:pointer;transition:all .2s}
         .header-balance:active{background:rgba(30,74,107,.2);transform:scale(.96)}
-        .bottom-nav{
-            position:fixed;
-            bottom:0;
-            left:0;
-            right:0;
-            max-width:500px;
-            margin:0 auto;
-            background:rgba(255,255,255,.96);
-            backdrop-filter:blur(12px);
-            display:flex;
-            justify-content:space-around;
-            padding:8px 20px max(18px, env(safe-area-inset-bottom));
-            border-top:1px solid rgba(226,232,240,.6);
-            z-index:20;
-            flex-shrink:0;
-            transition:transform .3s ease, opacity .3s ease;
-        }
-        body.hide-bottom-nav .bottom-nav {
-            transform:translateY(100%);
-            opacity:0;
-            pointer-events:none;
-        }
+        .bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);display:flex;justify-content:space-around;padding:8px 20px max(18px, env(safe-area-inset-bottom));border-top:1px solid rgba(226,232,240,.6);z-index:20;flex-shrink:0;transition:transform .3s ease, opacity .3s ease}
+        body.hide-bottom-nav .bottom-nav{transform:translateY(100%);opacity:0;pointer-events:none}
         .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;color:#94a3b8;cursor:pointer;transition:all .2s;position:relative}
         .nav-item.active{color:#1e4a6b;font-weight:500;transform:translateY(-2px)}
         .nav-icon{font-size:1.6rem}
         .msg-badge{position:absolute;top:-5px;right:-12px;background:#ef4444;color:#fff;border-radius:20px;padding:2px 6px;font-size:.6rem;min-width:18px;text-align:center;display:none;font-weight:600}
-        
-        /* ===== 卡片 & 通用组件 ===== */
-        .card{
-            background:#fff;
-            border-radius:24px;
-            padding:18px 20px;
-            margin:12px 16px;
-            box-shadow:0 2px 8px rgba(0,0,0,.03),0 1px 2px rgba(0,0,0,.05);
-            border:1px solid #eef2f8;
-            transition:all .2s ease;
-            cursor:pointer;
-            font-size:1rem;
-        }
+        .card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.03),0 1px 2px rgba(0,0,0,.05);border:1px solid #eef2f8;transition:all .2s ease;cursor:pointer;font-size:1rem}
         .card:active{transform:scale(.98);box-shadow:0 1px 4px rgba(0,0,0,.05)}
         .skeleton-card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;border:1px solid #eef2f8;animation:pulse 1.2s infinite}
         @keyframes pulse{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}
@@ -119,29 +61,8 @@
         .task-desc{font-size:.95rem;color:#475569;margin-bottom:8px;line-height:1.5}
         .task-meta{display:flex;gap:14px;font-size:.75rem;color:#6c7a91;flex-wrap:wrap}
         .distance-badge{background:#e6f7e6;color:#2b6e2f;padding:2px 12px;border-radius:20px;font-weight:500}
-        .category-bar,.sort-bar{
-            display:flex;
-            gap:12px;
-            padding:14px 16px;
-            background:#fff;
-            border-bottom:1px solid #eef2f8;
-            overflow-x:auto;
-            white-space:nowrap;
-            scrollbar-width:thin;
-            flex-shrink:0;
-        }
-        .category-chip,.sort-chip{
-            background:#f1f5f9;
-            padding:8px 18px;
-            border-radius:40px;
-            font-size:.9rem;
-            font-weight:500;
-            color:#475569;
-            cursor:pointer;
-            display:inline-block;
-            transition:all .25s ease;
-            opacity:.85;
-        }
+        .category-bar,.sort-bar{display:flex;gap:12px;padding:14px 16px;background:#fff;border-bottom:1px solid #eef2f8;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;flex-shrink:0}
+        .category-chip,.sort-chip{background:#f1f5f9;padding:8px 18px;border-radius:40px;font-size:.9rem;font-weight:500;color:#475569;cursor:pointer;display:inline-block;transition:all .25s ease;opacity:.85}
         .category-chip.active,.sort-chip.active{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);color:#fff;font-weight:700;opacity:1;box-shadow:0 4px 12px rgba(0,0,0,.2);transform:scale(1.02);position:relative}
         .category-chip.active::after,.sort-chip.active::after{content:'';position:absolute;bottom:-6px;left:25%;width:50%;height:3px;background:#fff;border-radius:3px;box-shadow:0 0 4px rgba(255,255,255,.5)}
         .detail-hero{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px 16px 0;padding:28px 24px;color:#fff;position:relative;overflow:hidden}
@@ -186,7 +107,7 @@
         .cancel-btn{background:#e2e8f0;color:#1e293b}
         .toast-message{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:10px 24px;border-radius:60px;font-size:.95rem;z-index:1100;pointer-events:none;animation:fadeOut 2s forwards;backdrop-filter:blur(8px)}
         @keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
-        .chat-container{display:flex;flex-direction:column;height:100%;background:#f8fafc;flex:1;}
+        .chat-container{display:flex;flex-direction:column;height:100%;background:#f8fafc;flex:1}
         .chat-header-bar{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:10;flex-shrink:0}
         .chat-back-btn{background:#f1f5f9;border:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer;transition:all .2s}
         .chat-back-btn:active{background:#e2e8f0;transform:scale(.94)}
@@ -225,18 +146,7 @@
         .stat-item:active{transform:scale(.96)}
         .stat-number{font-size:1.4rem;font-weight:800;color:#1e4a6b}
         .stat-label{font-size:.85rem;color:#475569}
-        .profile-task-card{
-            background:#fff;
-            border-radius:24px;
-            margin:8px 16px;
-            padding:16px 20px;
-            border:1px solid #eef2f8;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            cursor:pointer;
-            transition:all .2s;
-        }
+        .profile-task-card{background:#fff;border-radius:24px;margin:8px 16px;padding:16px 20px;border:1px solid #eef2f8;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all .2s}
         .profile-task-card:active{transform:scale(.98);background:#f8fafc}
         .profile-task-card .left{display:flex;flex-direction:column;gap:4px}
         .profile-task-card .left .title{font-weight:600;font-size:1rem}
@@ -317,141 +227,28 @@
         .wallet-bill-item .amount.expense{color:#dc2626}
         .withdraw-modal{z-index:9999 !important}
         .withdraw-modal .custom-modal-content{max-width:340px}
-        .my-tasks-header{
-            background:rgba(255,255,255,.96);
-            backdrop-filter:blur(12px);
-            padding:12px 16px;
-            border-bottom:1px solid #eef2f8;
-            display:flex;
-            align-items:center;
-            gap:12px;
-            position:sticky;
-            top:0;
-            z-index:20;
-            flex-shrink:0;
-        }
-        .my-tasks-header .back-btn{
-            background:transparent;
-            border:none;
-            font-size:1.8rem;
-            cursor:pointer;
-            padding:4px 8px;
-            color:#1e4a6b;
-        }
-        .my-tasks-header .title{
-            font-weight:700;
-            font-size:1.2rem;
-            flex:1;
-            color:#0f172a;
-        }
-        .my-tasks-list{
-            flex:1;
-            overflow-y:auto;
-            padding-bottom:20px;
-        }
-        /* ===== 地图选点模态框 ===== */
-        .map-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: #fff;
-            z-index: 9998;
-            display: none;
-            flex-direction: column;
-        }
-        .map-modal.active {
-            display: flex;
-        }
-        .map-modal-header {
-            padding: 12px 16px;
-            background: #fff;
-            border-bottom: 1px solid #eef2f8;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-        .map-modal-header input {
-            flex: 1;
-            padding: 10px 16px;
-            border-radius: 24px;
-            border: 1px solid #d1d5db;
-            font-size: 1rem;
-            outline: none;
-        }
-        .map-modal-header input:focus {
-            border-color: #1e4a6b;
-        }
-        .map-modal-header .close-btn {
-            background: none;
-            border: none;
-            font-size: 1.8rem;
-            cursor: pointer;
-            color: #6b7280;
-            padding: 0 4px;
-        }
-        #mapContainer {
-            flex: 1;
-            width: 100%;
-        }
-        .map-modal-footer {
-            padding: 16px 20px;
-            background: #fff;
-            border-top: 1px solid #eef2f8;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-            gap: 16px;
-        }
-        .map-modal-footer .address-preview {
-            flex: 1;
-            font-size: .9rem;
-            color: #374151;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .map-modal-footer .btn-group {
-            display: flex;
-            gap: 10px;
-        }
-        .map-modal-footer .btn-group button {
-            padding: 8px 20px;
-            border-radius: 40px;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-        .map-modal-footer .btn-group .btn-cancel {
-            background: #f3f4f6;
-            color: #374151;
-        }
-        .map-modal-footer .btn-group .btn-confirm {
-            background: #1e4a6b;
-            color: #fff;
-        }
-        .map-center-marker {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -100%);
-            font-size: 2.4rem;
-            color: #ef4444;
-            pointer-events: none;
-            z-index: 10;
-            text-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        }
-        #mapContainer {
-            position: relative;
-        }
-        /* 屏幕自适应 */
+        .my-tasks-header{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20;flex-shrink:0}
+        .my-tasks-header .back-btn{background:transparent;border:none;font-size:1.8rem;cursor:pointer;padding:4px 8px;color:#1e4a6b}
+        .my-tasks-header .title{font-weight:700;font-size:1.2rem;flex:1;color:#0f172a}
+        .my-tasks-list{flex:1;overflow-y:auto;padding-bottom:20px}
+        /* 地图模态框样式 */
+        .map-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:9998;display:none;flex-direction:column}
+        .map-modal.active{display:flex}
+        .map-modal-header{padding:12px 16px;background:#fff;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:10px;flex-shrink:0}
+        .map-modal-header input{flex:1;padding:10px 16px;border-radius:24px;border:1px solid #d1d5db;font-size:1rem;outline:none}
+        .map-modal-header input:focus{border-color:#1e4a6b}
+        .map-modal-header .close-btn{background:none;border:none;font-size:1.8rem;cursor:pointer;color:#6b7280;padding:0 4px}
+        #mapContainer{flex:1;width:100%;position:relative}
+        .map-modal-footer{padding:16px 20px;background:#fff;border-top:1px solid #eef2f8;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:16px}
+        .map-modal-footer .address-preview{flex:1;font-size:.9rem;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .map-modal-footer .btn-group{display:flex;gap:10px}
+        .map-modal-footer .btn-group button{padding:8px 20px;border-radius:40px;border:none;font-weight:600;cursor:pointer;font-size:1rem}
+        .map-modal-footer .btn-group .btn-cancel{background:#f3f4f6;color:#374151}
+        .map-modal-footer .btn-group .btn-confirm{background:#1e4a6b;color:#fff}
+        .map-center-marker{position:absolute;top:50%;left:50%;transform:translate(-50%, -100%);font-size:2.4rem;color:#ef4444;pointer-events:none;z-index:10;text-shadow:0 2px 6px rgba(0,0,0,0.3)}
         @media (max-width:380px){html{font-size:14px}.card{padding:14px 16px;margin:10px 12px}.nav-header{padding:10px 14px}.bottom-nav{padding:6px 14px 14px}}
         @media (min-width:600px){.app-container{max-width:600px}}
-        #homeContent, #messageContainer, #profileContainer, #detailContainer, .my-tasks-list{flex:1}
+        #homeContent,#messageContainer,#profileContainer,#detailContainer,.my-tasks-list{flex:1}
         .chat-container{flex:1}
     </style>
 </head>
@@ -554,9 +351,7 @@
                     <button class="back-btn" id="myTasksBackBtn">‹</button>
                     <span class="title" id="myTasksTitle">我的任务</span>
                 </div>
-                <div class="my-tasks-list" id="myTasksList">
-                    <div class="loading">加载中...</div>
-                </div>
+                <div class="my-tasks-list" id="myTasksList"><div class="loading">加载中...</div></div>
             </div>
             <!-- 底部导航 -->
             <div class="bottom-nav">
@@ -610,7 +405,10 @@
     let geocoder = null;
     let selectedLocation = { lng: 0, lat: 0, address: '' };
     let mapReady = false;
+    let mapInitAttempts = 0;
+    const MAX_MAP_ATTEMPTS = 3;
 
+    // ===== 通用函数 =====
     function showNetworkSlow() {
         if (networkToast) return;
         networkToast = document.createElement('div');
@@ -799,17 +597,43 @@
         } catch (e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
     }
 
-    // ===== 地图选点功能 =====
+    // ===== 地图增强版初始化 =====
     function initMap() {
+        if (mapReady) return;
         if (typeof AMap === 'undefined') {
-            showAlert('地图加载失败', '请检查网络或高德地图 Key 是否正确。');
+            console.warn('AMap 未加载，尝试重新加载脚本...');
+            if (mapInitAttempts >= MAX_MAP_ATTEMPTS) {
+                showAlert('地图加载失败', '请检查网络或高德地图 Key 是否正确。您可以直接在输入框中手动输入地址。');
+                closeMapModal();
+                return;
+            }
+            mapInitAttempts++;
+            const script = document.createElement('script');
+            script.src = `https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder&callback=onMapScriptLoaded`;
+            script.async = true;
+            document.head.appendChild(script);
+            window.onMapScriptLoaded = function() {
+                console.log('高德地图脚本加载成功，重新初始化地图');
+                mapReady = false;
+                initMap();
+            };
+            setTimeout(() => {
+                if (!mapReady) {
+                    console.error('高德地图脚本加载超时');
+                    mapInitAttempts = MAX_MAP_ATTEMPTS;
+                    showAlert('地图加载超时', '请检查网络后重试，或手动输入地址。');
+                    closeMapModal();
+                }
+            }, 8000);
             return;
         }
-        if (mapReady) return;
+
+        // AMap 已存在，正常初始化
         const container = document.getElementById('mapContainer');
+        if (!container) return;
         map = new AMap.Map('mapContainer', {
             zoom: 16,
-            center: [116.397428, 39.90923], // 默认北京
+            center: [116.397428, 39.90923],
             resizeEnable: true,
             touchZoom: true,
             dragEnable: true,
@@ -821,6 +645,7 @@
             radius: 1000,
             extensions: 'all'
         });
+
         // 尝试定位到当前位置
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -830,20 +655,18 @@
                     map.setCenter([lng, lat]);
                     updateAddress(lng, lat);
                 },
-                () => {
-                    // 定位失败，使用默认位置
-                },
+                () => {},
                 { enableHighAccuracy: true, timeout: 10000 }
             );
         }
 
-        // 拖动地图时更新地址
         map.on('moveend', () => {
             const center = map.getCenter();
             updateAddress(center.getLng(), center.getLat());
         });
 
         mapReady = true;
+        console.log('高德地图初始化成功');
     }
 
     function updateAddress(lng, lat) {
@@ -852,9 +675,8 @@
         if (geocoder) {
             geocoder.getAddress(new AMap.LngLat(lng, lat), (status, result) => {
                 if (status === 'complete' && result.info === 'OK') {
-                    const address = result.regeocode.formattedAddress;
-                    selectedLocation.address = address;
-                    document.getElementById('selectedAddress').textContent = address || '未知地址';
+                    selectedLocation.address = result.regeocode.formattedAddress;
+                    document.getElementById('selectedAddress').textContent = selectedLocation.address || '未知地址';
                 } else {
                     document.getElementById('selectedAddress').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                     selectedLocation.address = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
@@ -869,16 +691,9 @@
     function openMapModal() {
         const modal = document.getElementById('mapModal');
         modal.classList.add('active');
-        // 禁止底层页面滚动
         document.body.style.overflow = 'hidden';
-        // 初始化地图（如果未初始化）
-        if (!mapReady) {
-            setTimeout(initMap, 300);
-        } else {
-            // 重置地图大小
-            map.resize();
-        }
-        // 如果已有地址输入框的值，尝试定位到该地址
+        mapInitAttempts = 0;
+        setTimeout(() => { initMap(); }, 300);
         const addressInput = document.getElementById('pubAddress');
         const addr = addressInput.value.trim();
         if (addr && mapReady) {
@@ -906,11 +721,14 @@
                 hint.innerHTML = '✅ 已选择位置：' + selectedLocation.address;
                 setTimeout(() => { hint.innerHTML = '点击“选择位置”打开地图选点'; }, 3000);
             }
+        } else {
+            showAlert('提示', '请先在地图上选择位置或搜索地点');
+            return;
         }
         closeMapModal();
     }
 
-    // ===== 页面其他函数 =====
+    // ===== 原有功能函数（延续） =====
     async function getPreciseLocationNative() {
         showToast('正在获取精确位置...', 3000);
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -934,11 +752,8 @@
         }
     }
 
-    // 原 getCurrentLocation 已不再使用，改为 openMapModal
-    window.getCurrentLocation = async function() {
-        // 兼容旧调用，打开地图
-        openMapModal();
-    };
+    // 旧定位函数（保留兼容）
+    window.getCurrentLocation = function() { openMapModal(); };
 
     async function navigateTo(lat, lng, address) {
         const destName = encodeURIComponent(address || '目的地');
@@ -2215,7 +2030,6 @@
                     <div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit||60}</div><div class="stat-label">信用</div></div>
                     <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div>
                 </div>
-                <!-- 三个任务卡片，点击跳转至全屏列表 -->
                 <div class="profile-task-card" onclick="navigateToMyTasks('pub')">
                     <div class="left"><span class="title">📤 我发布</span><span class="count">${pubCount} 个进行中</span></div>
                     <span class="arrow">›</span>
@@ -2383,7 +2197,7 @@
         });
     }
 
-    // ==================== 页面切换（增强） ====================
+    // ==================== 页面切换 ====================
     function switchPage(page) {
         if (page === 'myTasks') {
             document.body.classList.add('hide-bottom-nav');
@@ -2534,21 +2348,23 @@
         });
         initGestureBack();
 
-        // 地图相关按钮
         document.getElementById('openMapBtn').addEventListener('click', openMapModal);
         document.getElementById('mapModalClose').addEventListener('click', closeMapModal);
         document.getElementById('mapCancelBtn').addEventListener('click', closeMapModal);
         document.getElementById('mapConfirmBtn').addEventListener('click', confirmLocation);
         document.getElementById('mapSearchBtn').addEventListener('click', () => {
             const keyword = document.getElementById('mapSearchInput').value.trim();
-            if (!keyword || !mapReady) return;
+            if (!keyword || !mapReady) {
+                if (!mapReady) showToast('地图尚未加载完成，请稍候');
+                return;
+            }
             geocoder.getLocation(keyword, (status, result) => {
                 if (status === 'complete' && result.geocodes.length) {
                     const loc = result.geocodes[0].location;
                     map.setCenter([loc.getLng(), loc.getLat()]);
                     updateAddress(loc.getLng(), loc.getLat());
                 } else {
-                    showToast('未找到该地点');
+                    showToast('未找到该地点，请尝试更详细的关键词');
                 }
             });
         });
@@ -2578,7 +2394,7 @@
     document.getElementById('showLoginBtn').onclick = (e) => { e.preventDefault(); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); };
     document.getElementById('mediaInput')?.addEventListener('change', (e) => { if(e.target.files.length) handleMediaFiles(e.target.files); });
 
-    // 兼容旧定位函数（已弃用，但保留以防调用）
+    // 兼容旧定位函数
     window.getCurrentLocation = function() { openMapModal(); };
 
     (async () => {
