@@ -7,6 +7,7 @@
     <!-- 高德地图 JS API（使用您提供的 Key） -->
     <script src="https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder"></script>
     <style>
+        /* ===== 全局样式（与之前一致） ===== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html{font-size:calc(16px + 0.2vw);}
         body{
@@ -231,7 +232,6 @@
         .my-tasks-header .back-btn{background:transparent;border:none;font-size:1.8rem;cursor:pointer;padding:4px 8px;color:#1e4a6b}
         .my-tasks-header .title{font-weight:700;font-size:1.2rem;flex:1;color:#0f172a}
         .my-tasks-list{flex:1;overflow-y:auto;padding-bottom:20px}
-        /* 地图模态框样式 */
         .map-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:9998;display:none;flex-direction:column}
         .map-modal.active{display:flex}
         .map-modal-header{padding:12px 16px;background:#fff;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:10px;flex-shrink:0}
@@ -672,19 +672,19 @@
     function updateAddress(lng, lat) {
         selectedLocation.lng = lng;
         selectedLocation.lat = lat;
+        // 先显示坐标，如果逆地理编码成功再替换
+        const coordStr = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        document.getElementById('selectedAddress').textContent = coordStr;
+        selectedLocation.address = coordStr;
+
         if (geocoder) {
             geocoder.getAddress(new AMap.LngLat(lng, lat), (status, result) => {
                 if (status === 'complete' && result.info === 'OK') {
-                    selectedLocation.address = result.regeocode.formattedAddress;
-                    document.getElementById('selectedAddress').textContent = selectedLocation.address || '未知地址';
-                } else {
-                    document.getElementById('selectedAddress').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                    selectedLocation.address = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    const addr = result.regeocode.formattedAddress;
+                    selectedLocation.address = addr;
+                    document.getElementById('selectedAddress').textContent = addr;
                 }
             });
-        } else {
-            document.getElementById('selectedAddress').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-            selectedLocation.address = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         }
     }
 
@@ -712,20 +712,92 @@
         document.body.style.overflow = '';
     }
 
+    // ===== 修复：确认位置时强制获取文字地址 =====
     function confirmLocation() {
         const addressInput = document.getElementById('pubAddress');
-        if (selectedLocation.address) {
-            addressInput.value = selectedLocation.address;
-            const hint = document.getElementById('locationHint');
-            if (hint) {
-                hint.innerHTML = '✅ 已选择位置：' + selectedLocation.address;
-                setTimeout(() => { hint.innerHTML = '点击“选择位置”打开地图选点'; }, 3000);
+        const addressPreview = document.getElementById('selectedAddress');
+        
+        // 如果当前地址是经纬度格式（包含逗号），或者地址为空，主动调用逆地理编码
+        const isCoord = /^[-+]?\d+\.\d+,\s*[-+]?\d+\.\d+$/.test(selectedLocation.address);
+        if (!selectedLocation.address || isCoord) {
+            // 显示加载状态
+            addressPreview.textContent = '正在获取地址...';
+            // 调用逆地理编码
+            if (geocoder && map) {
+                const center = map.getCenter();
+                geocoder.getAddress(center, (status, result) => {
+                    if (status === 'complete' && result.info === 'OK') {
+                        const addr = result.regeocode.formattedAddress;
+                        selectedLocation.address = addr;
+                        addressPreview.textContent = addr;
+                        // 填入输入框
+                        addressInput.value = addr;
+                        const hint = document.getElementById('locationHint');
+                        if (hint) {
+                            hint.innerHTML = '✅ 已选择位置：' + addr;
+                            setTimeout(() => { hint.innerHTML = '点击“选择位置”打开地图选点'; }, 3000);
+                        }
+                        closeMapModal();
+                    } else {
+                        // 如果逆地理编码失败，使用坐标（但提示用户）
+                        const coordStr = `${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}`;
+                        showAlert('地址解析失败', '无法获取详细地址，已填入坐标，您可手动修改。');
+                        addressInput.value = coordStr;
+                        selectedLocation.address = coordStr;
+                        closeMapModal();
+                    }
+                });
+            } else {
+                // 如果地图或编码器未就绪，直接填入坐标
+                const coordStr = `${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}`;
+                addressInput.value = coordStr;
+                selectedLocation.address = coordStr;
+                closeMapModal();
             }
-        } else {
-            showAlert('提示', '请先在地图上选择位置或搜索地点');
             return;
         }
+        
+        // 正常情况（已有文字地址）
+        addressInput.value = selectedLocation.address;
+        const hint = document.getElementById('locationHint');
+        if (hint) {
+            hint.innerHTML = '✅ 已选择位置：' + selectedLocation.address;
+            setTimeout(() => { hint.innerHTML = '点击“选择位置”打开地图选点'; }, 3000);
+        }
         closeMapModal();
+    }
+
+    // ===== 全局手势返回支持 =====
+    function initGlobalSwipeBack() {
+        // 为所有 .page 添加左滑返回手势（首页除外，避免干扰下拉刷新）
+        const pages = document.querySelectorAll('.page:not(#homePage)');
+        let startX = 0, startY = 0, isSwiping = false;
+        pages.forEach(page => {
+            page.addEventListener('touchstart', (e) => {
+                // 只有页面激活时才处理
+                if (!page.classList.contains('active')) return;
+                // 判断触摸点是否在屏幕左边缘（左 1/6 区域）
+                const rect = page.getBoundingClientRect();
+                const touchX = e.touches[0].clientX - rect.left;
+                if (touchX > rect.width * 0.16) return; // 太靠右不触发
+                if (page.scrollLeft > 0 || page.scrollTop > 0) return;
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                isSwiping = true;
+            }, { passive: true });
+            page.addEventListener('touchmove', (e) => {
+                if (!isSwiping || !page.classList.contains('active')) return;
+                const deltaX = e.touches[0].clientX - startX;
+                const deltaY = e.touches[0].clientY - startY;
+                if (deltaX > 50 && Math.abs(deltaY) < 100) {
+                    e.preventDefault();
+                    isSwiping = false;
+                    // 触发返回
+                    handleBackButton();
+                }
+            }, { passive: false });
+            page.addEventListener('touchend', () => { isSwiping = false; }, { passive: true });
+        });
     }
 
     // ===== 原有功能函数（延续） =====
@@ -752,7 +824,6 @@
         }
     }
 
-    // 旧定位函数（保留兼容）
     window.getCurrentLocation = function() { openMapModal(); };
 
     async function navigateTo(lat, lng, address) {
@@ -2303,51 +2374,33 @@
         } else { window.addEventListener('popstate', handleBackButton); }
     }
     function handleBackButton() {
-        const activePage = document.querySelector('.page.active').id;
-        if (activePage === 'homePage') {
+        const activePage = document.querySelector('.page.active');
+        if (!activePage) return;
+        const id = activePage.id;
+        if (id === 'homePage') {
             if (backPressedOnce) {
                 if (window.Capacitor && window.Capacitor.isNativePlatform()) Capacitor.Plugins.App.exitApp();
                 else window.close();
             } else { backPressedOnce = true; showToast('再按一次退出应用'); setTimeout(()=>{ backPressedOnce=false; },2000); }
+        } else if (id === 'myTasksPage') {
+            document.getElementById('myTasksBackBtn').click();
+        } else if (id === 'detailPage') {
+            document.getElementById('detailBackBtn')?.click();
         } else {
-            const backBtn = document.getElementById('detailBackBtn');
-            if (backBtn && backBtn.closest('.page') && backBtn.closest('.page').classList.contains('active')) backBtn.click();
-            else history.back();
+            // 其他页面（发布、消息、我的）回到首页
+            switchPage('home');
         }
-    }
-
-    // ==================== 手势返回支持（myTasks 页面） ====================
-    function initGestureBack() {
-        const myTasksPage = document.getElementById('myTasksPage');
-        let startX = 0, startY = 0, isSwiping = false;
-        myTasksPage.addEventListener('touchstart', (e) => {
-            if (myTasksPage.scrollLeft === 0 && myTasksPage.scrollTop === 0) {
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-                isSwiping = true;
-            }
-        }, { passive: true });
-        myTasksPage.addEventListener('touchmove', (e) => {
-            if (!isSwiping) return;
-            const deltaX = e.touches[0].clientX - startX;
-            const deltaY = e.touches[0].clientY - startY;
-            if (deltaX > 50 && Math.abs(deltaY) < 100) {
-                e.preventDefault();
-                isSwiping = false;
-                document.getElementById('myTasksBackBtn').click();
-            }
-        }, { passive: false });
-        myTasksPage.addEventListener('touchend', () => { isSwiping = false; }, { passive: true });
     }
 
     // ===== 地图模态框事件绑定 =====
     document.addEventListener('DOMContentLoaded', () => {
+        // myTasks 返回
         document.getElementById('myTasksBackBtn').addEventListener('click', () => {
             switchPage('profile');
             loadProfile();
         });
-        initGestureBack();
 
+        // 地图相关按钮
         document.getElementById('openMapBtn').addEventListener('click', openMapModal);
         document.getElementById('mapModalClose').addEventListener('click', closeMapModal);
         document.getElementById('mapCancelBtn').addEventListener('click', closeMapModal);
@@ -2371,6 +2424,9 @@
         document.getElementById('mapSearchInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') document.getElementById('mapSearchBtn').click();
         });
+
+        // 初始化全局手势
+        initGlobalSwipeBack();
     });
 
     // ==================== 事件绑定 ====================
@@ -2394,7 +2450,6 @@
     document.getElementById('showLoginBtn').onclick = (e) => { e.preventDefault(); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); };
     document.getElementById('mediaInput')?.addEventListener('change', (e) => { if(e.target.files.length) handleMediaFiles(e.target.files); });
 
-    // 兼容旧定位函数
     window.getCurrentLocation = function() { openMapModal(); };
 
     (async () => {
