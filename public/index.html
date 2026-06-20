@@ -6,24 +6,32 @@
     <title>赏金集市 · 双向议价</title>
     <script src="https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder"></script>
     <style>
+        /* 全局重置 */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
         .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden}
         #mainApp{display:flex;flex-direction:column;flex:1;overflow:hidden}
+
+        /* ===== 页面容器 ===== */
         .page{display:none;flex-direction:column;flex:1;overflow:hidden;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1)}
         .page.active{display:flex}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+        /* ===== 导航栏 ===== */
         .nav-header{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 18px;border-bottom:1px solid rgba(226,232,240,.6);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:20}
         .logo{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,#0f2b3d,#1e4a6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
         .header-balance{background:rgba(30,74,107,.1);padding:6px 14px;border-radius:40px;font-size:.75rem;font-weight:600;color:#1e4a6b;cursor:pointer}
         .header-balance:active{background:rgba(30,74,107,.2);transform:scale(.96)}
+        /* ===== 底部导航 ===== */
         .bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);display:flex;justify-content:space-around;padding:8px 20px max(18px,env(safe-area-inset-bottom));border-top:1px solid rgba(226,232,240,.6);z-index:20;flex-shrink:0;transition:transform .3s ease,opacity .3s ease}
         body.hide-bottom-nav .bottom-nav{transform:translateY(100%);opacity:0;pointer-events:none}
         .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;color:#94a3b8;cursor:pointer;position:relative}
         .nav-item.active{color:#1e4a6b;font-weight:500;transform:translateY(-2px)}
         .nav-icon{font-size:1.6rem}
         .msg-badge{position:absolute;top:-5px;right:-12px;background:#ef4444;color:#fff;border-radius:20px;padding:2px 6px;font-size:.6rem;min-width:18px;display:none;font-weight:600}
+
+        /* ===== 通用卡片 ===== */
         .card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.03),0 1px 2px rgba(0,0,0,.05);border:1px solid #eef2f8;cursor:pointer;font-size:1rem}
         .card:active{transform:scale(.98);box-shadow:0 1px 4px rgba(0,0,0,.05)}
         .skeleton-card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;border:1px solid #eef2f8;animation:pulse 1.2s infinite}
@@ -31,16 +39,19 @@
         .skeleton-title{height:20px;background:#e2e8f0;border-radius:12px;width:60%;margin-bottom:12px}
         .skeleton-desc{height:16px;background:#e2e8f0;border-radius:12px;width:90%;margin-bottom:8px}
         .skeleton-meta{height:14px;background:#e2e8f0;border-radius:12px;width:40%}
+
         .task-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
         .task-title{font-size:1.1rem;font-weight:700;color:#0f172a}
         .reward-badge{background:linear-gradient(135deg,#fef3c7,#fde68a);padding:4px 12px;border-radius:40px;font-weight:700;font-size:.75rem;color:#b45309}
         .task-desc{font-size:.95rem;color:#475569;margin-bottom:8px;line-height:1.5}
         .task-meta{display:flex;gap:14px;font-size:.75rem;color:#6c7a91;flex-wrap:wrap}
         .distance-badge{background:#e6f7e6;color:#2b6e2f;padding:2px 12px;border-radius:20px;font-weight:500}
+
         .category-bar,.sort-bar{display:flex;gap:12px;padding:14px 16px;background:#fff;border-bottom:1px solid #eef2f8;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;flex-shrink:0}
         .category-chip,.sort-chip{background:#f1f5f9;padding:8px 18px;border-radius:40px;font-size:.9rem;font-weight:500;color:#475569;cursor:pointer;display:inline-block;transition:all .25s ease;opacity:.85}
         .category-chip.active,.sort-chip.active{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);color:#fff;font-weight:700;opacity:1;box-shadow:0 4px 12px rgba(0,0,0,.2);transform:scale(1.02);position:relative}
         .category-chip.active::after,.sort-chip.active::after{content:'';position:absolute;bottom:-6px;left:25%;width:50%;height:3px;background:#fff;border-radius:3px;box-shadow:0 0 4px rgba(255,255,255,.5)}
+
         .detail-hero{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px 16px 0;padding:28px 24px;color:#fff;position:relative;overflow:hidden}
         .detail-hero::before{content:"💰";position:absolute;right:-20px;bottom:-20px;font-size:80px;opacity:.15}
         .detail-reward{font-size:2rem;font-weight:800;margin-top:8px}
@@ -50,10 +61,12 @@
         .info-label{font-size:.8rem;color:#64748b;margin-bottom:2px}
         .info-value{font-weight:600;color:#1e293b;cursor:pointer;font-size:1rem}
         .desc-section{background:#f9fafc;border-radius:20px;padding:18px;margin-top:16px}
+
         .form-group{margin-bottom:20px}
         .form-label{font-size:.95rem;font-weight:600;color:#1e293b;margin-bottom:6px;display:block}
         .form-input,.form-textarea,select.form-input{width:100%;padding:14px 18px;border-radius:24px;border:1px solid #e2e8f0;font-size:1rem;outline:none;background:#fff;transition:all .2s}
         .form-input:focus,.form-textarea:focus{border-color:#1e4a6b;box-shadow:0 0 0 3px rgba(30,74,107,.1)}
+
         .btn-primary{background:linear-gradient(95deg,#059669,#047857);border:none;border-radius:60px;padding:16px;font-weight:600;color:#fff;width:100%;text-align:center;cursor:pointer;font-size:1.1rem;transition:all .2s;box-shadow:0 2px 6px rgba(5,150,105,.2)}
         .btn-primary:active{transform:scale(.97);box-shadow:0 1px 3px rgba(5,150,105,.2)}
         .btn-primary:disabled{opacity:.6;transform:none;cursor:not-allowed}
@@ -66,14 +79,17 @@
         .btn-nav{background:#3b82f6;color:#fff}
         .btn-location{background:#eef2ff;color:#1e4a6b}
         .btn-phone:active,.btn-nav:active,.btn-location:active{transform:scale(.96)}
+
         .slide-confirm,.slide-action{margin:18px 0;user-select:none}
         .slide-track{position:relative;width:100%;height:56px;background:#eef2ff;border-radius:60px;overflow:hidden;border:1px solid #cbd5e1;touch-action:none}
         .slide-thumb{position:absolute;left:0;top:0;width:70px;height:56px;background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:60px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.8rem;touch-action:none;transition:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}
         .slide-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1e4a6b;pointer-events:none;font-size:1rem;gap:8px;z-index:1;text-align:center}
         .slide-confirm.completed .slide-track,.slide-action.completed .slide-track{background:#d1fae5;border-color:#059669}
+
         .countdown-timer{background:#fef3c7;border-radius:60px;padding:12px 18px;text-align:center;margin:16px 0;font-weight:700;color:#b45309;display:flex;align-items:center;justify-content:center;gap:8px;font-size:1rem}
         .countdown-timer.warning{background:#fee2e2;color:#dc2626;animation:pulseWarning 1s infinite}
         @keyframes pulseWarning{0%,100%{opacity:1}50%{opacity:.7}}
+
         .custom-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000}
         .custom-modal-content{background:#fff;border-radius:32px;width:85%;max-width:340px;padding:28px;text-align:center;box-shadow:0 20px 35px -12px rgba(0,0,0,.3)}
         .custom-modal-content h3{margin-bottom:14px;font-size:1.3rem}
@@ -81,27 +97,18 @@
         .custom-modal-buttons button{flex:1;padding:12px;border-radius:40px;border:none;font-weight:600;cursor:pointer;font-size:1rem}
         .confirm-btn{background:#1e4a6b;color:#fff}
         .cancel-btn{background:#e2e8f0;color:#1e293b}
+
         .toast-message{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:10px 24px;border-radius:60px;font-size:.95rem;z-index:1100;pointer-events:none;animation:fadeOut 2s forwards;backdrop-filter:blur(8px)}
         @keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
-        /* ===== 聊天布局（修复输入框） ===== */
-        #messagePage{flex:1;overflow:hidden;display:flex;flex-direction:column}
-        .chat-container{display:flex;flex-direction:column;height:100%;flex:1;background:#f8fafc}
+
+        /* ===== 聊天页面布局（修复输入框） ===== */
+        #messagePage{flex:1;display:flex;flex-direction:column;overflow:hidden}
+        .chat-container{display:flex;flex-direction:column;height:100%;background:#f8fafc}
         .chat-header-bar{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:8px;flex-shrink:0}
         .chat-back-btn{background:#f1f5f9;border:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer}
         .chat-back-btn:active{background:#e2e8f0;transform:scale(.94)}
         .chat-header-name{font-weight:700;font-size:1.1rem;flex:1}
         .chat-messages-area{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
-        .chat-bubble{max-width:80%;display:flex;flex-direction:column;cursor:pointer}
-        .chat-bubble:active{background:rgba(0,0,0,.03);border-radius:16px}
-        .chat-bubble-mine{align-self:flex-end}
-        .chat-bubble-other{align-self:flex-start}
-        .bubble-text{padding:12px 18px;border-radius:20px;font-size:.95rem;line-height:1.5;word-break:break-word;background:#fff;border:1px solid #e2e8f0;border-bottom-left-radius:4px}
-        .chat-bubble-mine .bubble-text{background:#1e4a6b;color:#fff;border-bottom-right-radius:4px;border:none}
-        .bubble-image{max-width:100%;border-radius:16px;margin-top:4px;display:block;cursor:zoom-in}
-        .bubble-image-wrapper{background:transparent;border:none}
-        .bubble-audio{max-width:100%;margin-top:4px;border-radius:16px;display:block}
-        .bubble-time{font-size:.7rem;color:#94a3b8;margin-top:4px;margin-left:10px;margin-right:10px}
-        .chat-bubble-mine .bubble-time{text-align:right}
         .chat-input-wrapper{flex-shrink:0;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid #eef2f8;padding:12px 16px;border-radius:24px 24px 0 0}
         .chat-action-row{display:flex;gap:8px;align-items:center;flex-wrap:nowrap}
         .chat-message-input{flex:1;min-width:0;padding:12px 18px;border-radius:40px;border:1px solid #e2e8f0;background:#fff;font-size:1rem;transition:all .2s}
@@ -114,7 +121,10 @@
         .plus-item{background:#f1f5f9;border-radius:30px;padding:8px 16px;font-size:1rem;border:none;cursor:pointer;transition:background .2s;display:inline-flex;align-items:center;gap:6px}
         .plus-item:active{background:#e2e8f0;transform:scale(.96)}
         .nego-send-btn{background:#f59e0b;border:none;border-radius:40px;padding:8px 18px;font-weight:600;color:#fff;cursor:pointer;font-size:1rem}
-        /* 其他样式 */
+        .task-card-in-chat{background:#f8fafc;border-radius:20px;padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;border:1px solid #e2e8f0}
+        .chat-refresh-indicator{text-align:center;padding:10px;font-size:.85rem;color:#64748b}
+
+        /* ===== 个人主页 ===== */
         .profile-header{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px;padding:24px;color:#fff;display:flex;align-items:center;gap:16px;cursor:pointer}
         .profile-avatar{width:72px;height:72px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:600;overflow:hidden}
         .profile-name{font-weight:700;font-size:1.2rem}
@@ -137,6 +147,8 @@
         .profile-task-status.cancelled{background:#fee2e2;color:#b91c1c}
         .logout-btn{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:60px;padding:16px;font-weight:600;width:calc(100% - 32px);margin:16px;cursor:pointer;transition:all .2s;font-size:1.1rem}
         .logout-btn:active{transform:scale(.97)}
+
+        /* ===== 其他组件 ===== */
         .image-preview-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
         .image-preview-modal img{max-width:90%;max-height:90%;object-fit:contain}
         .close-preview{position:absolute;top:20px;right:20px;color:#fff;font-size:2rem;background:rgba(0,0,0,.5);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
@@ -157,8 +169,7 @@
         .step-dot{width:36px;height:36px;background:#fff;border:2px solid #cbd5e1;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:1rem;background:#f1f5f9}
         .step.active .step-dot{background:#1e4a6b;border-color:#1e4a6b;color:#fff}
         .step.completed .step-dot{background:#059669;border-color:#059669;color:#fff}
-        .task-card-in-chat{background:#f8fafc;border-radius:20px;padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;border:1px solid #e2e8f0}
-        .chat-refresh-indicator{text-align:center;padding:10px;font-size:.85rem;color:#64748b}
+
         .network-toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#ffc107;padding:8px 16px;border-radius:40px;font-size:.8rem;z-index:2000;white-space:nowrap}
         .rating-section{background:#fff;border-radius:24px;padding:18px;margin:12px 16px;border:1px solid #eef2f8}
         .rating-buttons{display:flex;gap:12px;justify-content:center;margin:8px 0}
@@ -205,10 +216,12 @@
         .wallet-bill-item .amount.expense{color:#dc2626}
         .withdraw-modal{z-index:9999!important}
         .withdraw-modal .custom-modal-content{max-width:340px}
+
         .my-tasks-header{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:12px;flex-shrink:0}
         .my-tasks-header .back-btn{background:transparent;border:none;font-size:1.8rem;cursor:pointer;padding:4px 8px;color:#1e4a6b}
         .my-tasks-header .title{font-weight:700;font-size:1.2rem;flex:1;color:#0f172a}
         .my-tasks-list{flex:1;overflow-y:auto;padding-bottom:20px}
+
         .map-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:9998;display:none;flex-direction:column}
         .map-modal.active{display:flex}
         .map-modal-header{padding:12px 16px;background:#fff;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:10px;flex-shrink:0}
@@ -225,6 +238,7 @@
         .map-center-marker{position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);font-size:2.4rem;color:#ef4444;pointer-events:none;z-index:10;text-shadow:0 2px 6px rgba(0,0,0,.3)}
         .swipe-back-indicator{position:fixed;left:10px;top:50%;transform:translateY(-50%);font-size:2rem;color:rgba(30,74,107,.6);background:rgba(255,255,255,.8);backdrop-filter:blur(4px);padding:8px 12px;border-radius:40px;box-shadow:0 2px 10px rgba(0,0,0,.1);pointer-events:none;opacity:0;transition:opacity .2s;z-index:999}
         .swipe-back-indicator.show{opacity:1}
+
         @media (max-width:380px){html{font-size:14px}.card{padding:14px 16px;margin:10px 12px}.nav-header{padding:10px 14px}.bottom-nav{padding:6px 14px 14px}}
         @media (min-width:600px){.app-container{max-width:600px}}
     </style>
@@ -270,7 +284,8 @@
                 <span class="logo">💰 赏金集市</span>
                 <div><span class="header-balance" id="headerBalance">余额: ¥0</span></div>
             </div>
-            <!-- 首页 -->
+
+            <!-- ===== 首页 ===== -->
             <div id="homePage" class="page">
                 <div class="category-bar" id="categoryBar">
                     <span class="category-chip active" data-cat="all">全部</span>
@@ -286,12 +301,14 @@
                 <div id="refreshIndicator" class="pull-refresh-container" style="display:none;">↓ 下拉刷新</div>
                 <div id="homeContent" style="flex:1;overflow-y:auto;padding-bottom:20px;">加载中...</div>
             </div>
-            <!-- 详情页 -->
+
+            <!-- ===== 详情页 ===== -->
             <div id="detailPage" class="page">
                 <div id="detailContainer" style="flex:1;overflow-y:auto;padding-bottom:20px;"></div>
                 <div class="back-button" style="margin:8px 16px 20px;"><button class="btn-secondary" id="detailBackBtn" style="margin:0;">← 返回上一页</button></div>
             </div>
-            <!-- 发布页 -->
+
+            <!-- ===== 发布页 ===== -->
             <div id="publishPage" class="page">
                 <div style="flex:1;overflow-y:auto;padding:16px;">
                     <div class="card" style="cursor:default;">
@@ -317,15 +334,18 @@
                     </div>
                 </div>
             </div>
-            <!-- 消息页 -->
+
+            <!-- ===== 消息页 ===== -->
             <div id="messagePage" class="page">
                 <div id="messageContainer" style="flex:1;display:flex;flex-direction:column;height:100%;">加载中...</div>
             </div>
-            <!-- 我的页面 -->
+
+            <!-- ===== 我的页面 ===== -->
             <div id="profilePage" class="page">
                 <div id="profileContainer" style="flex:1;overflow-y:auto;padding-bottom:20px;">加载中...</div>
             </div>
-            <!-- 我的任务列表页 -->
+
+            <!-- ===== 我的任务列表页（独立全屏） ===== -->
             <div id="myTasksPage" class="page">
                 <div class="my-tasks-header">
                     <button class="back-btn" id="myTasksBackBtn">‹</button>
@@ -333,6 +353,7 @@
                 </div>
                 <div class="my-tasks-list" id="myTasksList" style="flex:1;overflow-y:auto;padding-bottom:20px;"><div class="loading">加载中...</div></div>
             </div>
+
             <!-- 底部导航 -->
             <div class="bottom-nav">
                 <div class="nav-item" onclick="switchPage('home')"><span class="nav-icon">🏠</span><span>首页</span></div>
@@ -751,7 +772,6 @@
 
     // ===== 全局手势返回 =====
     let swipeIndicator = null;
-    let swipeActive = false;
     function initGlobalSwipeBack() {
         const pages = document.querySelectorAll('.page:not(#homePage)');
         swipeIndicator = document.getElementById('swipeBackIndicator');
@@ -767,7 +787,6 @@
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
                 isSwiping = true;
-                swipeActive = true;
             };
             const touchMove = (e) => {
                 if (!isSwiping || !page.classList.contains('active')) return;
@@ -781,7 +800,6 @@
                     e.preventDefault();
                     if (deltaX > 45) {
                         isSwiping = false;
-                        swipeActive = false;
                         if (swipeIndicator) swipeIndicator.classList.remove('show');
                         handleBackButton();
                     }
@@ -791,7 +809,6 @@
             };
             const touchEnd = () => {
                 isSwiping = false;
-                swipeActive = false;
                 if (swipeIndicator) swipeIndicator.classList.remove('show');
             };
             page.addEventListener('touchstart', touchStart, { passive: true });
