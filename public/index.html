@@ -6,22 +6,24 @@
     <title>赏金集市 · 双向议价</title>
     <script src="https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder"></script>
     <style>
-        /* 全局重置 */
+        /* ===== 全局重置 ===== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
         .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden}
         #mainApp{display:flex;flex-direction:column;flex:1;overflow:hidden}
 
-        /* 页面容器 */
+        /* ===== 页面容器 ===== */
         .page{display:none;flex-direction:column;flex:1;overflow:hidden;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1)}
         .page.active{display:flex}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
+        /* ===== 导航栏 ===== */
         .nav-header{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 18px;border-bottom:1px solid rgba(226,232,240,.6);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:20}
         .logo{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,#0f2b3d,#1e4a6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
         .header-balance{background:rgba(30,74,107,.1);padding:6px 14px;border-radius:40px;font-size:.75rem;font-weight:600;color:#1e4a6b;cursor:pointer}
         .header-balance:active{background:rgba(30,74,107,.2);transform:scale(.96)}
+        /* ===== 底部导航 ===== */
         .bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);display:flex;justify-content:space-around;padding:8px 20px max(18px,env(safe-area-inset-bottom));border-top:1px solid rgba(226,232,240,.6);z-index:20;flex-shrink:0;transition:transform .3s ease,opacity .3s ease}
         body.hide-bottom-nav .bottom-nav{transform:translateY(100%);opacity:0;pointer-events:none}
         .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;color:#94a3b8;cursor:pointer;position:relative}
@@ -29,7 +31,7 @@
         .nav-icon{font-size:1.6rem}
         .msg-badge{position:absolute;top:-5px;right:-12px;background:#ef4444;color:#fff;border-radius:20px;padding:2px 6px;font-size:.6rem;min-width:18px;display:none;font-weight:600}
 
-        /* 通用卡片 */
+        /* ===== 通用组件 ===== */
         .card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.03),0 1px 2px rgba(0,0,0,.05);border:1px solid #eef2f8;cursor:pointer;font-size:1rem}
         .card:active{transform:scale(.98);box-shadow:0 1px 4px rgba(0,0,0,.05)}
         .skeleton-card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;border:1px solid #eef2f8;animation:pulse 1.2s infinite}
@@ -122,7 +124,7 @@
         .task-card-in-chat{background:#f8fafc;border-radius:20px;padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;border:1px solid #e2e8f0}
         .chat-refresh-indicator{text-align:center;padding:10px;font-size:.85rem;color:#64748b}
 
-        /* 个人主页 */
+        /* ===== 个人主页 ===== */
         .profile-header{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px;padding:24px;color:#fff;display:flex;align-items:center;gap:16px;cursor:pointer}
         .profile-avatar{width:72px;height:72px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:600;overflow:hidden}
         .profile-name{font-weight:700;font-size:1.2rem}
@@ -146,7 +148,7 @@
         .logout-btn{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:60px;padding:16px;font-weight:600;width:calc(100% - 32px);margin:16px;cursor:pointer;transition:all .2s;font-size:1.1rem}
         .logout-btn:active{transform:scale(.97)}
 
-        /* 其他组件 */
+        /* ===== 其他组件 ===== */
         .image-preview-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
         .image-preview-modal img{max-width:90%;max-height:90%;object-fit:contain}
         .close-preview{position:absolute;top:20px;right:20px;color:#fff;font-size:2rem;background:rgba(0,0,0,.5);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
