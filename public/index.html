@@ -6,7 +6,6 @@
     <title>赏金集市 · 双向议价</title>
     <script src="https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder"></script>
     <style>
-        /* 全局重置 */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
@@ -25,7 +24,6 @@
         .nav-item.active{color:#1e4a6b;font-weight:500;transform:translateY(-2px)}
         .nav-icon{font-size:1.6rem}
         .msg-badge{position:absolute;top:-5px;right:-12px;background:#ef4444;color:#fff;border-radius:20px;padding:2px 6px;font-size:.6rem;min-width:18px;display:none;font-weight:600}
-        /* 卡片 */
         .card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.03),0 1px 2px rgba(0,0,0,.05);border:1px solid #eef2f8;cursor:pointer;font-size:1rem}
         .card:active{transform:scale(.98);box-shadow:0 1px 4px rgba(0,0,0,.05)}
         .skeleton-card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;border:1px solid #eef2f8;animation:pulse 1.2s infinite}
@@ -85,7 +83,7 @@
         .cancel-btn{background:#e2e8f0;color:#1e293b}
         .toast-message{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:10px 24px;border-radius:60px;font-size:.95rem;z-index:1100;pointer-events:none;animation:fadeOut 2s forwards;backdrop-filter:blur(8px)}
         @keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
-        /* ===== 聊天布局修复 ===== */
+        /* ===== 聊天布局 ===== */
         #messagePage{flex:1;overflow:hidden}
         .chat-container{display:flex;flex-direction:column;height:100%;background:#f8fafc}
         .chat-header-bar{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:8px;flex-shrink:0}
@@ -116,7 +114,6 @@
         .plus-item{background:#f1f5f9;border-radius:30px;padding:8px 16px;font-size:1rem;border:none;cursor:pointer;transition:background .2s;display:inline-flex;align-items:center;gap:6px}
         .plus-item:active{background:#e2e8f0;transform:scale(.96)}
         .nego-send-btn{background:#f59e0b;border:none;border-radius:40px;padding:8px 18px;font-weight:600;color:#fff;cursor:pointer;font-size:1rem}
-        /* 个人主页 */
         .profile-header{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px;padding:24px;color:#fff;display:flex;align-items:center;gap:16px;cursor:pointer}
         .profile-avatar{width:72px;height:72px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:600;overflow:hidden}
         .profile-name{font-weight:700;font-size:1.2rem}
@@ -367,7 +364,6 @@
 
 <!-- 手势返回视觉提示 -->
 <div class="swipe-back-indicator" id="swipeBackIndicator">‹</div>
-
 <script>
     // ==================== API 地址 ====================
     const getApiBase = () => {
@@ -584,7 +580,7 @@
         } catch (e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
     }
 
-    // ===== 地图功能（使用后端 /regeo） =====
+    // ===== 地图功能 =====
     function initMap() {
         if (mapReady) return;
         if (typeof AMap === 'undefined') {
@@ -676,6 +672,18 @@
         document.body.style.overflow = 'hidden';
         mapInitAttempts = 0;
         setTimeout(() => { initMap(); }, 300);
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    if (map) {
+                        map.setCenter([pos.coords.longitude, pos.coords.latitude]);
+                        updateAddress(pos.coords.longitude, pos.coords.latitude);
+                    }
+                },
+                () => {},
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
         const addressInput = document.getElementById('pubAddress');
         const addr = addressInput.value.trim();
         if (addr && mapReady) {
@@ -739,7 +747,7 @@
         closeMapModal();
     }
 
-    // ===== 全局手势返回（修复） =====
+    // ===== 全局手势返回 =====
     let swipeIndicator = null;
     let swipeActive = false;
     function initGlobalSwipeBack() {
@@ -773,7 +781,6 @@
                         isSwiping = false;
                         swipeActive = false;
                         if (swipeIndicator) swipeIndicator.classList.remove('show');
-                        // 调用返回逻辑
                         handleBackButton();
                     }
                 } else {
@@ -792,7 +799,7 @@
         });
     }
 
-    // ===== 返回按钮处理（修复） =====
+    // ===== 返回按钮处理 =====
     function handleBackButton() {
         const activePage = document.querySelector('.page.active');
         if (!activePage) return;
@@ -811,151 +818,20 @@
             }
         } else if (id === 'myTasksPage') {
             document.getElementById('myTasksBackBtn').click();
-            backPressedOnce = false; // 重置
+            backPressedOnce = false;
         } else if (id === 'detailPage') {
             document.getElementById('detailBackBtn')?.click();
             backPressedOnce = false;
         } else if (id === 'publishPage' || id === 'messagePage' || id === 'profilePage') {
-            // 回到首页
             switchPage('home');
             backPressedOnce = false;
         } else {
-            // 默认回到首页
             switchPage('home');
             backPressedOnce = false;
         }
     }
 
-    // ===== 原有功能函数 =====
-    async function getPreciseLocationNative() {
-        showToast('正在获取精确位置...', 3000);
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            try {
-                const { Geolocation } = Capacitor.Plugins;
-                let permission = await Geolocation.checkPermissions();
-                if (permission.location !== 'granted') {
-                    permission = await Geolocation.requestPermissions();
-                    if (permission.location !== 'granted') return null;
-                }
-                const position = await Geolocation.getCurrentPosition({ timeout: 15000, enableHighAccuracy: true });
-                return await getDetailedAddress(position.coords.latitude, position.coords.longitude);
-            } catch(e) { return null; }
-        } else {
-            return new Promise((resolve) => {
-                navigator.geolocation.getCurrentPosition(async (pos) => {
-                    const address = await getDetailedAddress(pos.coords.latitude, pos.coords.longitude);
-                    resolve(address);
-                }, () => resolve(null), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-            });
-        }
-    }
-
-    window.getCurrentLocation = function() { openMapModal(); };
-
-    async function navigateTo(lat, lng, address) {
-        const destName = encodeURIComponent(address || '目的地');
-        let url = '';
-        if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
-            url = `iosamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${lat}&lon=${lng}&dev=0&style=2`;
-        } else if (/android/i.test(navigator.userAgent)) {
-            url = `androidamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${lat}&lon=${lng}&dev=0&style=2`;
-        } else {
-            url = `https://uri.amap.com/navigation?to=${lng},${lat},${destName}&mode=car&callnative=1`;
-        }
-        window.location.href = url;
-        setTimeout(() => {
-            if (document.hasFocus()) {
-                window.location.href = `https://uri.amap.com/navigation?to=${lng},${lat},${destName}&mode=car&callnative=1`;
-            }
-        }, 2500);
-    }
-
-    function showImagePreview(url) {
-        const modal = document.createElement('div');
-        modal.className = 'image-preview-modal';
-        modal.innerHTML = `<div class="close-preview">✕</div><img src="${url}">`;
-        document.body.appendChild(modal);
-        modal.querySelector('.close-preview').onclick = () => modal.remove();
-        modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
-    }
-
-    function compressImage(file, quality=0.5, maxWidth=600, maxHeight=600) {
-        return new Promise((resolve,reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (e) => {
-                const img = new Image();
-                img.src = e.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    let width = img.width, height = img.height;
-                    if(width > height) {
-                        if(width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
-                    } else {
-                        if(height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
-                    }
-                    canvas.width = width; canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
-                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
-                    resolve(dataUrl);
-                };
-                img.onerror = reject;
-            };
-            reader.onerror = reject;
-        });
-    }
-    async function handleMediaFiles(files) {
-        let remain = 3 - pendingMedia.length;
-        if(files.length > remain) {
-            showAlert('提示', `最多上传3个，当前已有${pendingMedia.length}个`);
-            files = Array.from(files).slice(0, remain);
-        }
-        for(let file of files) {
-            if(!file.type.startsWith('image/') && !file.type.startsWith('video/')) continue;
-            let dataURL;
-            if(file.type.startsWith('image/')) {
-                dataURL = await compressImage(file);
-            } else {
-                dataURL = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(e.target.result);
-                    reader.readAsDataURL(file);
-                });
-            }
-            pendingMedia.push({type: file.type.startsWith('image/')?'image':'video', dataURL, file});
-            updateMediaPreview();
-        }
-        document.getElementById('mediaInput').value = '';
-    }
-    function updateMediaPreview() {
-        const container = document.getElementById('mediaPreview');
-        if(!container) return;
-        if(pendingMedia.length === 0) { container.innerHTML = ''; return; }
-        container.innerHTML = pendingMedia.map((m,idx) => `
-            <div class="preview-img-wrapper">
-                ${m.type==='image' ? `<img src="${m.dataURL}">` : `<video src="${m.dataURL}" style="width:100%;height:100%;object-fit:cover;"></video>`}
-                <div class="remove-img-btn" data-index="${idx}">✕</div>
-            </div>
-        `).join('');
-        document.querySelectorAll('#mediaPreview .remove-img-btn').forEach(btn => {
-            btn.onclick = (e) => {
-                const idx = parseInt(btn.getAttribute('data-index'));
-                pendingMedia.splice(idx,1);
-                updateMediaPreview();
-            };
-        });
-    }
-
-    const categoryMap = {'取件':['取件','快递','包裹','取货'],'调试':['调试','bug','修复','代码','前端','后端','程序'],'跑腿':['跑腿','送','买','代购','排队']};
-    function getTaskCategory(title) {
-        const lower = title.toLowerCase();
-        for(let [cat,keywords] of Object.entries(categoryMap))
-            if(keywords.some(kw=>lower.includes(kw))) return cat;
-        return '其他';
-    }
-
-    // ==================== 首页 ====================
+    // ===== 首页相关 =====
     async function refreshTaskList(force = false) {
         if (refreshThrottle) return;
         refreshThrottle = true;
@@ -1084,6 +960,15 @@
         });
     }
 
+    const categoryMap = {'取件':['取件','快递','包裹','取货'],'调试':['调试','bug','修复','代码','前端','后端','程序'],'跑腿':['跑腿','送','买','代购','排队']};
+    function getTaskCategory(title) {
+        const lower = title.toLowerCase();
+        for(let [cat,keywords] of Object.entries(categoryMap))
+            if(keywords.some(kw=>lower.includes(kw))) return cat;
+        return '其他';
+    }
+
+    // ===== 幻灯片滑动 =====
     function initSlide(container, onComplete) {
         const track = container.querySelector('.slide-track');
         const thumb = container.querySelector('.slide-thumb');
@@ -1114,285 +999,7 @@
         container.classList.remove('completed'); setTransform(0);
     }
 
-    function startCountdown(estimatedMinutes, startTimestamp) {
-        if(countdownTimer) clearInterval(countdownTimer);
-        const countdownDiv = document.getElementById('countdownDisplay');
-        if(!countdownDiv) return;
-        const update = () => {
-            const elapsed = (Date.now() - startTimestamp) / 1000;
-            const remaining = Math.max(0, estimatedMinutes * 60 - elapsed);
-            const mins = Math.floor(remaining / 60);
-            const secs = Math.floor(remaining % 60);
-            if(remaining <= 0) {
-                countdownDiv.innerHTML = '⏰ 预计已到达！请滑动确认到达';
-                countdownDiv.classList.add('warning');
-                clearInterval(countdownTimer);
-                countdownTimer = null;
-            } else {
-                countdownDiv.innerHTML = `🚗 预计剩余时间: ${mins}分${secs.toString().padStart(2,'0')}秒`;
-                if(remaining < 60) countdownDiv.classList.add('warning');
-                else countdownDiv.classList.remove('warning');
-            }
-        };
-        update();
-        countdownTimer = setInterval(update, 1000);
-    }
-
-    function renderProgressSteps(task) {
-        if(!task.takerId) return '';
-        let activeIndex=0;
-        if(task.status==='ongoing'){
-            if(task.travelStatus==='idle') activeIndex=1;
-            else if(task.travelStatus==='traveling') activeIndex=2;
-            else if(task.travelStatus==='arrived') activeIndex=3;
-            if(task.takerCompleted) activeIndex=4;
-        }else if(task.status==='completed') activeIndex=5;
-        const steps = [{icon:'📋',label:'已接取'},{icon:'🚗',label:'出发'},{icon:'📍',label:'到达'},{icon:'📎',label:'提交凭证'},{icon:'✅',label:'结算'}];
-        let html='<div class="progress-steps">';
-        steps.forEach((step,idx)=>{
-            const stepNum=idx+1;
-            let statusClass='';
-            if(stepNum<activeIndex) statusClass='completed';
-            else if(stepNum===activeIndex) statusClass='active';
-            html+=`<div class="step ${statusClass}"><div class="step-dot">${step.icon}</div><div class="step-label">${step.label}</div></div>`;
-        });
-        html+='</div>';
-        return html;
-    }
-
-    async function submitProof(taskId, proofFiles) {
-        const proofMedia=[];
-        for(let file of proofFiles){
-            const dataURL = await new Promise((resolve)=>{ const reader=new FileReader(); reader.onload=(e)=>resolve(e.target.result); reader.readAsDataURL(file); });
-            proofMedia.push({type:file.type.startsWith('image/')?'image':'video', url:dataURL});
-        }
-        const result = await callApi(`/tasks/${taskId}/submit-proof`, {method:'POST', body:JSON.stringify({userId:currentUser.id, proofMedia})});
-        return result;
-    }
-
-    async function chooseProofFiles() {
-        return new Promise((resolve) => {
-            const modal = document.createElement('div');
-            modal.className = 'custom-modal';
-            modal.innerHTML = `
-                <div class="custom-modal-content">
-                    <h3>选择凭证</h3>
-                    <div style="display:flex; flex-direction:column; gap:12px;">
-                        <button class="btn-primary" id="takePhotoBtn">📷 拍照</button>
-                        <button class="btn-primary" id="chooseFromAlbumBtn" style="background:#3b82f6;">📁 从相册选择</button>
-                        <button class="btn-secondary" id="cancelChoose">取消</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            const takePhotoBtn = modal.querySelector('#takePhotoBtn');
-            const albumBtn = modal.querySelector('#chooseFromAlbumBtn');
-            const cancelBtn = modal.querySelector('#cancelChoose');
-            const cleanup = () => modal.remove();
-
-            takePhotoBtn.onclick = () => {
-                cleanup();
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*,video/*';
-                input.setAttribute('capture', 'environment');
-                input.onchange = (e) => {
-                    const files = Array.from(e.target.files);
-                    resolve(files);
-                };
-                input.click();
-            };
-
-            albumBtn.onclick = () => {
-                cleanup();
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*,video/*';
-                input.onchange = (e) => {
-                    const files = Array.from(e.target.files);
-                    resolve(files);
-                };
-                input.click();
-            };
-
-            cancelBtn.onclick = () => {
-                cleanup();
-                resolve([]);
-            };
-        });
-    }
-
-    // ==================== 评价 API ====================
-    async function getRating(taskId) {
-        try {
-            return await callApi(`/ratings/task/${taskId}/user/${currentUser.id}`);
-        } catch(e) { return null; }
-    }
-    async function submitRating(taskId, toUserId, rating, comment) {
-        try {
-            return await callApi('/ratings', { method: 'POST', body: JSON.stringify({ taskId, toUserId, rating, comment }) });
-        } catch(e) { showAlert('评价失败', e.message); return null; }
-    }
-
-    // ==================== 语音相关 ====================
-    async function requestMicrophonePermission() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
-            return true;
-        } catch (err) {
-            return false;
-        }
-    }
-
-    async function startRecording() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-            mediaRecorder.ondataavailable = event => {
-                audioChunks.push(event.data);
-            };
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const file = new File([audioBlob], `audio_${Date.now()}.webm`, { type: 'audio/webm' });
-                try {
-                    showToast('上传语音中...', 1500);
-                    const url = await uploadFile(file);
-                    await sendMessage(chatState.taskId, `[audio]${url}[/audio]`, false);
-                    await refreshMessagesOnly();
-                    updateUnreadBadge();
-                } catch (err) {
-                    showAlert('发送语音失败', err.message);
-                }
-                stream.getTracks().forEach(track => track.stop());
-            };
-            mediaRecorder.start();
-            isRecording = true;
-        } catch (err) {
-            let msg = '无法访问麦克风，请检查浏览器权限或在 HTTPS 环境下使用';
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                msg = '麦克风权限被拒绝，请在浏览器设置中允许访问麦克风后重试';
-            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                msg = '未检测到麦克风设备';
-            }
-            showAlert('录音失败', msg);
-            isRecording = false;
-        }
-    }
-
-    function stopRecordingAndSend() {
-        if (mediaRecorder && isRecording) {
-            mediaRecorder.stop();
-            isRecording = false;
-        }
-    }
-
-    // ==================== 网络语音通话（模拟） ====================
-    function showVoiceCallModal(otherName) {
-        const modal = document.createElement('div');
-        modal.className = 'voice-call-modal';
-        modal.innerHTML = `
-            <div class="avatar">📞</div>
-            <div class="name">${escapeHtml(otherName)}</div>
-            <div class="status">正在呼叫...</div>
-            <button class="hangup-btn" id="hangupCallBtn">✕</button>
-        `;
-        document.body.appendChild(modal);
-        modal.querySelector('#hangupCallBtn').onclick = () => {
-            modal.remove();
-            showToast('已挂断');
-        };
-        setTimeout(() => {
-            const statusEl = modal.querySelector('.status');
-            if (statusEl) {
-                statusEl.textContent = '通话中...';
-                statusEl.style.color = '#4ade80';
-            }
-        }, 2000);
-        setTimeout(() => {
-            if (modal.parentNode) {
-                modal.remove();
-                showToast('通话结束');
-            }
-        }, 30000);
-    }
-
-    // ==================== 钱包详情弹窗（大尺寸） ====================
-    async function showWalletModal() {
-        const bills = await callApi(`/bills/${currentUser.id}`);
-        const modal = document.createElement('div');
-        modal.className = 'wallet-modal';
-        let billHtml = '';
-        if (bills.length === 0) {
-            billHtml = '<div class="empty-state" style="padding:20px;">暂无账单记录</div>';
-        } else {
-            for (const b of bills) {
-                const icon = b.amount > 0 ? '📈' : '📉';
-                const amountClass = b.amount > 0 ? 'income' : 'expense';
-                const sign = b.amount > 0 ? '+' : '';
-                billHtml += `
-                    <div class="wallet-bill-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
-                        <div class="icon">${icon}</div>
-                        <div class="info">
-                            <div class="desc">${b.desc}</div>
-                            <div class="time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
-                        </div>
-                        <div class="amount ${amountClass}">${sign}${b.amount}元</div>
-                    </div>
-                `;
-            }
-        }
-
-        modal.innerHTML = `
-            <div class="wallet-modal-content">
-                <div class="wallet-modal-header">
-                    <span class="wallet-modal-title">💰 我的钱包</span>
-                    <button class="wallet-modal-close" id="walletModalClose">✕</button>
-                </div>
-                <div class="wallet-balance-box">
-                    <div class="amount">¥${(currentUser.balance||0).toFixed(2)}</div>
-                    <div class="frozen">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div>
-                    <button class="btn-primary" id="walletWithdrawBtn" style="margin-top:10px;padding:8px;font-size:.85rem;">💸 提现</button>
-                </div>
-                <div class="wallet-bills">
-                    <div class="title"><span>📋 账单明细</span></div>
-                    ${billHtml}
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        modal.querySelector('#walletModalClose').onclick = () => modal.remove();
-        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-
-        modal.querySelector('#walletWithdrawBtn').onclick = () => {
-            const chooseModal = document.createElement('div');
-            chooseModal.className = 'custom-modal withdraw-modal';
-            chooseModal.innerHTML = `<div class="custom-modal-content"><h3>选择提现方式</h3><button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button><button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button><div class="custom-modal-buttons"><button class="cancel-btn">取消</button></div></div>`;
-            document.body.appendChild(chooseModal);
-            chooseModal.querySelector('#withdrawWechatBtn').onclick = () => { showToast('提现到微信（演示模式）'); chooseModal.remove(); };
-            chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); };
-            chooseModal.querySelector('.cancel-btn').onclick = () => chooseModal.remove();
-        };
-
-        modal.querySelectorAll('.wallet-bill-item').forEach(item => {
-            item.onclick = () => {
-                const bill = JSON.parse(item.getAttribute('data-bill'));
-                const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
-                showAlert('账单详情', `
-                    <div style="text-align:left;">
-                        <div><strong>说明：</strong>${bill.desc}</div>
-                        <div><strong>金额：</strong>${bill.amount}元</div>
-                        <div><strong>时间：</strong>${new Date(bill.createdAt).toLocaleString()}</div>
-                        <div><strong>类型：</strong>${typeLabel}</div>
-                    </div>
-                `);
-            };
-        });
-    }
-
-    // ==================== 任务详情 ====================
+    // ===== 任务详情 =====
     window.viewTask = async function(taskId, fromPage = 'home') {
         lastPage = fromPage;
         if(countdownTimer) clearInterval(countdownTimer);
@@ -1409,12 +1016,8 @@
                 <div class="info-row"><div class="info-icon">📌</div><div class="info-content"><div class="info-label">发布者</div><div class="info-value" id="publisherName">${escapeHtml(task.publisherName)}</div></div></div>
                 <div class="info-row"><div class="info-icon">📍</div><div class="info-content"><div class="info-label">任务地点</div><div class="info-value">${escapeHtml(task.locationAddress||'未标注')}</div></div></div>
                 <div class="info-row"><div class="info-icon">⏰</div><div class="info-content"><div class="info-label">发布时间</div><div class="info-value">${task.createdAt?new Date(task.createdAt).toLocaleDateString():'未知'}</div></div></div>`;
-            if(task.takerId) detailHtml += renderProgressSteps(task);
             if(task.takerId) {
-                const takenTimeStr = task.takenAt ? new Date(task.takenAt).toLocaleString() : '时间未知';
-                if(isMine) detailHtml += `<div class="info-row" id="takerInfoRow"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
-                else if(isTaker) detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">您已接取</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
-                else detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${takenTimeStr}</div></div>`;
+                detailHtml += `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${task.takenAt?new Date(task.takenAt).toLocaleString():'时间未知'}</div></div>`;
             }
             detailHtml += `<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description||'')}</p></div>`;
             if(task.mediaList && task.mediaList.length>0) {
@@ -1483,14 +1086,6 @@
                 document.body.appendChild(modal);
                 modal.querySelector('.confirm-btn').onclick = () => modal.remove();
             });
-            document.getElementById('takerInfoRow')?.addEventListener('click', async () => {
-                const takerInfo = await callApi(`/user/${task.takerId}`);
-                const modal = document.createElement('div');
-                modal.className = 'custom-modal';
-                modal.innerHTML = `<div class="custom-modal-content"><h3>接取者资料</h3><div>昵称: ${escapeHtml(takerInfo.nickname)}</div><div>信用: ${takerInfo.credit}</div><div>家乡: ${takerInfo.hometown||'未填写'}</div><div>签名: ${takerInfo.signature||'无'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;
-                document.body.appendChild(modal);
-                modal.querySelector('.confirm-btn').onclick = () => modal.remove();
-            });
 
             document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click', () => openChat(taskIdStr, task.publisherId, task.publisherName, task.reward, task.title));
             document.getElementById('contactTakerBtn')?.addEventListener('click', () => openChat(taskIdStr, task.takerId, task.takerName, task.reward, task.title));
@@ -1540,8 +1135,30 @@
             }
             const slideArrive = document.getElementById('slideArriveWrapper');
             if(slideArrive) {
-                if(task.travelStartTime && task.estimatedMinutes) startCountdown(task.estimatedMinutes, task.travelStartTime);
-                else { let est = task.estimatedMinutes || 15; let start = Date.now(); startCountdown(est, start); }
+                if(task.travelStartTime && task.estimatedMinutes) {
+                    if(countdownTimer) clearInterval(countdownTimer);
+                    const countdownDiv = document.getElementById('countdownDisplay');
+                    if(countdownDiv) {
+                        const update = () => {
+                            const elapsed = (Date.now() - task.travelStartTime) / 1000;
+                            const remaining = Math.max(0, task.estimatedMinutes * 60 - elapsed);
+                            const mins = Math.floor(remaining / 60);
+                            const secs = Math.floor(remaining % 60);
+                            if(remaining <= 0) {
+                                countdownDiv.innerHTML = '⏰ 预计已到达！请滑动确认到达';
+                                countdownDiv.classList.add('warning');
+                                clearInterval(countdownTimer);
+                                countdownTimer = null;
+                            } else {
+                                countdownDiv.innerHTML = `🚗 预计剩余时间: ${mins}分${secs.toString().padStart(2,'0')}秒`;
+                                if(remaining < 60) countdownDiv.classList.add('warning');
+                                else countdownDiv.classList.remove('warning');
+                            }
+                        };
+                        update();
+                        countdownTimer = setInterval(update, 1000);
+                    }
+                }
                 initSlide(slideArrive, async () => {
                     const result = await callApi(`/tasks/${taskId}/status`, {method:'PUT', body:JSON.stringify({travelStatus:'arrived'})});
                     if(result.success) { if(countdownTimer) clearInterval(countdownTimer); showToast('已到达目的地！'); viewTask(taskId, lastPage); }
@@ -1589,14 +1206,13 @@
                 });
             }
 
-            // ===== 评价系统 =====
+            // 评价系统
             if (task.status === 'completed' && (isMine || isTaker)) {
                 const myRating = await getRating(taskIdStr);
                 const otherUserId = isMine ? task.takerId : task.publisherId;
                 const otherUserName = isMine ? task.takerName : task.publisherName;
                 let ratingHtml = '';
                 if (myRating) {
-                    const scoreClass = myRating.rating >= 4 ? 'good' : (myRating.rating <= 2 ? 'bad' : 'mid');
                     const scoreText = myRating.rating >= 4 ? '好评' : (myRating.rating <= 2 ? '差评' : '中评');
                     ratingHtml = `
                         <div class="rating-section">
@@ -1663,7 +1279,7 @@
         }
     });
 
-    // ==================== 聊天功能 ====================
+    // ===== 聊天功能 =====
     const CHAT_POLL_INTERVAL = 3000;
 
     async function sendMessage(taskId, text, isNego = false) {
@@ -1799,7 +1415,7 @@
         });
     }
 
-    // ==================== 聊天界面 ====================
+    // ===== 聊天界面 =====
     function showChatView() {
         document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
         document.getElementById('messagePage').classList.add('active');
@@ -2027,7 +1643,7 @@
         }
     }
 
-    // ==================== 消息列表 ====================
+    // ===== 消息列表 =====
     async function renderMessageList() {
         if(!currentUser || !currentUser.id) {
             const container = document.getElementById('messageContainer');
@@ -2096,7 +1712,7 @@
         } catch(e) {}
     }
 
-    // ==================== 个人主页 ====================
+    // ===== 个人主页 =====
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -2147,7 +1763,7 @@
         } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
 
-    // ==================== 我的任务列表（全屏页面） ====================
+    // ===== 我的任务列表 =====
     let currentMyTasksType = 'pub';
     async function navigateToMyTasks(type) {
         currentMyTasksType = type;
@@ -2212,7 +1828,7 @@
         }
     }
 
-    // ==================== 信用明细 ====================
+    // ===== 其他功能 =====
     async function showCreditDetail() {
         const logs = await callApi(`/credit-logs/${currentUser.id}`);
         const modal = document.createElement('div');
@@ -2294,32 +1910,26 @@
         });
     }
 
-    // ==================== 页面切换 ====================
+    // ===== 页面切换 =====
     function switchPage(page) {
-        // 隐藏所有页面
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        // 显示目标页面
         const target = document.getElementById(`${page}Page`);
         if (target) target.classList.add('active');
 
-        // 控制底部导航隐藏（myTasks页面特殊）
         if (page === 'myTasks') {
             document.body.classList.add('hide-bottom-nav');
         } else {
             document.body.classList.remove('hide-bottom-nav');
         }
 
-        // 重置返回退出标志（避免误退出）
         backPressedOnce = false;
 
-        // 页面加载逻辑
         if (page === 'home') refreshTaskList();
         else if (page === 'profile') loadProfile();
         else if (page === 'message') renderMessageList();
-        // 其他页面无需额外加载
     }
 
-    // ==================== 注册、登录、发布等 ====================
+    // ===== 发布、登录等 =====
     async function cancelTask(taskId) {
         showConfirm('确认取消', '确定取消该任务吗？取消后赏金将退还到您的账户。', async () => {
             try {
@@ -2397,12 +2007,344 @@
         } else { window.addEventListener('popstate', handleBackButton); }
     }
 
-    // ===== 地图和手势初始化 =====
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('myTasksBackBtn').addEventListener('click', () => {
-            switchPage('profile');
-            loadProfile();
+    // ===== 语音相关 =====
+    async function requestMicrophonePermission() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
+
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const file = new File([audioBlob], `audio_${Date.now()}.webm`, { type: 'audio/webm' });
+                try {
+                    showToast('上传语音中...', 1500);
+                    const url = await uploadFile(file);
+                    await sendMessage(chatState.taskId, `[audio]${url}[/audio]`, false);
+                    await refreshMessagesOnly();
+                    updateUnreadBadge();
+                } catch (err) {
+                    showAlert('发送语音失败', err.message);
+                }
+                stream.getTracks().forEach(track => track.stop());
+            };
+            mediaRecorder.start();
+            isRecording = true;
+        } catch (err) {
+            let msg = '无法访问麦克风，请检查浏览器权限或在 HTTPS 环境下使用';
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                msg = '麦克风权限被拒绝，请在浏览器设置中允许访问麦克风后重试';
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                msg = '未检测到麦克风设备';
+            }
+            showAlert('录音失败', msg);
+            isRecording = false;
+        }
+    }
+
+    function stopRecordingAndSend() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            isRecording = false;
+        }
+    }
+
+    // ===== 语音通话（模拟） =====
+    function showVoiceCallModal(otherName) {
+        const modal = document.createElement('div');
+        modal.className = 'voice-call-modal';
+        modal.innerHTML = `
+            <div class="avatar">📞</div>
+            <div class="name">${escapeHtml(otherName)}</div>
+            <div class="status">正在呼叫...</div>
+            <button class="hangup-btn" id="hangupCallBtn">✕</button>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('#hangupCallBtn').onclick = () => {
+            modal.remove();
+            showToast('已挂断');
+        };
+        setTimeout(() => {
+            const statusEl = modal.querySelector('.status');
+            if (statusEl) {
+                statusEl.textContent = '通话中...';
+                statusEl.style.color = '#4ade80';
+            }
+        }, 2000);
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+                showToast('通话结束');
+            }
+        }, 30000);
+    }
+
+    // ===== 钱包 =====
+    async function showWalletModal() {
+        const bills = await callApi(`/bills/${currentUser.id}`);
+        const modal = document.createElement('div');
+        modal.className = 'wallet-modal';
+        let billHtml = '';
+        if (bills.length === 0) {
+            billHtml = '<div class="empty-state" style="padding:20px;">暂无账单记录</div>';
+        } else {
+            for (const b of bills) {
+                const icon = b.amount > 0 ? '📈' : '📉';
+                const amountClass = b.amount > 0 ? 'income' : 'expense';
+                const sign = b.amount > 0 ? '+' : '';
+                billHtml += `
+                    <div class="wallet-bill-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
+                        <div class="icon">${icon}</div>
+                        <div class="info">
+                            <div class="desc">${b.desc}</div>
+                            <div class="time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
+                        </div>
+                        <div class="amount ${amountClass}">${sign}${b.amount}元</div>
+                    </div>
+                `;
+            }
+        }
+
+        modal.innerHTML = `
+            <div class="wallet-modal-content">
+                <div class="wallet-modal-header">
+                    <span class="wallet-modal-title">💰 我的钱包</span>
+                    <button class="wallet-modal-close" id="walletModalClose">✕</button>
+                </div>
+                <div class="wallet-balance-box">
+                    <div class="amount">¥${(currentUser.balance||0).toFixed(2)}</div>
+                    <div class="frozen">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div>
+                    <button class="btn-primary" id="walletWithdrawBtn" style="margin-top:10px;padding:8px;font-size:.85rem;">💸 提现</button>
+                </div>
+                <div class="wallet-bills">
+                    <div class="title"><span>📋 账单明细</span></div>
+                    ${billHtml}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('#walletModalClose').onclick = () => modal.remove();
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+        modal.querySelector('#walletWithdrawBtn').onclick = () => {
+            const chooseModal = document.createElement('div');
+            chooseModal.className = 'custom-modal withdraw-modal';
+            chooseModal.innerHTML = `<div class="custom-modal-content"><h3>选择提现方式</h3><button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button><button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button><div class="custom-modal-buttons"><button class="cancel-btn">取消</button></div></div>`;
+            document.body.appendChild(chooseModal);
+            chooseModal.querySelector('#withdrawWechatBtn').onclick = () => { showToast('提现到微信（演示模式）'); chooseModal.remove(); };
+            chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); };
+            chooseModal.querySelector('.cancel-btn').onclick = () => chooseModal.remove();
+        };
+
+        modal.querySelectorAll('.wallet-bill-item').forEach(item => {
+            item.onclick = () => {
+                const bill = JSON.parse(item.getAttribute('data-bill'));
+                const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
+                showAlert('账单详情', `
+                    <div style="text-align:left;">
+                        <div><strong>说明：</strong>${bill.desc}</div>
+                        <div><strong>金额：</strong>${bill.amount}元</div>
+                        <div><strong>时间：</strong>${new Date(bill.createdAt).toLocaleString()}</div>
+                        <div><strong>类型：</strong>${typeLabel}</div>
+                    </div>
+                `);
+            };
         });
+    }
+
+    // ===== 评价 API =====
+    async function getRating(taskId) {
+        try {
+            return await callApi(`/ratings/task/${taskId}/user/${currentUser.id}`);
+        } catch(e) { return null; }
+    }
+    async function submitRating(taskId, toUserId, rating, comment) {
+        try {
+            return await callApi('/ratings', { method: 'POST', body: JSON.stringify({ taskId, toUserId, rating, comment }) });
+        } catch(e) { showAlert('评价失败', e.message); return null; }
+    }
+
+    // ===== 凭证提交 =====
+    async function submitProof(taskId, proofFiles) {
+        const proofMedia=[];
+        for(let file of proofFiles){
+            const dataURL = await new Promise((resolve)=>{ const reader=new FileReader(); reader.onload=(e)=>resolve(e.target.result); reader.readAsDataURL(file); });
+            proofMedia.push({type:file.type.startsWith('image/')?'image':'video', url:dataURL});
+        }
+        const result = await callApi(`/tasks/${taskId}/submit-proof`, {method:'POST', body:JSON.stringify({userId:currentUser.id, proofMedia})});
+        return result;
+    }
+
+    async function chooseProofFiles() {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal';
+            modal.innerHTML = `
+                <div class="custom-modal-content">
+                    <h3>选择凭证</h3>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <button class="btn-primary" id="takePhotoBtn">📷 拍照</button>
+                        <button class="btn-primary" id="chooseFromAlbumBtn" style="background:#3b82f6;">📁 从相册选择</button>
+                        <button class="btn-secondary" id="cancelChoose">取消</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            const takePhotoBtn = modal.querySelector('#takePhotoBtn');
+            const albumBtn = modal.querySelector('#chooseFromAlbumBtn');
+            const cancelBtn = modal.querySelector('#cancelChoose');
+            const cleanup = () => modal.remove();
+
+            takePhotoBtn.onclick = () => {
+                cleanup();
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*,video/*';
+                input.setAttribute('capture', 'environment');
+                input.onchange = (e) => {
+                    const files = Array.from(e.target.files);
+                    resolve(files);
+                };
+                input.click();
+            };
+
+            albumBtn.onclick = () => {
+                cleanup();
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*,video/*';
+                input.onchange = (e) => {
+                    const files = Array.from(e.target.files);
+                    resolve(files);
+                };
+                input.click();
+            };
+
+            cancelBtn.onclick = () => {
+                cleanup();
+                resolve([]);
+            };
+        });
+    }
+
+    // ===== 图片预览 =====
+    function showImagePreview(url) {
+        const modal = document.createElement('div');
+        modal.className = 'image-preview-modal';
+        modal.innerHTML = `<div class="close-preview">✕</div><img src="${url}">`;
+        document.body.appendChild(modal);
+        modal.querySelector('.close-preview').onclick = () => modal.remove();
+        modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
+    }
+
+    // ===== 导航 =====
+    async function navigateTo(lat, lng, address) {
+        const destName = encodeURIComponent(address || '目的地');
+        let url = '';
+        if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+            url = `iosamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${lat}&lon=${lng}&dev=0&style=2`;
+        } else if (/android/i.test(navigator.userAgent)) {
+            url = `androidamap://navi?sourceApplication=赏金集市&poiname=${destName}&lat=${lat}&lon=${lng}&dev=0&style=2`;
+        } else {
+            url = `https://uri.amap.com/navigation?to=${lng},${lat},${destName}&mode=car&callnative=1`;
+        }
+        window.location.href = url;
+        setTimeout(() => {
+            if (document.hasFocus()) {
+                window.location.href = `https://uri.amap.com/navigation?to=${lng},${lat},${destName}&mode=car&callnative=1`;
+            }
+        }, 2500);
+    }
+
+    // ===== 压缩图片 =====
+    function compressImage(file, quality=0.5, maxWidth=600, maxHeight=600) {
+        return new Promise((resolve,reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (e) => {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    let width = img.width, height = img.height;
+                    if(width > height) {
+                        if(width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                    } else {
+                        if(height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+                    }
+                    canvas.width = width; canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    resolve(dataUrl);
+                };
+                img.onerror = reject;
+            };
+            reader.onerror = reject;
+        });
+    }
+    async function handleMediaFiles(files) {
+        let remain = 3 - pendingMedia.length;
+        if(files.length > remain) {
+            showAlert('提示', `最多上传3个，当前已有${pendingMedia.length}个`);
+            files = Array.from(files).slice(0, remain);
+        }
+        for(let file of files) {
+            if(!file.type.startsWith('image/') && !file.type.startsWith('video/')) continue;
+            let dataURL;
+            if(file.type.startsWith('image/')) {
+                dataURL = await compressImage(file);
+            } else {
+                dataURL = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+            pendingMedia.push({type: file.type.startsWith('image/')?'image':'video', dataURL, file});
+            updateMediaPreview();
+        }
+        document.getElementById('mediaInput').value = '';
+    }
+    function updateMediaPreview() {
+        const container = document.getElementById('mediaPreview');
+        if(!container) return;
+        if(pendingMedia.length === 0) { container.innerHTML = ''; return; }
+        container.innerHTML = pendingMedia.map((m,idx) => `
+            <div class="preview-img-wrapper">
+                ${m.type==='image' ? `<img src="${m.dataURL}">` : `<video src="${m.dataURL}" style="width:100%;height:100%;object-fit:cover;"></video>`}
+                <div class="remove-img-btn" data-index="${idx}">✕</div>
+            </div>
+        `).join('');
+        document.querySelectorAll('#mediaPreview .remove-img-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                const idx = parseInt(btn.getAttribute('data-index'));
+                pendingMedia.splice(idx,1);
+                updateMediaPreview();
+            };
+        });
+    }
+
+    // ===== 启动 =====
+    document.addEventListener('DOMContentLoaded', () => {
+        initGlobalSwipeBack();
+        initPullToRefresh();
+        initMessagePullToRefresh();
+        initFiltersAndCategories();
+
         document.getElementById('openMapBtn').addEventListener('click', openMapModal);
         document.getElementById('mapModalClose').addEventListener('click', closeMapModal);
         document.getElementById('mapCancelBtn').addEventListener('click', closeMapModal);
@@ -2423,13 +2365,32 @@
         document.getElementById('mapSearchInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') document.getElementById('mapSearchBtn').click();
         });
-        initGlobalSwipeBack();
-        initPullToRefresh();
-        initMessagePullToRefresh();
-        initFiltersAndCategories();
+        document.getElementById('myTasksBackBtn').addEventListener('click', () => {
+            switchPage('profile');
+            loadProfile();
+        });
+
+        document.getElementById('doLoginBtn').onclick = doLogin;
+        document.getElementById('doRegisterBtn').onclick = async () => {
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirm = document.getElementById('regConfirmPwd').value;
+            const nickname = document.getElementById('regNickname').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
+            if(!username || !password) { showAlert('提示','请填写用户名和密码'); return; }
+            if(password !== confirm) { showAlert('提示','两次密码不一致'); return; }
+            try {
+                const result = await callApi('/register', {method:'POST', body:JSON.stringify({username,password,nickname,phone})});
+                if(result.success) { showToast('注册成功，请登录'); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); }
+                else showAlert('注册失败', result.error);
+            } catch(err) { showAlert('注册失败', err.message); }
+        };
+        document.getElementById('doPublishBtn').onclick = publishTask;
+        document.getElementById('showRegisterBtn').onclick = (e) => { e.preventDefault(); document.getElementById('loginPage').classList.remove('active'); document.getElementById('registerPage').classList.add('active'); };
+        document.getElementById('showLoginBtn').onclick = (e) => { e.preventDefault(); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); };
+        document.getElementById('mediaInput')?.addEventListener('change', (e) => { if(e.target.files.length) handleMediaFiles(e.target.files); });
     });
 
-    // ==================== 启动应用 ====================
     (async () => {
         const savedUser = localStorage.getItem('user');
         if(savedUser && localStorage.getItem('token')) {
@@ -2446,27 +2407,6 @@
             initBackButtonHandler();
         }
     })();
-
-    // 绑定登录注册按钮事件
-    document.getElementById('doLoginBtn').onclick = doLogin;
-    document.getElementById('doRegisterBtn').onclick = async () => {
-        const username = document.getElementById('regUsername').value.trim();
-        const password = document.getElementById('regPassword').value;
-        const confirm = document.getElementById('regConfirmPwd').value;
-        const nickname = document.getElementById('regNickname').value.trim();
-        const phone = document.getElementById('regPhone').value.trim();
-        if(!username || !password) { showAlert('提示','请填写用户名和密码'); return; }
-        if(password !== confirm) { showAlert('提示','两次密码不一致'); return; }
-        try {
-            const result = await callApi('/register', {method:'POST', body:JSON.stringify({username,password,nickname,phone})});
-            if(result.success) { showToast('注册成功，请登录'); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); }
-            else showAlert('注册失败', result.error);
-        } catch(err) { showAlert('注册失败', err.message); }
-    };
-    document.getElementById('doPublishBtn').onclick = publishTask;
-    document.getElementById('showRegisterBtn').onclick = (e) => { e.preventDefault(); document.getElementById('loginPage').classList.remove('active'); document.getElementById('registerPage').classList.add('active'); };
-    document.getElementById('showLoginBtn').onclick = (e) => { e.preventDefault(); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); };
-    document.getElementById('mediaInput')?.addEventListener('change', (e) => { if(e.target.files.length) handleMediaFiles(e.target.files); });
 </script>
 </body>
 </html>
