@@ -85,12 +85,12 @@
         @keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
         /* ===== 聊天布局 ===== */
         #messagePage{flex:1;overflow:hidden}
-        .chat-container{display:flex;flex-direction:column;height:100%;background:#f8fafc}
+        .chat-container{display:flex;flex-direction:column;flex:1;background:#f8fafc;min-height:0}
         .chat-header-bar{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:8px;flex-shrink:0}
         .chat-back-btn{background:#f1f5f9;border:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer}
         .chat-back-btn:active{background:#e2e8f0;transform:scale(.94)}
         .chat-header-name{font-weight:700;font-size:1.1rem;flex:1}
-        .chat-messages-area{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+        .chat-messages-area{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:0}
         .chat-bubble{max-width:80%;display:flex;flex-direction:column;cursor:pointer}
         .chat-bubble:active{background:rgba(0,0,0,.03);border-radius:16px}
         .chat-bubble-mine{align-self:flex-end}
@@ -102,7 +102,7 @@
         .bubble-audio{max-width:100%;margin-top:4px;border-radius:16px;display:block}
         .bubble-time{font-size:.7rem;color:#94a3b8;margin-top:4px;margin-left:10px;margin-right:10px}
         .chat-bubble-mine .bubble-time{text-align:right}
-        .chat-input-wrapper{flex-shrink:0;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid #eef2f8;padding:12px 16px;border-radius:24px 24px 0 0}
+        .chat-input-wrapper{flex-shrink:0;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid #eef2f8;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-radius:24px 24px 0 0}
         .chat-action-row{display:flex;gap:8px;align-items:center;flex-wrap:nowrap}
         .chat-message-input{flex:1;min-width:0;padding:12px 18px;border-radius:40px;border:1px solid #e2e8f0;background:#fff;font-size:1rem;transition:all .2s}
         .chat-message-input.recording{background:#fee2e2;border-color:#ef4444}
@@ -156,7 +156,7 @@
         .step-dot{width:36px;height:36px;background:#fff;border:2px solid #cbd5e1;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:1rem;background:#f1f5f9}
         .step.active .step-dot{background:#1e4a6b;border-color:#1e4a6b;color:#fff}
         .step.completed .step-dot{background:#059669;border-color:#059669;color:#fff}
-        .task-card-in-chat{background:#f8fafc;border-radius:20px;padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;border:1px solid #e2e8f0}
+        .task-card-in-chat{background:#f8fafc;border-radius:20px;padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;border:1px solid #e2e8f0;flex-shrink:0}
         .chat-refresh-indicator{text-align:center;padding:10px;font-size:.85rem;color:#64748b}
         .network-toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#ffc107;padding:8px 16px;border-radius:40px;font-size:.8rem;z-index:2000;white-space:nowrap}
         .rating-section{background:#fff;border-radius:24px;padding:18px;margin:12px 16px;border:1px solid #eef2f8}
@@ -304,7 +304,7 @@
                                 <input type="text" id="pubAddress" class="form-input" placeholder="任务地点">
                                 <button class="btn-location" id="openMapBtn" type="button">📍 选择位置</button>
                             </div>
-                            <div style="font-size:.7rem;color:#64748b;margin-top:4px;" id="locationHint">点击“选择位置”打开地图选点</div>
+                            <div style="font-size:.7rem;color:#64748b;margin-top:4px;" id="locationHint">点击"选择位置"打开地图选点</div>
                         </div>
                         <div class="form-group">
                             <div class="form-label">📎 图片/视频（最多3个）</div>
@@ -725,7 +725,7 @@
                 const hint = document.getElementById('locationHint');
                 if (hint) {
                     hint.innerHTML = '✅ 已选择位置：' + address;
-                    setTimeout(() => { hint.innerHTML = '点击“选择位置”打开地图选点'; }, 3000);
+                    setTimeout(() => { hint.innerHTML = '点击"选择位置"打开地图选点'; }, 3000);
                 }
                 closeMapModal();
             } catch (e) {
@@ -742,7 +742,7 @@
         const hint = document.getElementById('locationHint');
         if (hint) {
             hint.innerHTML = '✅ 已选择位置：' + selectedLocation.address;
-            setTimeout(() => { hint.innerHTML = '点击“选择位置”打开地图选点'; }, 3000);
+            setTimeout(() => { hint.innerHTML = '点击"选择位置"打开地图选点'; }, 3000);
         }
         closeMapModal();
     }
@@ -1419,9 +1419,13 @@
     function showChatView() {
         document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
         document.getElementById('messagePage').classList.add('active');
+        // 隐藏底部导航栏，避免遮挡输入框
+        document.body.classList.add('hide-bottom-nav');
+
         const container = document.getElementById('messageContainer');
+        // 使用 flex:1 替代 height:100%，确保容器正确填满父容器
         container.innerHTML = `
-            <div class="chat-container">
+            <div class="chat-container" style="flex:1; display:flex; flex-direction:column; min-height:0;">
                 <div class="chat-header-bar">
                     <button class="chat-back-btn" id="chatBackBtn">←</button>
                     <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
@@ -1448,10 +1452,7 @@
 
         document.getElementById('chatBackBtn').onclick = () => {
             closeChat();
-            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-            document.getElementById('messagePage').classList.add('active');
-            renderMessageList();
-            updateUnreadBadge();
+            switchPage('message');
         };
 
         document.getElementById('voiceCallBtn').onclick = () => {
@@ -1628,6 +1629,8 @@
         chatState.active = false;
         chatState.taskId = null;
         chatState.messagesArea = null;
+        // 恢复底部导航栏
+        document.body.classList.remove('hide-bottom-nav');
         if (mediaRecorder && isRecording) {
             mediaRecorder.stop();
             isRecording = false;
@@ -1912,6 +1915,11 @@
 
     // ===== 页面切换 =====
     function switchPage(page) {
+        // 如果聊天活跃且切换到非消息页面，关闭聊天
+        if (chatState.active && page !== 'message') {
+            closeChat();
+        }
+
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         const target = document.getElementById(`${page}Page`);
         if (target) target.classList.add('active');
@@ -1973,7 +1981,7 @@
         document.getElementById('pubReward').value=''; document.getElementById('pubAddress').value='';
         document.getElementById('pubCategory').value='取件';
         pendingMedia=[]; updateMediaPreview();
-        document.getElementById('locationHint').innerHTML='点击“选择位置”打开地图选点';
+        document.getElementById('locationHint').innerHTML='点击"选择位置"打开地图选点';
     }
 
     async function doLogin() {
