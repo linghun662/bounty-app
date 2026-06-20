@@ -85,7 +85,7 @@
         .cancel-btn{background:#e2e8f0;color:#1e293b}
         .toast-message{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:10px 24px;border-radius:60px;font-size:.95rem;z-index:1100;pointer-events:none;animation:fadeOut 2s forwards;backdrop-filter:blur(8px)}
         @keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
-        /* 聊天 */
+        /* ===== 聊天布局修复 ===== */
         #messagePage{flex:1;overflow:hidden}
         .chat-container{display:flex;flex-direction:column;height:100%;background:#f8fafc}
         .chat-header-bar{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:8px;flex-shrink:0}
@@ -385,6 +385,7 @@
     let refreshThrottle = false, networkToast = null;
     let mediaRecorder = null, audioChunks = [], isRecording = false;
     let longPressTimer = null;
+    let backPressedOnce = false;
 
     // ===== 地图变量 =====
     let map = null;
@@ -738,8 +739,9 @@
         closeMapModal();
     }
 
-    // ===== 全局手势返回 =====
+    // ===== 全局手势返回（修复） =====
     let swipeIndicator = null;
+    let swipeActive = false;
     function initGlobalSwipeBack() {
         const pages = document.querySelectorAll('.page:not(#homePage)');
         swipeIndicator = document.getElementById('swipeBackIndicator');
@@ -755,6 +757,7 @@
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
                 isSwiping = true;
+                swipeActive = true;
             };
             const touchMove = (e) => {
                 if (!isSwiping || !page.classList.contains('active')) return;
@@ -768,7 +771,9 @@
                     e.preventDefault();
                     if (deltaX > 45) {
                         isSwiping = false;
+                        swipeActive = false;
                         if (swipeIndicator) swipeIndicator.classList.remove('show');
+                        // 调用返回逻辑
                         handleBackButton();
                     }
                 } else {
@@ -777,6 +782,7 @@
             };
             const touchEnd = () => {
                 isSwiping = false;
+                swipeActive = false;
                 if (swipeIndicator) swipeIndicator.classList.remove('show');
             };
             page.addEventListener('touchstart', touchStart, { passive: true });
@@ -784,6 +790,40 @@
             page.addEventListener('touchend', touchEnd, { passive: true });
             page.addEventListener('touchcancel', touchEnd, { passive: true });
         });
+    }
+
+    // ===== 返回按钮处理（修复） =====
+    function handleBackButton() {
+        const activePage = document.querySelector('.page.active');
+        if (!activePage) return;
+        const id = activePage.id;
+        if (id === 'homePage') {
+            if (backPressedOnce) {
+                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                    Capacitor.Plugins.App.exitApp();
+                } else {
+                    window.close();
+                }
+            } else {
+                backPressedOnce = true;
+                showToast('再按一次退出应用');
+                setTimeout(() => { backPressedOnce = false; }, 2000);
+            }
+        } else if (id === 'myTasksPage') {
+            document.getElementById('myTasksBackBtn').click();
+            backPressedOnce = false; // 重置
+        } else if (id === 'detailPage') {
+            document.getElementById('detailBackBtn')?.click();
+            backPressedOnce = false;
+        } else if (id === 'publishPage' || id === 'messagePage' || id === 'profilePage') {
+            // 回到首页
+            switchPage('home');
+            backPressedOnce = false;
+        } else {
+            // 默认回到首页
+            switchPage('home');
+            backPressedOnce = false;
+        }
     }
 
     // ===== 原有功能函数 =====
@@ -2254,7 +2294,7 @@
         });
     }
 
-    // ==================== 页面切换（修复核心） ====================
+    // ==================== 页面切换 ====================
     function switchPage(page) {
         // 隐藏所有页面
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -2268,6 +2308,9 @@
         } else {
             document.body.classList.remove('hide-bottom-nav');
         }
+
+        // 重置返回退出标志（避免误退出）
+        backPressedOnce = false;
 
         // 页面加载逻辑
         if (page === 'home') refreshTaskList();
@@ -2348,28 +2391,10 @@
         } catch(err) { errorDiv.innerText = err.message; }
     }
 
-    let backPressedOnce = false;
     function initBackButtonHandler() {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             Capacitor.Plugins.App.addListener('backButton', handleBackButton);
         } else { window.addEventListener('popstate', handleBackButton); }
-    }
-    function handleBackButton() {
-        const activePage = document.querySelector('.page.active');
-        if (!activePage) return;
-        const id = activePage.id;
-        if (id === 'homePage') {
-            if (backPressedOnce) {
-                if (window.Capacitor && window.Capacitor.isNativePlatform()) Capacitor.Plugins.App.exitApp();
-                else window.close();
-            } else { backPressedOnce = true; showToast('再按一次退出应用'); setTimeout(()=>{ backPressedOnce=false; },2000); }
-        } else if (id === 'myTasksPage') {
-            document.getElementById('myTasksBackBtn').click();
-        } else if (id === 'detailPage') {
-            document.getElementById('detailBackBtn')?.click();
-        } else {
-            switchPage('home');
-        }
     }
 
     // ===== 地图和手势初始化 =====
