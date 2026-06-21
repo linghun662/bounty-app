@@ -4,8 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=no">
     <title>赏金集市 · 双向议价</title>
-    <script src="https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder"></script>
+    <!-- 地图 API 延迟加载以提升首屏速度 -->
+    <script>
+        // 延迟加载高德地图，避免阻塞首屏渲染
+        window.loadAMap = function() {
+            return new Promise((resolve, reject) => {
+                if (window.AMap) { resolve(); return; }
+                const script = document.createElement('script');
+                script.src = 'https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder&callback=onAMapReady';
+                script.async = true;
+                script.onerror = reject;
+                window.onAMapReady = resolve;
+                document.head.appendChild(script);
+            });
+        };
+    </script>
     <style>
+        /* ===== 基础样式 ===== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
@@ -24,8 +39,15 @@
         .nav-item.active{color:#1e4a6b;font-weight:500;transform:translateY(-2px)}
         .nav-icon{font-size:1.6rem}
         .msg-badge{position:absolute;top:-5px;right:-12px;background:#ef4444;color:#fff;border-radius:20px;padding:2px 6px;font-size:.6rem;min-width:18px;display:none;font-weight:600}
-        .card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.03),0 1px 2px rgba(0,0,0,.05);border:1px solid #eef2f8;cursor:pointer;font-size:1rem}
+        .card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.03),0 1px 2px rgba(0,0,0,.05);border:1px solid #eef2f8;cursor:pointer;font-size:1rem;position:relative;transition:transform .2s}
         .card:active{transform:scale(.98);box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        /* 左滑删除样式 */
+        .task-card-wrapper{position:relative;overflow:hidden;margin:12px 16px;border-radius:24px;touch-action:pan-y}
+        .task-card-wrapper .card{margin:0;border-radius:24px}
+        .task-card-wrapper .delete-btn{position:absolute;right:0;top:0;bottom:0;width:80px;background:#ef4444;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;border-radius:0 24px 24px 0;font-size:1rem;cursor:pointer;transition:opacity .2s;opacity:0;pointer-events:none}
+        .task-card-wrapper.swiped .delete-btn{opacity:1;pointer-events:auto}
+        .task-card-wrapper.swiped .card{transform:translateX(-80px)}
+        /* 其他卡片样式 */
         .skeleton-card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;border:1px solid #eef2f8;animation:pulse 1.2s infinite}
         @keyframes pulse{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}
         .skeleton-title{height:20px;background:#e2e8f0;border-radius:12px;width:60%;margin-bottom:12px}
@@ -223,6 +245,7 @@
 <body>
 <div id="app">
     <div class="app-container">
+        <!-- 登录页 -->
         <div id="loginPage" class="page active">
             <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
                 <div class="card" style="width:100%;cursor:default;text-align:center;">
@@ -238,6 +261,7 @@
                 </div>
             </div>
         </div>
+        <!-- 注册页 -->
         <div id="registerPage" class="page">
             <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
                 <div class="card" style="width:100%;cursor:default;">
@@ -253,6 +277,7 @@
                 </div>
             </div>
         </div>
+        <!-- 主应用 -->
         <div id="mainApp" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
             <div class="nav-header">
                 <span class="logo">💰 赏金集市</span>
@@ -338,6 +363,7 @@
         </div>
     </div>
 </div>
+<!-- 地图模态框 -->
 <div class="map-modal" id="mapModal">
     <div class="map-modal-header">
         <button class="close-btn" id="mapModalClose">✕</button>
@@ -355,7 +381,9 @@
         </div>
     </div>
 </div>
+<!-- 手势返回指示器 -->
 <div class="swipe-back-indicator" id="swipeBackIndicator">‹</div>
+
 <script>
     // ==================== API 地址 ====================
     const getApiBase = () => {
@@ -1298,7 +1326,6 @@
     // ===== 聊天功能 =====
     const CHAT_POLL_INTERVAL = 3000;
 
-    // 更新对话最新时间（用于排序）
     function updateConversationTimestamp(taskId) {
         if (!taskId) return;
         const key = `conv_time_${taskId}`;
@@ -1323,19 +1350,15 @@
             await callApi(`/conversations/${taskId}/${currentUser.id}`, {method:'DELETE', body:JSON.stringify({})});
             showToast('聊天已删除');
             deletedConversations.add(taskId);
-            const card = document.querySelector(`.task-card[data-taskid="${taskId}"]`);
-            if (card) card.remove();
             await updateUnreadBadge();
             if(chatState.active && chatState.taskId === taskId) {
                 closeChat();
                 switchPage('message');
             }
-            const container = document.getElementById('messageContainer');
-            if (container && container.querySelectorAll('.task-card').length === 0) {
-                container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
-            }
+            renderMessageList(); // 刷新列表
         } catch(err) { showAlert('删除失败', err.message); }
     }
+
     async function refreshMessagesOnly() {
         if(!chatState.messagesArea || !chatState.taskId) return;
         try {
@@ -1343,7 +1366,7 @@
             if(!messages || !Array.isArray(messages)) return;
             const newCount = messages.length;
             const hasNew = newCount > (chatState.lastMessageCount || 0);
-            if (hasNew) updateConversationTimestamp(chatState.taskId); // 有新消息更新排序时间
+            if (hasNew) updateConversationTimestamp(chatState.taskId);
             chatState.lastMessageCount = newCount;
             let html = '';
             for(const m of messages) {
@@ -1377,9 +1400,8 @@
             }
             chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
             if(hasNew) chatState.messagesArea.scrollTop = chatState.messagesArea.scrollHeight;
-            document.querySelectorAll('.chat-bubble').forEach(bubble => {
-                const isMine = bubble.getAttribute('data-is-mine') === 'true';
-                if(!isMine) return;
+            // 长按删除消息（仅自己发送的）
+            document.querySelectorAll('.chat-bubble[data-is-mine="true"]').forEach(bubble => {
                 const messageId = bubble.getAttribute('data-message-id');
                 if(!messageId) return;
                 let pressTimer = null;
@@ -1388,20 +1410,12 @@
                     pressTimer = setTimeout(() => { showConfirm('删除消息', '确定要删除这条消息吗？', () => deleteMessage(messageId)); }, 500);
                 };
                 const cancelPress = () => { if(pressTimer) clearTimeout(pressTimer); };
-                bubble.removeEventListener('contextmenu', (e) => e.preventDefault());
                 bubble.removeEventListener('touchstart', startPress);
                 bubble.removeEventListener('touchend', cancelPress);
                 bubble.removeEventListener('touchmove', cancelPress);
-                bubble.removeEventListener('mousedown', startPress);
-                bubble.removeEventListener('mouseup', cancelPress);
-                bubble.removeEventListener('mouseleave', cancelPress);
-                bubble.addEventListener('contextmenu', (e) => e.preventDefault());
                 bubble.addEventListener('touchstart', startPress);
                 bubble.addEventListener('touchend', cancelPress);
                 bubble.addEventListener('touchmove', cancelPress);
-                bubble.addEventListener('mousedown', startPress);
-                bubble.addEventListener('mouseup', cancelPress);
-                bubble.addEventListener('mouseleave', cancelPress);
             });
         } catch(e) { console.error('刷新消息失败', e); }
     }
@@ -1487,9 +1501,11 @@
         };
 
         document.getElementById('imageBtn').onclick = () => {
+            // 直接触发文件选择器，默认会弹出“拍照”和“从相册选择”
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*,video/*';
+            input.multiple = false;
             input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -1502,10 +1518,12 @@
                 } catch (err) {
                     showAlert('发送失败', err.message);
                 }
+                input.remove();
             };
             input.click();
         };
 
+        // 语音按钮：检测权限并给出引导
         const voiceBtn = document.getElementById('voiceBtn');
         const chatInput = document.getElementById('chatInput');
         let isPressed = false;
@@ -1513,13 +1531,39 @@
         const startPress = async (e) => {
             e.preventDefault();
             if (isPressed) return;
+            // 请求权限
             let stream;
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 stream.getTracks().forEach(track => track.stop());
             } catch (err) {
-                showAlert('麦克风权限', '请允许浏览器访问麦克风后重试，您可在浏览器设置中开启');
-                return;
+                // 权限被拒绝
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    // 显示引导弹窗
+                    const modal = document.createElement('div');
+                    modal.className = 'custom-modal';
+                    modal.innerHTML = `
+                        <div class="custom-modal-content">
+                            <h3>🎤 麦克风权限</h3>
+                            <p>需要麦克风权限来发送语音消息。请在浏览器设置中允许访问麦克风。</p>
+                            <div class="custom-modal-buttons">
+                                <button class="confirm-btn" id="micGoSettings">去设置</button>
+                                <button class="cancel-btn" id="micCancel">取消</button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+                    modal.querySelector('#micGoSettings').onclick = () => {
+                        modal.remove();
+                        // 提示用户如何手动打开
+                        showAlert('如何开启麦克风权限', '请打开浏览器设置 → 隐私与安全 → 网站设置 → 麦克风，允许此网站访问。');
+                    };
+                    modal.querySelector('#micCancel').onclick = () => modal.remove();
+                    return;
+                } else {
+                    showAlert('录音失败', err.message || '无法访问麦克风');
+                    return;
+                }
             }
             isPressed = true;
             chatInput.placeholder = '录音中...松开发送';
@@ -1666,24 +1710,23 @@
         }
     }
 
-    // ===== 消息列表 =====
-    async function renderMessageList() {
+    // ===== 消息列表：左滑删除 =====
+    function renderMessageList() {
         if(!currentUser || !currentUser.id) {
             const container = document.getElementById('messageContainer');
             if(container) container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">请先登录</div></div>';
             updateUnreadBadge();
             return;
         }
-        try {
-            const convs = await callApi(`/user/${currentUser.id}/conversations`);
+        callApi(`/user/${currentUser.id}/conversations`).then(convs => {
             const container = document.getElementById('messageContainer');
             if(!convs || convs.length === 0) {
                 container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
                 updateUnreadBadge();
                 return;
             }
-            const filtered = convs.filter(c => !deletedConversations.has(c.taskId) && c.lastMsg);
-            // 按本地存储的最新消息时间降序排序
+            let filtered = convs.filter(c => !deletedConversations.has(c.taskId) && c.lastMsg);
+            // 按最新消息时间排序
             filtered.sort((a,b) => {
                 const t1 = parseInt(localStorage.getItem(`conv_time_${a.taskId}`)) || 0;
                 const t2 = parseInt(localStorage.getItem(`conv_time_${b.taskId}`)) || 0;
@@ -1695,42 +1738,107 @@
                 updateUnreadBadge();
                 return;
             }
+
             let html = '<div class="card"><strong>📬 消息记录</strong></div>';
             for(let c of filtered) {
                 let unreadHtml = '';
                 if(c.unread > 0) unreadHtml = `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;
-                html += `<div class="card task-card" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
-                    <div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div>
-                    <div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div>
-                </div>`;
+                // 使用 wrapper 支持左滑
+                html += `
+                    <div class="task-card-wrapper" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
+                        <div class="card" style="cursor:pointer;">
+                            <div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div>
+                            <div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div>
+                        </div>
+                        <div class="delete-btn" onclick="deleteConversation('${c.taskId}')">删除</div>
+                    </div>
+                `;
             }
             container.innerHTML = html;
-            document.querySelectorAll('#messageContainer .task-card').forEach(card => {
-                card.removeEventListener('click', card._clickHandler);
-                card.removeEventListener('contextmenu', card._contextHandler);
-                const clickHandler = () => {
-                    const taskId = card.getAttribute('data-taskid');
-                    const otherId = card.getAttribute('data-otherid');
-                    const otherName = card.getAttribute('data-othername');
-                    const reward = parseInt(card.getAttribute('data-reward'));
-                    const title = card.getAttribute('data-title');
+
+            // 为每个 wrapper 绑定左滑事件
+            document.querySelectorAll('.task-card-wrapper').forEach(wrapper => {
+                let startX = 0, currentX = 0, isDragging = false;
+                const card = wrapper.querySelector('.card');
+                const deleteBtn = wrapper.querySelector('.delete-btn');
+                const threshold = 60;
+
+                const reset = () => {
+                    wrapper.classList.remove('swiped');
+                    card.style.transform = '';
+                };
+
+                const onTouchStart = (e) => {
+                    startX = e.touches[0].clientX;
+                    isDragging = true;
+                };
+
+                const onTouchMove = (e) => {
+                    if (!isDragging) return;
+                    const deltaX = e.touches[0].clientX - startX;
+                    if (deltaX < -10) {
+                        e.preventDefault();
+                        const offset = Math.max(-80, Math.min(0, deltaX));
+                        card.style.transform = `translateX(${offset}px)`;
+                        deleteBtn.style.opacity = Math.min(1, Math.abs(offset) / threshold);
+                        if (offset < -threshold) {
+                            wrapper.classList.add('swiped');
+                        } else {
+                            wrapper.classList.remove('swiped');
+                        }
+                    } else {
+                        // 右滑取消
+                        if (wrapper.classList.contains('swiped')) {
+                            reset();
+                        }
+                    }
+                };
+
+                const onTouchEnd = () => {
+                    isDragging = false;
+                    if (!wrapper.classList.contains('swiped')) {
+                        reset();
+                    } else {
+                        // 保持展开
+                        card.style.transform = 'translateX(-80px)';
+                        deleteBtn.style.opacity = '1';
+                    }
+                };
+
+                // 点击卡片打开聊天
+                card.addEventListener('click', (e) => {
+                    if (wrapper.classList.contains('swiped')) {
+                        reset();
+                        return;
+                    }
+                    const taskId = wrapper.getAttribute('data-taskid');
+                    const otherId = wrapper.getAttribute('data-otherid');
+                    const otherName = wrapper.getAttribute('data-othername');
+                    const reward = parseInt(wrapper.getAttribute('data-reward'));
+                    const title = wrapper.getAttribute('data-title');
                     openChat(taskId, otherId, otherName, reward, title);
+                });
+
+                wrapper.addEventListener('touchstart', onTouchStart, { passive: true });
+                wrapper.addEventListener('touchmove', onTouchMove, { passive: false });
+                wrapper.addEventListener('touchend', onTouchEnd, { passive: true });
+                wrapper.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+                // 点击删除按钮（已经绑定了 onclick）
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    const taskId = wrapper.getAttribute('data-taskid');
+                    deleteConversation(taskId);
                 };
-                const contextHandler = (e) => {
-                    e.preventDefault();
-                    const taskId = card.getAttribute('data-taskid');
-                    const otherName = card.getAttribute('data-othername');
-                    showConfirm('删除聊天', `确定删除与 ${otherName} 的聊天吗？`, () => { deleteConversation(taskId); });
-                };
-                card.addEventListener('click', clickHandler);
-                card.addEventListener('contextmenu', contextHandler);
-                card._clickHandler = clickHandler;
-                card._contextHandler = contextHandler;
             });
+
             updateUnreadBadge();
-        } catch(e) { console.error('加载消息列表失败', e); }
+        }).catch(e => {
+            console.error('加载消息列表失败', e);
+        });
     }
 
+    // 更新未读角标
     async function updateUnreadBadge() {
         if(!currentUser) return;
         try {
@@ -2400,6 +2508,13 @@
         document.getElementById('showRegisterBtn').onclick = (e) => { e.preventDefault(); document.getElementById('loginPage').classList.remove('active'); document.getElementById('registerPage').classList.add('active'); };
         document.getElementById('showLoginBtn').onclick = (e) => { e.preventDefault(); document.getElementById('registerPage').classList.remove('active'); document.getElementById('loginPage').classList.add('active'); };
         document.getElementById('mediaInput')?.addEventListener('change', (e) => { if(e.target.files.length) handleMediaFiles(e.target.files); });
+
+        // 注册 Service Worker 以支持后台运行和离线缓存（需额外 sw.js 文件）
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('SW registered'))
+                .catch(err => console.warn('SW registration failed:', err));
+        }
     });
 
     (async () => {
@@ -2422,7 +2537,8 @@
                     }
                 } catch(e) {}
             }
-            await refreshTaskList(false); // 不强制刷新，优先缓存
+            // 非阻塞刷新
+            refreshTaskList(false);
             loadProfile();
             renderMessageList();
             updateUnreadBadge();
