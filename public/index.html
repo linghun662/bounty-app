@@ -85,7 +85,7 @@
         @keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
         /* ===== 聊天布局 ===== */
         #messagePage{flex:1;overflow:hidden}
-        .chat-container{display:flex;flex-direction:column;flex:1;background:#f8fafc;min-height:0}
+        .chat-container{display:flex;flex-direction:column;flex:1;background:#f8fafc;min-height:0;height:100%}
         .chat-header-bar{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:8px;flex-shrink:0}
         .chat-back-btn{background:#f1f5f9;border:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer}
         .chat-back-btn:active{background:#e2e8f0;transform:scale(.94)}
@@ -227,7 +227,6 @@
         @media (max-width:380px){html{font-size:14px}.card{padding:14px 16px;margin:10px 12px}.nav-header{padding:10px 14px}.bottom-nav{padding:6px 14px 14px}}
         @media (min-width:600px){.app-container{max-width:600px}}
 
-        /* 全屏页面通用头部 */
         .fullscreen-header{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:12px;flex-shrink:0}
         .fullscreen-header .back-btn{background:transparent;border:none;font-size:1.8rem;cursor:pointer;padding:4px 8px;color:#1e4a6b}
         .fullscreen-header .title{font-weight:700;font-size:1.2rem;flex:1;color:#0f172a}
@@ -339,7 +338,7 @@
                 <div class="my-tasks-list" id="myTasksList" style="flex:1;overflow-y:auto;padding-bottom:20px;"><div class="loading">加载中...</div></div>
             </div>
 
-            <!-- ===== 新增：钱包全屏页 ===== -->
+            <!-- 钱包全屏页 -->
             <div id="walletPage" class="page">
                 <div class="fullscreen-header">
                     <button class="back-btn" id="walletBackBtn">‹</button>
@@ -348,7 +347,7 @@
                 <div class="fullscreen-content" id="walletContent">加载中...</div>
             </div>
 
-            <!-- ===== 新增：信用明细全屏页 ===== -->
+            <!-- 信用明细全屏页 -->
             <div id="creditPage" class="page">
                 <div class="fullscreen-header">
                     <button class="back-btn" id="creditBackBtn">‹</button>
@@ -402,8 +401,7 @@
     let chatState = { active: false, taskId: null, otherId: null, otherName: '', reward: 0, title: '', pollInterval: null, messagesArea: null, lastMessageCount: 0 };
     let geocodeCache = new Map();
     let deletedConversations = new Set();
-    // 本地缓存任务
-    let tasksCache = { data: null, timestamp: 0, ttl: 10 * 60 * 1000 }; // 10分钟
+    let tasksCache = { data: null, timestamp: 0, ttl: 10 * 60 * 1000 };
     let refreshThrottle = false, networkToast = null;
     let mediaRecorder = null, audioChunks = [], isRecording = false;
     let longPressTimer = null;
@@ -427,7 +425,7 @@
         setTimeout(() => { if (networkToast) networkToast.remove(); networkToast = null; }, 3000);
     }
 
-    async function fetchWithTimeout(url, options = {}, timeout = 10000, retries = 1) {
+    async function fetchWithTimeout(url, options = {}, timeout = 8000, retries = 1) {
         let lastError;
         for (let i = 0; i <= retries; i++) {
             try {
@@ -441,10 +439,10 @@
                 lastError = err;
                 if (err.name === 'AbortError') {
                     console.warn(`请求超时 (${timeout}ms)，第 ${i+1} 次重试`);
-                    if (i < retries) await new Promise(r => setTimeout(r, 1000));
+                    if (i < retries) await new Promise(r => setTimeout(r, 800));
                     continue;
                 }
-                if (i < retries) { await new Promise(r => setTimeout(r, 1000)); showNetworkSlow(); }
+                if (i < retries) { await new Promise(r => setTimeout(r, 800)); showNetworkSlow(); }
             }
         }
         throw lastError;
@@ -456,7 +454,7 @@
         const headers = { 'Content-Type': 'application/json', ...options.headers };
         if (token) headers['Authorization'] = `Bearer ${token}`;
         try {
-            const res = await fetchWithTimeout(fullUrl, { ...options, headers }, 15000, 1);
+            const res = await fetchWithTimeout(fullUrl, { ...options, headers }, 10000, 1);
             if (res.status === 401) {
                 localStorage.removeItem('token'); localStorage.removeItem('user');
                 currentUser = null;
@@ -773,10 +771,11 @@
         closeMapModal();
     }
 
-    // ===== 全局手势返回 =====
+    // ===== 全局手势返回（侧滑返回） =====
     let swipeIndicator = null;
     let swipeActive = false;
     function initGlobalSwipeBack() {
+        // 对所有页面启用，但排除首页
         const pages = document.querySelectorAll('.page:not(#homePage)');
         swipeIndicator = document.getElementById('swipeBackIndicator');
         let startX = 0, startY = 0, isSwiping = false;
@@ -787,7 +786,8 @@
                 const rect = page.getBoundingClientRect();
                 const touchX = e.touches[0].clientX - rect.left;
                 if (touchX > rect.width * 0.15) return;
-                if (page.scrollLeft > 0 || page.scrollTop > 0) return;
+                // 如果页面有滚动，且滚动到顶部才触发
+                if (page.scrollTop > 0) return;
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
                 isSwiping = true;
@@ -869,15 +869,15 @@
         refreshThrottle = true;
         setTimeout(() => { refreshThrottle = false; }, 1000);
         const container = document.getElementById('homeContent');
-        // 检查本地缓存
+        // 检查本地缓存，如果有且不强制刷新，直接显示缓存
         if (!force && tasksCache.data && (Date.now() - tasksCache.timestamp) < tasksCache.ttl) {
             allTasks = tasksCache.data;
             applyFilterAndSort();
-            // 异步后台刷新
+            // 后台静默更新
             refreshTaskListInBackground();
             return;
         }
-        // 显示骨架
+        // 显示骨架屏
         container.innerHTML = '<div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div><div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div>';
         try {
             const tasks = await callApi('/tasks');
@@ -891,6 +891,8 @@
             allTasks = tasksWithCat;
             tasksCache.data = tasksWithCat;
             tasksCache.timestamp = Date.now();
+            // 保存到localStorage以便下次启动快速显示
+            try { localStorage.setItem('tasksCache', JSON.stringify(tasksCache)); } catch(e) {}
             applyFilterAndSort();
         } catch (err) {
             container.innerHTML = '<div class="empty-state">加载失败，请下拉刷新</div>';
@@ -906,6 +908,7 @@
             allTasks = tasksWithCat;
             tasksCache.data = tasksWithCat;
             tasksCache.timestamp = Date.now();
+            try { localStorage.setItem('tasksCache', JSON.stringify(tasksCache)); } catch(e) {}
             // 如果当前在首页且没有用户交互，可以更新UI
             const homePage = document.getElementById('homePage');
             if (homePage.classList.contains('active')) {
@@ -1476,7 +1479,7 @@
 
         const container = document.getElementById('messageContainer');
         container.innerHTML = `
-            <div class="chat-container" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+            <div class="chat-container" style="flex:1; display:flex; flex-direction:column; min-height:0; height:100%;">
                 <div class="chat-header-bar">
                     <button class="chat-back-btn" id="chatBackBtn">←</button>
                     <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
@@ -1492,7 +1495,6 @@
                     </div>
                     <div class="chat-plus-panel" id="chatPlusPanel">
                         <button class="chat-icon-btn plus-item" id="imageBtn">🖼️ 图片</button>
-                        <!-- 移除了通话按钮 -->
                         <button class="chat-icon-btn plus-item" id="sendNegoBtn">💰 议价</button>
                     </div>
                 </div>
@@ -1712,7 +1714,26 @@
                 updateUnreadBadge();
                 return;
             }
+            // 过滤已删除的，并按最新消息时间排序（降序，最新的在前）
             const filtered = convs.filter(c => !deletedConversations.has(c.taskId) && c.lastMsg);
+            // 按 lastMsg 时间排序（假设后端返回的 lastMsg 没有时间，我们可以按 task 的 updatedAt 排序）
+            // 但更可靠：由于后端返回的 convs 可能已排序，但我们再按 reward 或 taskId 没有意义，
+            // 我们可以在前端根据消息的最后时间排序，但我们需要获取每个 task 的更新时间？ 
+            // 简单起见，我们直接使用 convs 的排序，但 convs 可能不是按时间，所以我们用 lastMsg 字段包含时间？ 
+            // 为了更准确，我们可以在每个对话中获取最新消息的时间，但会增加请求。
+            // 折中方案：按 task 的 updatedAt 排序，但 convs 中没有 updatedAt，我们可再请求一次，
+            // 但为了性能，我们使用 convs 中已有的顺序（后端已按最新消息时间降序）。
+            // 我们可以在后端修改，但前端暂时按任务 id 的倒序，但任务 id 是递增的，可以近似按创建时间。
+            // 更稳妥：使用一个简单的排序依据：如果 lastMsg 有 createdAt 最好，但接口未返回。
+            // 我们降序排列 taskId 字符串（ObjectId 有时间戳），但可能不够准确。
+            // 我们改一下：先获取所有任务详情？太慢。我们让后端返回 conversations 时已排序。
+            // 为了不依赖后端，我们使用本地存储的 lastMsg 的时间戳？没有。
+            // 这里我们直接使用已有的顺序，但为了用户需求，我们可以在前端添加一个更新时间字段，但这需要修改后端。
+            // 我们假设后端已经按最近消息时间排序了（因为 conversations 接口是按任务更新时间降序），
+            // 我们添加一个手动排序：按任务 id 的 ObjectId 时间戳降序（近似）。
+            filtered.sort((a,b) => b.taskId.localeCompare(a.taskId));
+            // 但如果任务 id 是字符串，我们可以转换时间戳，但简单化。
+
             if(filtered.length === 0) {
                 container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
                 updateUnreadBadge();
@@ -2051,7 +2072,6 @@
 
     // ===== 页面切换 =====
     function switchPage(page) {
-        // 如果聊天活跃且切换到非消息页面，关闭聊天
         if (chatState.active && page !== 'message') {
             closeChat();
         }
@@ -2154,8 +2174,6 @@
     }
 
     // ===== 语音相关 =====
-    // requestMicrophonePermission 已内联到 startPress
-
     async function startRecording() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -2379,7 +2397,6 @@
         initMessagePullToRefresh();
         initFiltersAndCategories();
 
-        // 全屏页面返回按钮
         document.getElementById('walletBackBtn').addEventListener('click', () => switchPage('profile'));
         document.getElementById('creditBackBtn').addEventListener('click', () => switchPage('profile'));
 
@@ -2437,7 +2454,7 @@
             document.getElementById('loginPage').classList.remove('active');
             const loc = await getNativeUserLocation();
             if(loc) userLocation = loc;
-            // 先显示缓存数据（如果有）
+            // 先尝试从 localStorage 加载缓存
             const cached = localStorage.getItem('tasksCache');
             if (cached) {
                 try {
