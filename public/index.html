@@ -226,6 +226,12 @@
         .swipe-back-indicator.show{opacity:1}
         @media (max-width:380px){html{font-size:14px}.card{padding:14px 16px;margin:10px 12px}.nav-header{padding:10px 14px}.bottom-nav{padding:6px 14px 14px}}
         @media (min-width:600px){.app-container{max-width:600px}}
+
+        /* 全屏页面通用头部 */
+        .fullscreen-header{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:12px;flex-shrink:0}
+        .fullscreen-header .back-btn{background:transparent;border:none;font-size:1.8rem;cursor:pointer;padding:4px 8px;color:#1e4a6b}
+        .fullscreen-header .title{font-weight:700;font-size:1.2rem;flex:1;color:#0f172a}
+        .fullscreen-content{flex:1;overflow-y:auto;padding:16px}
     </style>
 </head>
 <body>
@@ -332,6 +338,25 @@
                 </div>
                 <div class="my-tasks-list" id="myTasksList" style="flex:1;overflow-y:auto;padding-bottom:20px;"><div class="loading">加载中...</div></div>
             </div>
+
+            <!-- ===== 新增：钱包全屏页 ===== -->
+            <div id="walletPage" class="page">
+                <div class="fullscreen-header">
+                    <button class="back-btn" id="walletBackBtn">‹</button>
+                    <span class="title">💰 我的钱包</span>
+                </div>
+                <div class="fullscreen-content" id="walletContent">加载中...</div>
+            </div>
+
+            <!-- ===== 新增：信用明细全屏页 ===== -->
+            <div id="creditPage" class="page">
+                <div class="fullscreen-header">
+                    <button class="back-btn" id="creditBackBtn">‹</button>
+                    <span class="title">⭐ 信用明细</span>
+                </div>
+                <div class="fullscreen-content" id="creditContent">加载中...</div>
+            </div>
+
             <!-- 底部导航 -->
             <div class="bottom-nav">
                 <div class="nav-item" onclick="switchPage('home')"><span class="nav-icon">🏠</span><span>首页</span></div>
@@ -377,7 +402,8 @@
     let chatState = { active: false, taskId: null, otherId: null, otherName: '', reward: 0, title: '', pollInterval: null, messagesArea: null, lastMessageCount: 0 };
     let geocodeCache = new Map();
     let deletedConversations = new Set();
-    let tasksCache = { data: null, timestamp: 0, ttl: 5 * 60 * 1000 };
+    // 本地缓存任务
+    let tasksCache = { data: null, timestamp: 0, ttl: 10 * 60 * 1000 }; // 10分钟
     let refreshThrottle = false, networkToast = null;
     let mediaRecorder = null, audioChunks = [], isRecording = false;
     let longPressTimer = null;
@@ -819,6 +845,12 @@
         } else if (id === 'myTasksPage') {
             document.getElementById('myTasksBackBtn').click();
             backPressedOnce = false;
+        } else if (id === 'walletPage') {
+            document.getElementById('walletBackBtn').click();
+            backPressedOnce = false;
+        } else if (id === 'creditPage') {
+            document.getElementById('creditBackBtn').click();
+            backPressedOnce = false;
         } else if (id === 'detailPage') {
             document.getElementById('detailBackBtn')?.click();
             backPressedOnce = false;
@@ -837,11 +869,15 @@
         refreshThrottle = true;
         setTimeout(() => { refreshThrottle = false; }, 1000);
         const container = document.getElementById('homeContent');
+        // 检查本地缓存
         if (!force && tasksCache.data && (Date.now() - tasksCache.timestamp) < tasksCache.ttl) {
             allTasks = tasksCache.data;
             applyFilterAndSort();
+            // 异步后台刷新
+            refreshTaskListInBackground();
             return;
         }
+        // 显示骨架
         container.innerHTML = '<div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div><div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div>';
         try {
             const tasks = await callApi('/tasks');
@@ -859,6 +895,23 @@
         } catch (err) {
             container.innerHTML = '<div class="empty-state">加载失败，请下拉刷新</div>';
         }
+    }
+
+    async function refreshTaskListInBackground() {
+        try {
+            const tasks = await callApi('/tasks');
+            if (!tasks || tasks.length === 0) return;
+            let tasksWithCat = tasks.map(t => ({ ...t, category: getTaskCategory(t.title) }));
+            if (userLocation) tasksWithCat = await enrichTasksWithDistance(tasksWithCat);
+            allTasks = tasksWithCat;
+            tasksCache.data = tasksWithCat;
+            tasksCache.timestamp = Date.now();
+            // 如果当前在首页且没有用户交互，可以更新UI
+            const homePage = document.getElementById('homePage');
+            if (homePage.classList.contains('active')) {
+                applyFilterAndSort();
+            }
+        } catch(e) { /* 静默更新失败 */ }
     }
 
     function applyFilterAndSort() {
@@ -1419,11 +1472,9 @@
     function showChatView() {
         document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
         document.getElementById('messagePage').classList.add('active');
-        // 隐藏底部导航栏，避免遮挡输入框
         document.body.classList.add('hide-bottom-nav');
 
         const container = document.getElementById('messageContainer');
-        // 使用 flex:1 替代 height:100%，确保容器正确填满父容器
         container.innerHTML = `
             <div class="chat-container" style="flex:1; display:flex; flex-direction:column; min-height:0;">
                 <div class="chat-header-bar">
@@ -1441,7 +1492,7 @@
                     </div>
                     <div class="chat-plus-panel" id="chatPlusPanel">
                         <button class="chat-icon-btn plus-item" id="imageBtn">🖼️ 图片</button>
-                        <button class="chat-icon-btn plus-item" id="voiceCallBtn">📞 通话</button>
+                        <!-- 移除了通话按钮 -->
                         <button class="chat-icon-btn plus-item" id="sendNegoBtn">💰 议价</button>
                     </div>
                 </div>
@@ -1453,10 +1504,6 @@
         document.getElementById('chatBackBtn').onclick = () => {
             closeChat();
             switchPage('message');
-        };
-
-        document.getElementById('voiceCallBtn').onclick = () => {
-            showVoiceCallModal(chatState.otherName);
         };
 
         document.getElementById('sendChatBtn').onclick = async () => {
@@ -1495,8 +1542,12 @@
         const startPress = async (e) => {
             e.preventDefault();
             if (isPressed) return;
-            const hasPermission = await requestMicrophonePermission();
-            if (!hasPermission) {
+            // 自动请求权限
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+            } catch (err) {
                 showAlert('麦克风权限', '请允许浏览器访问麦克风后重试，您可在浏览器设置中开启');
                 return;
             }
@@ -1629,7 +1680,6 @@
         chatState.active = false;
         chatState.taskId = null;
         chatState.messagesArea = null;
-        // 恢复底部导航栏
         document.body.classList.remove('hide-bottom-nav');
         if (mediaRecorder && isRecording) {
             mediaRecorder.stop();
@@ -1743,7 +1793,10 @@
                         <div class="stat-number">👛</div>
                         <div class="stat-label">钱包</div>
                     </div>
-                    <div class="stat-item" onclick="showCreditDetail()"><div class="stat-number">⭐${currentUser.credit||60}</div><div class="stat-label">信用</div></div>
+                    <div class="stat-item" id="creditEntry" style="cursor:pointer;">
+                        <div class="stat-number">⭐${currentUser.credit||60}</div>
+                        <div class="stat-label">信用</div>
+                    </div>
                     <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div>
                 </div>
                 <div class="profile-task-card" onclick="navigateToMyTasks('pub')">
@@ -1761,9 +1814,101 @@
                 <button class="logout-btn" onclick="logout()">退出登录</button>
             `;
 
-            document.getElementById('walletEntry').addEventListener('click', showWalletModal);
+            document.getElementById('walletEntry').addEventListener('click', () => switchPage('wallet'));
+            document.getElementById('creditEntry').addEventListener('click', () => switchPage('credit'));
 
         } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
+    }
+
+    // ===== 钱包全屏页 =====
+    async function renderWalletPage() {
+        const container = document.getElementById('walletContent');
+        container.innerHTML = '<div class="loading">加载中...</div>';
+        try {
+            const bills = await callApi(`/bills/${currentUser.id}`);
+            let billHtml = '';
+            if (bills.length === 0) {
+                billHtml = '<div class="empty-state" style="padding:20px;">暂无账单记录</div>';
+            } else {
+                for (const b of bills) {
+                    const icon = b.amount > 0 ? '📈' : '📉';
+                    const amountClass = b.amount > 0 ? 'income' : 'expense';
+                    const sign = b.amount > 0 ? '+' : '';
+                    billHtml += `
+                        <div class="wallet-bill-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
+                            <div class="icon">${icon}</div>
+                            <div class="info">
+                                <div class="desc">${b.desc}</div>
+                                <div class="time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
+                            </div>
+                            <div class="amount ${amountClass}">${sign}${b.amount}元</div>
+                        </div>
+                    `;
+                }
+            }
+            container.innerHTML = `
+                <div class="wallet-balance-box" style="margin:0 0 16px 0; background:#eef2ff; border-radius:20px; padding:20px; text-align:center;">
+                    <div class="amount">¥${(currentUser.balance||0).toFixed(2)}</div>
+                    <div class="frozen">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div>
+                    <button class="btn-primary" id="walletWithdrawBtn" style="margin-top:10px;padding:8px;font-size:.85rem;">💸 提现</button>
+                </div>
+                <div style="margin-top:8px; border-top:1px solid #eef2f8; padding-top:12px;">
+                    <div style="font-weight:600; font-size:1rem; color:#1e293b; margin-bottom:8px;">📋 账单明细</div>
+                    ${billHtml}
+                </div>
+            `;
+            document.getElementById('walletWithdrawBtn').onclick = () => {
+                const chooseModal = document.createElement('div');
+                chooseModal.className = 'custom-modal withdraw-modal';
+                chooseModal.innerHTML = `<div class="custom-modal-content"><h3>选择提现方式</h3><button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button><button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button><div class="custom-modal-buttons"><button class="cancel-btn">取消</button></div></div>`;
+                document.body.appendChild(chooseModal);
+                chooseModal.querySelector('#withdrawWechatBtn').onclick = () => { showToast('提现到微信（演示模式）'); chooseModal.remove(); };
+                chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); };
+                chooseModal.querySelector('.cancel-btn').onclick = () => chooseModal.remove();
+            };
+            container.querySelectorAll('.wallet-bill-item').forEach(item => {
+                item.onclick = () => {
+                    const bill = JSON.parse(item.getAttribute('data-bill'));
+                    const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
+                    showAlert('账单详情', `
+                        <div style="text-align:left;">
+                            <div><strong>说明：</strong>${bill.desc}</div>
+                            <div><strong>金额：</strong>${bill.amount}元</div>
+                            <div><strong>时间：</strong>${new Date(bill.createdAt).toLocaleString()}</div>
+                            <div><strong>类型：</strong>${typeLabel}</div>
+                        </div>
+                    `);
+                };
+            });
+        } catch(e) {
+            container.innerHTML = '<div class="empty-state">加载失败</div>';
+        }
+    }
+
+    // ===== 信用全屏页 =====
+    async function renderCreditPage() {
+        const container = document.getElementById('creditContent');
+        container.innerHTML = '<div class="loading">加载中...</div>';
+        try {
+            const logs = await callApi(`/credit-logs/${currentUser.id}`);
+            let html = `<div style="margin-bottom:12px;font-weight:600;">当前信用分：⭐ ${currentUser.credit||60}</div>`;
+            if (logs.length === 0) {
+                html += '<div class="empty-state">暂无信用变动记录</div>';
+            } else {
+                html += '<div style="border-top:1px solid #eef2f8; padding-top:12px;">';
+                for (const l of logs) {
+                    html += `<div style="padding:10px 0; border-bottom:1px solid #eef2f8;">
+                        <div>${l.reason}</div>
+                        <div style="color:${l.change>0?'#059669':'#dc2626'};">${l.change>0?`+${l.change}`:l.change} 分</div>
+                        <div style="font-size:0.75rem; color:#94a3b8;">${new Date(l.createdAt).toLocaleString()}</div>
+                    </div>`;
+                }
+                html += '</div>';
+            }
+            container.innerHTML = html;
+        } catch(e) {
+            container.innerHTML = '<div class="empty-state">加载失败</div>';
+        }
     }
 
     // ===== 我的任务列表 =====
@@ -1832,15 +1977,6 @@
     }
 
     // ===== 其他功能 =====
-    async function showCreditDetail() {
-        const logs = await callApi(`/credit-logs/${currentUser.id}`);
-        const modal = document.createElement('div');
-        modal.className = 'custom-modal';
-        modal.innerHTML = `<div class="custom-modal-content"><h3>⭐ 信用明细</h3><div style="max-height:300px; overflow:auto;">${logs.map(l=>`<div style="padding:8px 0; border-bottom:1px solid #eef2f8;"><div>${l.reason}</div><div>${l.change>0?`+${l.change}`:l.change} 分</div><div style="font-size:0.7rem;">${new Date(l.createdAt).toLocaleString()}</div></div>`).join('')||'<div class="empty-state">暂无记录</div>'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;
-        document.body.appendChild(modal);
-        modal.querySelector('.confirm-btn').onclick = () => modal.remove();
-    }
-
     window.cancelAcceptedTask = async function(taskId) {
         showConfirm('确认取消', '取消接取将扣除5信用分，确定吗？', async () => {
             const result = await callApi(`/tasks/${taskId}/cancel-accept`, {method:'PUT', body:JSON.stringify({})});
@@ -1924,7 +2060,7 @@
         const target = document.getElementById(`${page}Page`);
         if (target) target.classList.add('active');
 
-        if (page === 'myTasks') {
+        if (page === 'myTasks' || page === 'wallet' || page === 'credit') {
             document.body.classList.add('hide-bottom-nav');
         } else {
             document.body.classList.remove('hide-bottom-nav');
@@ -1935,6 +2071,8 @@
         if (page === 'home') refreshTaskList();
         else if (page === 'profile') loadProfile();
         else if (page === 'message') renderMessageList();
+        else if (page === 'wallet') renderWalletPage();
+        else if (page === 'credit') renderCreditPage();
     }
 
     // ===== 发布、登录等 =====
@@ -2016,15 +2154,7 @@
     }
 
     // ===== 语音相关 =====
-    async function requestMicrophonePermission() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
-            return true;
-        } catch (err) {
-            return false;
-        }
-    }
+    // requestMicrophonePermission 已内联到 startPress
 
     async function startRecording() {
         try {
@@ -2067,110 +2197,6 @@
             mediaRecorder.stop();
             isRecording = false;
         }
-    }
-
-    // ===== 语音通话（模拟） =====
-    function showVoiceCallModal(otherName) {
-        const modal = document.createElement('div');
-        modal.className = 'voice-call-modal';
-        modal.innerHTML = `
-            <div class="avatar">📞</div>
-            <div class="name">${escapeHtml(otherName)}</div>
-            <div class="status">正在呼叫...</div>
-            <button class="hangup-btn" id="hangupCallBtn">✕</button>
-        `;
-        document.body.appendChild(modal);
-        modal.querySelector('#hangupCallBtn').onclick = () => {
-            modal.remove();
-            showToast('已挂断');
-        };
-        setTimeout(() => {
-            const statusEl = modal.querySelector('.status');
-            if (statusEl) {
-                statusEl.textContent = '通话中...';
-                statusEl.style.color = '#4ade80';
-            }
-        }, 2000);
-        setTimeout(() => {
-            if (modal.parentNode) {
-                modal.remove();
-                showToast('通话结束');
-            }
-        }, 30000);
-    }
-
-    // ===== 钱包 =====
-    async function showWalletModal() {
-        const bills = await callApi(`/bills/${currentUser.id}`);
-        const modal = document.createElement('div');
-        modal.className = 'wallet-modal';
-        let billHtml = '';
-        if (bills.length === 0) {
-            billHtml = '<div class="empty-state" style="padding:20px;">暂无账单记录</div>';
-        } else {
-            for (const b of bills) {
-                const icon = b.amount > 0 ? '📈' : '📉';
-                const amountClass = b.amount > 0 ? 'income' : 'expense';
-                const sign = b.amount > 0 ? '+' : '';
-                billHtml += `
-                    <div class="wallet-bill-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
-                        <div class="icon">${icon}</div>
-                        <div class="info">
-                            <div class="desc">${b.desc}</div>
-                            <div class="time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
-                        </div>
-                        <div class="amount ${amountClass}">${sign}${b.amount}元</div>
-                    </div>
-                `;
-            }
-        }
-
-        modal.innerHTML = `
-            <div class="wallet-modal-content">
-                <div class="wallet-modal-header">
-                    <span class="wallet-modal-title">💰 我的钱包</span>
-                    <button class="wallet-modal-close" id="walletModalClose">✕</button>
-                </div>
-                <div class="wallet-balance-box">
-                    <div class="amount">¥${(currentUser.balance||0).toFixed(2)}</div>
-                    <div class="frozen">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div>
-                    <button class="btn-primary" id="walletWithdrawBtn" style="margin-top:10px;padding:8px;font-size:.85rem;">💸 提现</button>
-                </div>
-                <div class="wallet-bills">
-                    <div class="title"><span>📋 账单明细</span></div>
-                    ${billHtml}
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        modal.querySelector('#walletModalClose').onclick = () => modal.remove();
-        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-
-        modal.querySelector('#walletWithdrawBtn').onclick = () => {
-            const chooseModal = document.createElement('div');
-            chooseModal.className = 'custom-modal withdraw-modal';
-            chooseModal.innerHTML = `<div class="custom-modal-content"><h3>选择提现方式</h3><button class="btn-primary" id="withdrawWechatBtn" style="background:#07c160; margin-bottom:8px;">💚 提现到微信</button><button class="btn-primary" id="withdrawAlipayBtn" style="background:#1677ff;">💙 提现到支付宝</button><div class="custom-modal-buttons"><button class="cancel-btn">取消</button></div></div>`;
-            document.body.appendChild(chooseModal);
-            chooseModal.querySelector('#withdrawWechatBtn').onclick = () => { showToast('提现到微信（演示模式）'); chooseModal.remove(); };
-            chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); };
-            chooseModal.querySelector('.cancel-btn').onclick = () => chooseModal.remove();
-        };
-
-        modal.querySelectorAll('.wallet-bill-item').forEach(item => {
-            item.onclick = () => {
-                const bill = JSON.parse(item.getAttribute('data-bill'));
-                const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
-                showAlert('账单详情', `
-                    <div style="text-align:left;">
-                        <div><strong>说明：</strong>${bill.desc}</div>
-                        <div><strong>金额：</strong>${bill.amount}元</div>
-                        <div><strong>时间：</strong>${new Date(bill.createdAt).toLocaleString()}</div>
-                        <div><strong>类型：</strong>${typeLabel}</div>
-                    </div>
-                `);
-            };
-        });
     }
 
     // ===== 评价 API =====
@@ -2353,6 +2379,10 @@
         initMessagePullToRefresh();
         initFiltersAndCategories();
 
+        // 全屏页面返回按钮
+        document.getElementById('walletBackBtn').addEventListener('click', () => switchPage('profile'));
+        document.getElementById('creditBackBtn').addEventListener('click', () => switchPage('profile'));
+
         document.getElementById('openMapBtn').addEventListener('click', openMapModal);
         document.getElementById('mapModalClose').addEventListener('click', closeMapModal);
         document.getElementById('mapCancelBtn').addEventListener('click', closeMapModal);
@@ -2407,6 +2437,18 @@
             document.getElementById('loginPage').classList.remove('active');
             const loc = await getNativeUserLocation();
             if(loc) userLocation = loc;
+            // 先显示缓存数据（如果有）
+            const cached = localStorage.getItem('tasksCache');
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    if (parsed.data && (Date.now() - parsed.timestamp) < parsed.ttl) {
+                        tasksCache = parsed;
+                        allTasks = parsed.data;
+                        applyFilterAndSort();
+                    }
+                } catch(e) {}
+            }
             await refreshTaskList(true);
             loadProfile();
             renderMessageList();
