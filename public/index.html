@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=no">
     <title>赏金集市 · 双向议价</title>
     <script>
-        // 延迟加载高德地图，避免阻塞首屏
+        // 延迟加载高德地图
         window.loadAMap = function() {
             return new Promise((resolve, reject) => {
                 if (window.AMap) { resolve(); return; }
@@ -19,7 +19,7 @@
         };
     </script>
     <style>
-        /* ===== 基础样式（与原文件一致，保留所有功能） ===== */
+        /* ===== 基础样式（完整保留） ===== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
@@ -238,6 +238,14 @@
         .fullscreen-header .title{font-weight:700;font-size:1.2rem;flex:1;color:#0f172a}
         .fullscreen-content{flex:1;overflow-y:auto;padding:16px}
         .date-separator{text-align:center;color:#94a3b8;font-size:.75rem;padding:6px 0;margin:4px 0;background:#f1f5f9;border-radius:20px;width:fit-content;margin-left:auto;margin-right:auto;padding:4px 16px}
+        /* 支付选项样式 */
+        .payment-option{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #eef2f8;border-radius:16px;margin-bottom:10px;cursor:pointer;transition:all .2s}
+        .payment-option:active{transform:scale(.98);background:#f8fafc}
+        .payment-option .icon{font-size:1.8rem;width:40px;text-align:center}
+        .payment-option .info{flex:1;text-align:left}
+        .payment-option .info .name{font-weight:600;font-size:1rem}
+        .payment-option .info .desc{font-size:.8rem;color:#64748b}
+        .payment-option.disabled{opacity:0.5;pointer-events:none}
     </style>
 </head>
 <body>
@@ -606,7 +614,7 @@
         } catch (e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
     }
 
-    // ===== 地图功能（优化定位精度） =====
+    // ===== 地图功能（高精度定位） =====
     function initMap() {
         if (mapReady) return;
         if (typeof AMap === 'undefined') {
@@ -655,24 +663,22 @@
         });
 
         mapReady = true;
-        // 使用高德定位插件（精度更高）
         locateUserOnMap();
     }
 
     function locateUserOnMap() {
         if (!mapReady) return;
         if (typeof AMap === 'undefined' || !AMap.Geolocation) {
-            // 回退到浏览器定位
             fallbackLocate();
             return;
         }
         const geolocation = new AMap.Geolocation(map, {
-            enableHighAccuracy: true,   // 开启高精度
-            timeout: 15000,             // 超时时间
-            zoomToAccuracy: true,       // 定位成功后自动调整地图视野
-            maximumAge: 0,              // 不使用缓存位置
-            panToLocation: true,        // 自动平移到定位点
-            noMove: false               // 允许地图移动
+            enableHighAccuracy: true,
+            timeout: 15000,
+            zoomToAccuracy: true,
+            maximumAge: 0,
+            panToLocation: true,
+            noMove: false
         });
         geolocation.getCurrentPosition((status, result) => {
             if (status === 'complete' && result && result.position) {
@@ -732,7 +738,6 @@
         mapInitAttempts = 0;
         setTimeout(() => {
             initMap();
-            // 如果地图已加载但定位未触发，强制触发
             if (mapReady) {
                 locateUserOnMap();
             }
@@ -789,7 +794,7 @@
         closeMapModal();
     }
 
-    // ===== 全局手势返回（侧滑返回） =====
+    // ===== 全局手势返回 =====
     let swipeIndicator = null;
     let swipeActive = false;
     function initGlobalSwipeBack() {
@@ -1571,7 +1576,7 @@
             input.click();
         };
 
-        // 语音按钮：按需请求麦克风权限（浏览器自动弹窗）
+        // 语音按钮：按需请求麦克风权限
         const voiceBtn = document.getElementById('voiceBtn');
         const chatInput = document.getElementById('chatInput');
         let isPressed = false;
@@ -2177,7 +2182,161 @@
         else if (page === 'credit') renderCreditPage();
     }
 
-    // ===== 发布、登录等 =====
+    // ===== 发布任务（含支付选择） =====
+    async function publishTask() {
+        if(!currentUser.idCardVerified){ showAlert('提示','请先实名认证'); return; }
+        const title = document.getElementById('pubTitle').value.trim();
+        if(!title){ showAlert('提示','请输入标题'); return; }
+        const reward = parseFloat(document.getElementById('pubReward').value);
+        if(isNaN(reward)||reward<=0){ showAlert('提示','请输入有效金额'); return; }
+        const locationAddress = document.getElementById('pubAddress').value.trim()||'未知';
+        const mediaList = pendingMedia.map(m=>({type:m.type, url:m.dataURL}));
+        const btn = document.getElementById('doPublishBtn');
+        const originalText = btn.innerText;
+        btn.innerText = '处理中...'; btn.disabled=true;
+
+        // 弹出支付选择弹窗
+        const modal = document.createElement('div');
+        modal.className = 'custom-modal';
+        const balance = currentUser.balance || 0;
+        const balanceEnough = balance >= reward;
+        modal.innerHTML = `
+            <div class="custom-modal-content">
+                <h3>选择支付方式</h3>
+                <p style="font-size:.9rem;color:#64748b;margin-bottom:16px;">任务赏金 ¥${reward}</p>
+                <div class="payment-option ${!balanceEnough ? 'disabled' : ''}" data-pay="balance" style="${!balanceEnough ? 'opacity:0.5;pointer-events:none;' : ''}">
+                    <div class="icon">👛</div>
+                    <div class="info">
+                        <div class="name">余额支付</div>
+                        <div class="desc">当前余额 ¥${balance.toFixed(2)} ${!balanceEnough ? '<span style="color:#dc2626;">（余额不足）</span>' : ''}</div>
+                    </div>
+                    <span style="font-size:1.2rem;">›</span>
+                </div>
+                <div class="payment-option" data-pay="wechat">
+                    <div class="icon">💚</div>
+                    <div class="info">
+                        <div class="name">微信支付</div>
+                        <div class="desc">推荐使用微信支付</div>
+                    </div>
+                    <span style="font-size:1.2rem;">›</span>
+                </div>
+                <div class="payment-option" data-pay="alipay">
+                    <div class="icon">💙</div>
+                    <div class="info">
+                        <div class="name">支付宝</div>
+                        <div class="desc">支付宝安全支付</div>
+                    </div>
+                    <span style="font-size:1.2rem;">›</span>
+                </div>
+                <div class="custom-modal-buttons">
+                    <button class="cancel-btn" id="payCancelBtn">取消</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const closeModal = () => { modal.remove(); btn.innerText = originalText; btn.disabled = false; };
+        modal.querySelector('#payCancelBtn').onclick = closeModal;
+
+        const options = modal.querySelectorAll('.payment-option');
+        options.forEach(opt => {
+            opt.addEventListener('click', async () => {
+                const method = opt.getAttribute('data-pay');
+                if (method === 'balance') {
+                    if (!balanceEnough) {
+                        showAlert('余额不足', '您的余额不足以支付此任务，请选择其他支付方式。');
+                        return;
+                    }
+                    // 余额支付（模拟扣减，实际应调用后端接口）
+                    showToast('余额支付成功');
+                    currentUser.balance -= reward;
+                    localStorage.setItem('user', JSON.stringify(currentUser));
+                    document.getElementById('headerBalance').innerHTML = '余额: ¥' + currentUser.balance.toFixed(2);
+                    await doPublish(title, reward, locationAddress, mediaList);
+                    closeModal();
+                } else if (method === 'wechat' || method === 'alipay') {
+                    // 弹出模拟支付页面
+                    const payName = method === 'wechat' ? '微信' : '支付宝';
+                    const payModal = document.createElement('div');
+                    payModal.className = 'custom-modal';
+                    payModal.innerHTML = `
+                        <div class="custom-modal-content">
+                            <h3>${payName}支付</h3>
+                            <p style="font-size:.9rem;color:#64748b;margin:12px 0;">订单金额：¥${reward}</p>
+                            <p style="font-size:.9rem;color:#64748b;margin:12px 0;">订单号：${'ORD' + Date.now()}</p>
+                            <div style="background:#f8fafc;padding:20px;border-radius:16px;margin:12px 0;">
+                                <div style="font-size:2rem;">${method === 'wechat' ? '💚' : '💙'}</div>
+                                <p style="font-size:.9rem;color:#1e293b;">请使用${payName}扫描二维码或打开${payName}支付</p>
+                            </div>
+                            <div class="custom-modal-buttons">
+                                <button class="confirm-btn" id="paySuccessBtn">模拟支付成功</button>
+                                <button class="cancel-btn" id="payFailBtn">取消支付</button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(payModal);
+                    payModal.querySelector('#paySuccessBtn').onclick = async () => {
+                        payModal.remove();
+                        showToast(payName + '支付成功');
+                        // 调用发布接口
+                        await doPublish(title, reward, locationAddress, mediaList);
+                        closeModal();
+                    };
+                    payModal.querySelector('#payFailBtn').onclick = () => {
+                        payModal.remove();
+                        showToast('已取消支付');
+                        closeModal();
+                    };
+                }
+            });
+        });
+    }
+
+    // 实际发布任务函数
+    async function doPublish(title, reward, locationAddress, mediaList) {
+        const btn = document.getElementById('doPublishBtn');
+        btn.innerText = '发布中...';
+        btn.disabled = true;
+        try {
+            const result = await callApi('/tasks', {method:'POST', body:JSON.stringify({
+                title,
+                description: document.getElementById('pubDesc').value,
+                reward,
+                publisherName: currentUser.nickname,
+                publisherPhone: currentUser.phone,
+                locationAddress,
+                mediaList,
+                category: document.getElementById('pubCategory').value
+            })});
+            if(result._id) {
+                showToast('发布成功');
+                resetPublishForm();
+                await loadProfile();
+                refreshTaskList(true);
+                switchPage('home');
+            } else {
+                showAlert('发布失败', result.error||'未知错误');
+            }
+        } catch(err) {
+            showAlert('发布出错', err.message);
+        } finally {
+            btn.innerText = '🚀 发布任务';
+            btn.disabled = false;
+        }
+    }
+
+    function resetPublishForm() {
+        document.getElementById('pubTitle').value = '';
+        document.getElementById('pubDesc').value = '';
+        document.getElementById('pubReward').value = '';
+        document.getElementById('pubAddress').value = '';
+        document.getElementById('pubCategory').value = '取件';
+        pendingMedia = [];
+        updateMediaPreview();
+        document.getElementById('locationHint').innerHTML = '点击"选择位置"打开地图选点';
+    }
+
+    // ===== 发布、登录等（原有） =====
     async function cancelTask(taskId) {
         showConfirm('确认取消', '确定取消该任务吗？取消后赏金将退还到您的账户。', async () => {
             try {
@@ -2189,39 +2348,6 @@
                 } else showAlert('取消失败', result.error||'未知错误');
             } catch(err) { showAlert('取消失败', err.message); }
         });
-    }
-
-    async function publishTask() {
-        if(!currentUser.idCardVerified){ showAlert('提示','请先实名认证'); return; }
-        const title = document.getElementById('pubTitle').value.trim();
-        if(!title){ showAlert('提示','请输入标题'); return; }
-        const reward = parseFloat(document.getElementById('pubReward').value);
-        if(isNaN(reward)||reward<=0){ showAlert('提示','请输入有效金额'); return; }
-        if(reward>currentUser.balance){ showAlert('提示','余额不足'); return; }
-        const locationAddress = document.getElementById('pubAddress').value.trim()||'未知';
-        const mediaList = pendingMedia.map(m=>({type:m.type, url:m.dataURL}));
-        const btn = document.getElementById('doPublishBtn');
-        const originalText = btn.innerText;
-        btn.innerText = '发布中...'; btn.disabled=true;
-        try {
-            const result = await callApi('/tasks', {method:'POST', body:JSON.stringify({
-                title, description:document.getElementById('pubDesc').value, reward,
-                publisherName:currentUser.nickname, publisherPhone:currentUser.phone,
-                locationAddress, mediaList, category:document.getElementById('pubCategory').value
-            })});
-            if(result._id) {
-                showToast('发布成功'); resetPublishForm(); await loadProfile(); refreshTaskList(true); switchPage('home');
-            } else showAlert('发布失败', result.error||'未知错误');
-        } catch(err) { showAlert('发布出错', err.message); }
-        finally { btn.innerText=originalText; btn.disabled=false; }
-    }
-
-    function resetPublishForm() {
-        document.getElementById('pubTitle').value=''; document.getElementById('pubDesc').value='';
-        document.getElementById('pubReward').value=''; document.getElementById('pubAddress').value='';
-        document.getElementById('pubCategory').value='取件';
-        pendingMedia=[]; updateMediaPreview();
-        document.getElementById('locationHint').innerHTML='点击"选择位置"打开地图选点';
     }
 
     async function doLogin() {
