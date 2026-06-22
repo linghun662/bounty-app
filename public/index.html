@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=no">
     <title>赏金集市 · 双向议价</title>
     <script>
-        // 延迟加载高德地图，避免阻塞首屏渲染
+        // 延迟加载高德地图
         window.loadAMap = function() {
             return new Promise((resolve, reject) => {
                 if (window.AMap) { resolve(); return; }
                 const script = document.createElement('script');
-                script.src = 'https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder&callback=onAMapReady';
+                script.src = 'https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onAMapReady';
                 script.async = true;
                 script.onerror = reject;
                 window.onAMapReady = resolve;
@@ -19,7 +19,7 @@
         };
     </script>
     <style>
-        /* ===== 基础样式 ===== */
+        /* ===== 基础样式（与之前一致，省略重复） ===== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
@@ -40,13 +40,11 @@
         .msg-badge{position:absolute;top:-5px;right:-12px;background:#ef4444;color:#fff;border-radius:20px;padding:2px 6px;font-size:.6rem;min-width:18px;display:none;font-weight:600}
         .card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.03),0 1px 2px rgba(0,0,0,.05);border:1px solid #eef2f8;cursor:pointer;font-size:1rem;position:relative;transition:transform .2s}
         .card:active{transform:scale(.98);box-shadow:0 1px 4px rgba(0,0,0,.05)}
-        /* 左滑删除样式 */
         .task-card-wrapper{position:relative;overflow:hidden;margin:12px 16px;border-radius:24px;touch-action:pan-y}
         .task-card-wrapper .card{margin:0;border-radius:24px}
         .task-card-wrapper .delete-btn{position:absolute;right:0;top:0;bottom:0;width:80px;background:#ef4444;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;border-radius:0 24px 24px 0;font-size:1rem;cursor:pointer;transition:opacity .2s;opacity:0;pointer-events:none}
         .task-card-wrapper.swiped .delete-btn{opacity:1;pointer-events:auto}
         .task-card-wrapper.swiped .card{transform:translateX(-80px)}
-        /* 其他卡片样式 */
         .skeleton-card{background:#fff;border-radius:24px;padding:18px 20px;margin:12px 16px;border:1px solid #eef2f8;animation:pulse 1.2s infinite}
         @keyframes pulse{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}
         .skeleton-title{height:20px;background:#e2e8f0;border-radius:12px;width:60%;margin-bottom:12px}
@@ -239,9 +237,15 @@
         .fullscreen-header .back-btn{background:transparent;border:none;font-size:1.8rem;cursor:pointer;padding:4px 8px;color:#1e4a6b}
         .fullscreen-header .title{font-weight:700;font-size:1.2rem;flex:1;color:#0f172a}
         .fullscreen-content{flex:1;overflow-y:auto;padding:16px}
-
-        /* 日期分隔线 */
         .date-separator{text-align:center;color:#94a3b8;font-size:.75rem;padding:6px 0;margin:4px 0;background:#f1f5f9;border-radius:20px;width:fit-content;margin-left:auto;margin-right:auto;padding:4px 16px}
+        .permission-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #eef2f8}
+        .permission-item .name{font-weight:500;font-size:1rem}
+        .permission-item .status{font-size:.85rem}
+        .permission-item .status.granted{color:#059669}
+        .permission-item .status.denied{color:#dc2626}
+        .permission-item .status.unknown{color:#94a3b8}
+        .permission-item .btn-request{background:#1e4a6b;color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:.8rem;cursor:pointer}
+        .permission-item .btn-request:active{transform:scale(.95)}
     </style>
 </head>
 <body>
@@ -356,6 +360,13 @@
                 </div>
                 <div class="fullscreen-content" id="creditContent">加载中...</div>
             </div>
+            <div id="permissionPage" class="page">
+                <div class="fullscreen-header">
+                    <button class="back-btn" id="permissionBackBtn">‹</button>
+                    <span class="title">🔐 权限管理</span>
+                </div>
+                <div class="fullscreen-content" id="permissionContent">加载中...</div>
+            </div>
             <div class="bottom-nav">
                 <div class="nav-item" onclick="switchPage('home')"><span class="nav-icon">🏠</span><span>首页</span></div>
                 <div class="nav-item" onclick="switchPage('publish')"><span class="nav-icon">✏️</span><span>发布</span></div>
@@ -411,6 +422,143 @@
     let mapReady = false;
     let mapInitAttempts = 0;
     const MAX_MAP_ATTEMPTS = 3;
+    let mapLocated = false; // 是否已完成定位
+
+    // ==================== 权限管理 ====================
+    const PERMISSIONS = {
+        camera: { name: '相机', web: 'camera', ios: 'camera', android: 'android.permission.CAMERA' },
+        photos: { name: '相册', web: 'photos', ios: 'photo-library', android: 'android.permission.READ_EXTERNAL_STORAGE' },
+        storage: { name: '存储', web: 'storage', ios: 'file-access', android: 'android.permission.WRITE_EXTERNAL_STORAGE' },
+        location: { name: '位置', web: 'geolocation', ios: 'location', android: 'android.permission.ACCESS_FINE_LOCATION' },
+        microphone: { name: '麦克风', web: 'microphone', ios: 'microphone', android: 'android.permission.RECORD_AUDIO' }
+    };
+
+    async function checkPermissionWeb(type) {
+        try {
+            if (type === 'geolocation') {
+                const result = await navigator.permissions.query({ name: 'geolocation' });
+                return result.state;
+            }
+            if (type === 'camera' || type === 'microphone') {
+                const name = type === 'camera' ? 'camera' : 'microphone';
+                try {
+                    const result = await navigator.permissions.query({ name });
+                    return result.state;
+                } catch (e) {
+                    return 'prompt';
+                }
+            }
+            return 'prompt';
+        } catch (e) {
+            return 'prompt';
+        }
+    }
+
+    async function requestPermissionWeb(type) {
+        try {
+            if (type === 'geolocation') {
+                const pos = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+                });
+                return pos ? 'granted' : 'denied';
+            }
+            if (type === 'camera') {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(t => t.stop());
+                return 'granted';
+            }
+            if (type === 'microphone') {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(t => t.stop());
+                return 'granted';
+            }
+            if (type === 'photos' || type === 'storage') {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                const result = await new Promise((resolve) => {
+                    input.onchange = () => resolve('granted');
+                    input.oncancel = () => resolve('denied');
+                    input.click();
+                });
+                return result;
+            }
+            return 'denied';
+        } catch (e) {
+            return 'denied';
+        }
+    }
+
+    async function getAllPermissions() {
+        const statuses = {};
+        for (const [key, perm] of Object.entries(PERMISSIONS)) {
+            const state = await checkPermissionWeb(perm.web);
+            statuses[key] = state;
+        }
+        return statuses;
+    }
+
+    async function requestSinglePermission(key) {
+        const perm = PERMISSIONS[key];
+        if (!perm) return;
+        const result = await requestPermissionWeb(perm.web);
+        await renderPermissionPage();
+        if (result === 'granted') {
+            showToast(`${perm.name} 权限已授权`);
+        } else {
+            showAlert('权限被拒绝', `无法获取 ${perm.name} 权限，请在系统设置中手动开启。`);
+        }
+    }
+
+    async function requestAllPermissions() {
+        const needed = ['location', 'camera', 'photos', 'storage', 'microphone'];
+        for (const key of needed) {
+            const state = await checkPermissionWeb(PERMISSIONS[key].web);
+            if (state === 'prompt' || state === 'denied') {
+                const result = await requestPermissionWeb(PERMISSIONS[key].web);
+                if (result === 'denied') {
+                    showAlert('权限提示', `需要 ${PERMISSIONS[key].name} 权限以完整使用应用功能，请在设置中手动开启。`);
+                }
+            }
+        }
+    }
+
+    async function renderPermissionPage() {
+        const container = document.getElementById('permissionContent');
+        container.innerHTML = '<div class="loading">加载权限状态...</div>';
+        const statuses = await getAllPermissions();
+        let html = '<div class="card" style="cursor:default;"><h3 style="margin-bottom:12px;">应用权限</h3><p style="color:#64748b;font-size:.9rem;margin-bottom:16px;">以下权限用于提供完整功能，您可以随时在此开启或关闭。</p>';
+        for (const [key, perm] of Object.entries(PERMISSIONS)) {
+            const state = statuses[key] || 'prompt';
+            let statusText = '未确定';
+            let statusClass = 'unknown';
+            if (state === 'granted') { statusText = '已授权'; statusClass = 'granted'; }
+            else if (state === 'denied') { statusText = '已拒绝'; statusClass = 'denied'; }
+            else if (state === 'prompt') { statusText = '未请求'; statusClass = 'unknown'; }
+            html += `
+                <div class="permission-item">
+                    <div>
+                        <div class="name">${perm.name}</div>
+                        <div class="status ${statusClass}">${statusText}</div>
+                    </div>
+                    <button class="btn-request" data-perm="${key}">${state === 'granted' ? '已授权' : '申请'}</button>
+                </div>
+            `;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+
+        container.querySelectorAll('.btn-request').forEach(btn => {
+            const key = btn.getAttribute('data-perm');
+            const state = statuses[key];
+            if (state === 'granted') {
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+            } else {
+                btn.onclick = () => requestSinglePermission(key);
+            }
+        });
+    }
 
     // ===== 工具函数 =====
     function showNetworkSlow() {
@@ -613,7 +761,7 @@
             }
             mapInitAttempts++;
             const script = document.createElement('script');
-            script.src = `https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder&callback=onMapScriptLoaded`;
+            script.src = `https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onMapScriptLoaded`;
             script.async = true;
             document.head.appendChild(script);
             window.onMapScriptLoaded = function() {
@@ -649,26 +797,51 @@
             extensions: 'all'
         });
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const lng = pos.coords.longitude;
-                    const lat = pos.coords.latitude;
-                    map.setCenter([lng, lat]);
-                    updateAddress(lng, lat);
-                },
-                () => {},
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
-        }
-
-        map.on('moveend', () => {
-            const center = map.getCenter();
-            updateAddress(center.getLng(), center.getLat());
-        });
-
         mapReady = true;
         console.log('高德地图初始化成功');
+
+        // 地图加载完成后尝试定位
+        locateUserOnMap();
+    }
+
+    // 使用高德定位插件定位用户
+    function locateUserOnMap() {
+        if (!mapReady || mapLocated) return;
+        if (typeof AMap === 'undefined' || !AMap.Geolocation) {
+            console.warn('Geolocation 插件未加载');
+            return;
+        }
+        const geolocation = new AMap.Geolocation(map, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            zoomToAccuracy: true
+        });
+        geolocation.getCurrentPosition((status, result) => {
+            if (status === 'complete' && result && result.position) {
+                const lng = result.position.getLng();
+                const lat = result.position.getLat();
+                map.setCenter([lng, lat]);
+                mapLocated = true;
+                updateAddress(lng, lat);
+                console.log('高德定位成功:', lat, lng);
+            } else {
+                // 定位失败，回退到浏览器定位
+                console.warn('高德定位失败，回退到浏览器定位');
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            const lng = pos.coords.longitude;
+                            const lat = pos.coords.latitude;
+                            map.setCenter([lng, lat]);
+                            mapLocated = true;
+                            updateAddress(lng, lat);
+                        },
+                        () => {},
+                        { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                }
+            }
+        });
     }
 
     async function updateAddress(lng, lat) {
@@ -692,30 +865,17 @@
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
         mapInitAttempts = 0;
-        setTimeout(() => { initMap(); }, 300);
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    if (map) {
-                        map.setCenter([pos.coords.longitude, pos.coords.latitude]);
-                        updateAddress(pos.coords.longitude, pos.coords.latitude);
-                    }
-                },
-                () => {},
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
-        }
-        const addressInput = document.getElementById('pubAddress');
-        const addr = addressInput.value.trim();
-        if (addr && mapReady) {
-            geocoder.getLocation(addr, (status, result) => {
-                if (status === 'complete' && result.geocodes.length) {
-                    const loc = result.geocodes[0].location;
-                    map.setCenter([loc.getLng(), loc.getLat()]);
-                    updateAddress(loc.getLng(), loc.getLat());
+        mapLocated = false; // 重置定位标志
+        setTimeout(() => {
+            initMap();
+            // 等待地图加载完成后定位
+            const checkReady = setInterval(() => {
+                if (mapReady) {
+                    clearInterval(checkReady);
+                    locateUserOnMap();
                 }
-            });
-        }
+            }, 200);
+        }, 300);
     }
 
     function closeMapModal() {
@@ -845,6 +1005,9 @@
             backPressedOnce = false;
         } else if (id === 'creditPage') {
             document.getElementById('creditBackBtn').click();
+            backPressedOnce = false;
+        } else if (id === 'permissionPage') {
+            document.getElementById('permissionBackBtn').click();
             backPressedOnce = false;
         } else if (id === 'detailPage') {
             document.getElementById('detailBackBtn')?.click();
@@ -1361,7 +1524,6 @@
         } catch(err) { showAlert('删除失败', err.message); }
     }
 
-    // ===== 刷新聊天消息（包含日期分组） =====
     async function refreshMessagesOnly() {
         if(!chatState.messagesArea || !chatState.taskId) return;
         try {
@@ -1428,7 +1590,6 @@
             chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
             if(hasNew) chatState.messagesArea.scrollTop = chatState.messagesArea.scrollHeight;
 
-            // 长按删除消息（仅自己发送的）
             document.querySelectorAll('.chat-bubble[data-is-mine="true"]').forEach(bubble => {
                 const messageId = bubble.getAttribute('data-message-id');
                 if(!messageId) return;
@@ -1550,7 +1711,6 @@
             input.click();
         };
 
-        // 语音按钮：检测权限并给出引导
         const voiceBtn = document.getElementById('voiceBtn');
         const chatInput = document.getElementById('chatInput');
         let isPressed = false;
@@ -1897,6 +2057,10 @@
                         <div class="stat-number">⭐${currentUser.credit||60}</div>
                         <div class="stat-label">信用</div>
                     </div>
+                    <div class="stat-item" id="permissionEntry" style="cursor:pointer;">
+                        <div class="stat-number">🔐</div>
+                        <div class="stat-label">权限管理</div>
+                    </div>
                     <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div>
                 </div>
                 <div class="profile-task-card" onclick="navigateToMyTasks('pub')">
@@ -1916,6 +2080,7 @@
 
             document.getElementById('walletEntry').addEventListener('click', () => switchPage('wallet'));
             document.getElementById('creditEntry').addEventListener('click', () => switchPage('credit'));
+            document.getElementById('permissionEntry').addEventListener('click', () => switchPage('permission'));
 
         } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
@@ -2159,7 +2324,7 @@
         const target = document.getElementById(`${page}Page`);
         if (target) target.classList.add('active');
 
-        if (page === 'myTasks' || page === 'wallet' || page === 'credit') {
+        if (page === 'myTasks' || page === 'wallet' || page === 'credit' || page === 'permission') {
             document.body.classList.add('hide-bottom-nav');
         } else {
             document.body.classList.remove('hide-bottom-nav');
@@ -2172,6 +2337,7 @@
         else if (page === 'message') renderMessageList();
         else if (page === 'wallet') renderWalletPage();
         else if (page === 'credit') renderCreditPage();
+        else if (page === 'permission') renderPermissionPage();
     }
 
     // ===== 发布、登录等 =====
@@ -2242,6 +2408,7 @@
                 updateUnreadBadge();
                 switchPage('home');
                 initBackButtonHandler();
+                await requestAllPermissions();
             } else errorDiv.innerText = result.error || '登录失败';
         } catch(err) { errorDiv.innerText = err.message; }
     }
@@ -2478,6 +2645,7 @@
 
         document.getElementById('walletBackBtn').addEventListener('click', () => switchPage('profile'));
         document.getElementById('creditBackBtn').addEventListener('click', () => switchPage('profile'));
+        document.getElementById('permissionBackBtn').addEventListener('click', () => switchPage('profile'));
 
         document.getElementById('openMapBtn').addEventListener('click', openMapModal);
         document.getElementById('mapModalClose').addEventListener('click', closeMapModal);
@@ -2556,6 +2724,7 @@
             updateUnreadBadge();
             switchPage('home');
             initBackButtonHandler();
+            await requestAllPermissions();
         }
     })();
 </script>
