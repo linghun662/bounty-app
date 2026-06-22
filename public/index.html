@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=no">
     <title>赏金集市 · 双向议价</title>
     <script>
-        // 延迟加载高德地图，避免阻塞首屏渲染
+        // 延迟加载高德地图，避免阻塞首屏
         window.loadAMap = function() {
             return new Promise((resolve, reject) => {
                 if (window.AMap) { resolve(); return; }
                 const script = document.createElement('script');
-                script.src = 'https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder&callback=onAMapReady';
+                script.src = 'https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onAMapReady';
                 script.async = true;
                 script.onerror = reject;
                 window.onAMapReady = resolve;
@@ -19,7 +19,7 @@
         };
     </script>
     <style>
-        /* ===== 基础样式（原文件已有，此处省略重复，完整保留） ===== */
+        /* ===== 基础样式（与原文件一致，保留所有功能） ===== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
@@ -237,20 +237,7 @@
         .fullscreen-header .back-btn{background:transparent;border:none;font-size:1.8rem;cursor:pointer;padding:4px 8px;color:#1e4a6b}
         .fullscreen-header .title{font-weight:700;font-size:1.2rem;flex:1;color:#0f172a}
         .fullscreen-content{flex:1;overflow-y:auto;padding:16px}
-
-        /* 日期分隔线 */
         .date-separator{text-align:center;color:#94a3b8;font-size:.75rem;padding:6px 0;margin:4px 0;background:#f1f5f9;border-radius:20px;width:fit-content;margin-left:auto;margin-right:auto;padding:4px 16px}
-
-        /* ===== 权限管理样式（新增） ===== */
-        .permission-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #eef2f8}
-        .permission-item .name{font-weight:500;font-size:1rem}
-        .permission-item .status{font-size:.85rem}
-        .permission-item .status.granted{color:#059669}
-        .permission-item .status.denied{color:#dc2626}
-        .permission-item .status.unknown{color:#94a3b8}
-        .permission-item .btn-request{background:#1e4a6b;color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:.8rem;cursor:pointer}
-        .permission-item .btn-request:active{transform:scale(.95)}
-        .permission-item .btn-request:disabled{opacity:0.6;pointer-events:none}
     </style>
 </head>
 <body>
@@ -373,14 +360,6 @@
                 </div>
                 <div class="fullscreen-content" id="creditContent">加载中...</div>
             </div>
-            <!-- ===== 权限管理全屏页（新增） ===== -->
-            <div id="permissionPage" class="page">
-                <div class="fullscreen-header">
-                    <button class="back-btn" id="permissionBackBtn">‹</button>
-                    <span class="title">🔐 权限管理</span>
-                </div>
-                <div class="fullscreen-content" id="permissionContent">加载中...</div>
-            </div>
             <!-- 底部导航 -->
             <div class="bottom-nav">
                 <div class="nav-item" onclick="switchPage('home')"><span class="nav-icon">🏠</span><span>首页</span></div>
@@ -437,147 +416,6 @@
     let mapReady = false;
     let mapInitAttempts = 0;
     const MAX_MAP_ATTEMPTS = 3;
-
-    // ==================== 权限管理（新增） ====================
-    const PERMISSIONS = {
-        camera: { name: '相机', web: 'camera' },
-        photos: { name: '相册', web: 'photos' },
-        storage: { name: '存储', web: 'storage' },
-        location: { name: '位置', web: 'geolocation' },
-        microphone: { name: '麦克风', web: 'microphone' }
-    };
-
-    async function checkPermissionWeb(type) {
-        try {
-            if (type === 'geolocation') {
-                const result = await navigator.permissions.query({ name: 'geolocation' });
-                return result.state;
-            }
-            if (type === 'camera' || type === 'microphone') {
-                const name = type === 'camera' ? 'camera' : 'microphone';
-                try {
-                    const result = await navigator.permissions.query({ name });
-                    return result.state;
-                } catch (e) { return 'prompt'; }
-            }
-            // photos 和 storage 无法直接查询，默认为 prompt
-            return 'prompt';
-        } catch (e) {
-            return 'prompt';
-        }
-    }
-
-    async function requestPermissionWeb(type) {
-        try {
-            if (type === 'geolocation') {
-                const pos = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
-                });
-                return pos ? 'granted' : 'denied';
-            }
-            if (type === 'camera') {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                stream.getTracks().forEach(t => t.stop());
-                return 'granted';
-            }
-            if (type === 'microphone') {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                stream.getTracks().forEach(t => t.stop());
-                return 'granted';
-            }
-            if (type === 'photos' || type === 'storage') {
-                // 通过文件输入触发权限（部分浏览器）
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*';
-                const result = await new Promise((resolve) => {
-                    input.onchange = () => resolve('granted');
-                    input.oncancel = () => resolve('denied');
-                    input.click();
-                });
-                return result;
-            }
-            return 'denied';
-        } catch (e) {
-            return 'denied';
-        }
-    }
-
-    async function getAllPermissions() {
-        const statuses = {};
-        for (const [key, perm] of Object.entries(PERMISSIONS)) {
-            const state = await checkPermissionWeb(perm.web);
-            statuses[key] = state;
-        }
-        return statuses;
-    }
-
-    async function requestSinglePermission(key) {
-        const perm = PERMISSIONS[key];
-        if (!perm) return;
-        const result = await requestPermissionWeb(perm.web);
-        await renderPermissionPage();
-        if (result === 'granted') {
-            showToast(`${perm.name} 权限已授权`);
-        } else {
-            showAlert('权限被拒绝', `无法获取 ${perm.name} 权限，请在系统设置中手动开启。`);
-        }
-    }
-
-    async function requestAllPermissions() {
-        const needed = ['location', 'camera', 'photos', 'storage', 'microphone'];
-        for (const key of needed) {
-            const state = await checkPermissionWeb(PERMISSIONS[key].web);
-            if (state === 'prompt' || state === 'denied') {
-                const result = await requestPermissionWeb(PERMISSIONS[key].web);
-                if (result === 'denied') {
-                    console.warn(`${PERMISSIONS[key].name} 权限被拒绝`);
-                    // 仅提示一次
-                    if (!window._permAlertShown) {
-                        window._permAlertShown = true;
-                        showAlert('权限提示', `需要 ${PERMISSIONS[key].name} 权限以完整使用应用功能，请在设置中手动开启。`);
-                    }
-                }
-            }
-        }
-    }
-
-    // ===== 渲染权限管理页面 =====
-    async function renderPermissionPage() {
-        const container = document.getElementById('permissionContent');
-        container.innerHTML = '<div class="loading">加载权限状态...</div>';
-        const statuses = await getAllPermissions();
-        let html = '<div class="card" style="cursor:default;"><h3 style="margin-bottom:12px;">应用权限</h3><p style="color:#64748b;font-size:.9rem;margin-bottom:16px;">以下权限用于提供完整功能，您可以随时在此开启或关闭。</p>';
-        for (const [key, perm] of Object.entries(PERMISSIONS)) {
-            const state = statuses[key] || 'prompt';
-            let statusText = '未确定';
-            let statusClass = 'unknown';
-            if (state === 'granted') { statusText = '已授权'; statusClass = 'granted'; }
-            else if (state === 'denied') { statusText = '已拒绝'; statusClass = 'denied'; }
-            else if (state === 'prompt') { statusText = '未请求'; statusClass = 'unknown'; }
-            html += `
-                <div class="permission-item">
-                    <div>
-                        <div class="name">${perm.name}</div>
-                        <div class="status ${statusClass}">${statusText}</div>
-                    </div>
-                    <button class="btn-request" data-perm="${key}" ${state === 'granted' ? 'disabled' : ''}>${state === 'granted' ? '已授权' : '申请'}</button>
-                </div>
-            `;
-        }
-        html += '</div>';
-        container.innerHTML = html;
-
-        container.querySelectorAll('.btn-request').forEach(btn => {
-            const key = btn.getAttribute('data-perm');
-            const status = statuses[key];
-            if (status === 'granted') {
-                btn.disabled = true;
-            } else {
-                btn.onclick = () => requestSinglePermission(key);
-            }
-        });
-    }
 
     // ===== 工具函数 =====
     function showNetworkSlow() {
@@ -768,7 +606,7 @@
         } catch (e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
     }
 
-    // ===== 地图功能 =====
+    // ===== 地图功能（优化定位精度） =====
     function initMap() {
         if (mapReady) return;
         if (typeof AMap === 'undefined') {
@@ -780,7 +618,7 @@
             }
             mapInitAttempts++;
             const script = document.createElement('script');
-            script.src = `https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder&callback=onMapScriptLoaded`;
+            script.src = `https://webapi.amap.com/maps?v=2.0&key=30107d62cf0ec682643d1097a48f7da4&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onMapScriptLoaded`;
             script.async = true;
             document.head.appendChild(script);
             window.onMapScriptLoaded = function() {
@@ -816,26 +654,59 @@
             extensions: 'all'
         });
 
+        mapReady = true;
+        // 使用高德定位插件（精度更高）
+        locateUserOnMap();
+    }
+
+    function locateUserOnMap() {
+        if (!mapReady) return;
+        if (typeof AMap === 'undefined' || !AMap.Geolocation) {
+            // 回退到浏览器定位
+            fallbackLocate();
+            return;
+        }
+        const geolocation = new AMap.Geolocation(map, {
+            enableHighAccuracy: true,   // 开启高精度
+            timeout: 15000,             // 超时时间
+            zoomToAccuracy: true,       // 定位成功后自动调整地图视野
+            maximumAge: 0,              // 不使用缓存位置
+            panToLocation: true,        // 自动平移到定位点
+            noMove: false               // 允许地图移动
+        });
+        geolocation.getCurrentPosition((status, result) => {
+            if (status === 'complete' && result && result.position) {
+                const lng = result.position.getLng();
+                const lat = result.position.getLat();
+                map.setCenter([lng, lat]);
+                updateAddress(lng, lat);
+                showToast('定位成功', 1500);
+            } else {
+                console.warn('高德定位失败，回退到浏览器定位', result);
+                fallbackLocate();
+            }
+        });
+    }
+
+    function fallbackLocate() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     const lng = pos.coords.longitude;
                     const lat = pos.coords.latitude;
-                    map.setCenter([lng, lat]);
+                    if (map) {
+                        map.setCenter([lng, lat]);
+                    }
                     updateAddress(lng, lat);
+                    showToast('定位成功（浏览器）', 1500);
                 },
-                () => {},
-                { enableHighAccuracy: true, timeout: 10000 }
+                (err) => {
+                    console.warn('浏览器定位失败', err);
+                    showAlert('定位失败', '无法获取您的位置，请手动拖动地图选择位置。');
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
             );
         }
-
-        map.on('moveend', () => {
-            const center = map.getCenter();
-            updateAddress(center.getLng(), center.getLat());
-        });
-
-        mapReady = true;
-        console.log('高德地图初始化成功');
     }
 
     async function updateAddress(lng, lat) {
@@ -859,30 +730,13 @@
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
         mapInitAttempts = 0;
-        setTimeout(() => { initMap(); }, 300);
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    if (map) {
-                        map.setCenter([pos.coords.longitude, pos.coords.latitude]);
-                        updateAddress(pos.coords.longitude, pos.coords.latitude);
-                    }
-                },
-                () => {},
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
-        }
-        const addressInput = document.getElementById('pubAddress');
-        const addr = addressInput.value.trim();
-        if (addr && mapReady) {
-            geocoder.getLocation(addr, (status, result) => {
-                if (status === 'complete' && result.geocodes.length) {
-                    const loc = result.geocodes[0].location;
-                    map.setCenter([loc.getLng(), loc.getLat()]);
-                    updateAddress(loc.getLng(), loc.getLat());
-                }
-            });
-        }
+        setTimeout(() => {
+            initMap();
+            // 如果地图已加载但定位未触发，强制触发
+            if (mapReady) {
+                locateUserOnMap();
+            }
+        }, 300);
     }
 
     function closeMapModal() {
@@ -1012,9 +866,6 @@
             backPressedOnce = false;
         } else if (id === 'creditPage') {
             document.getElementById('creditBackBtn').click();
-            backPressedOnce = false;
-        } else if (id === 'permissionPage') {
-            document.getElementById('permissionBackBtn').click();
             backPressedOnce = false;
         } else if (id === 'detailPage') {
             document.getElementById('detailBackBtn')?.click();
@@ -1720,7 +1571,7 @@
             input.click();
         };
 
-        // 语音按钮：检测权限并给出引导
+        // 语音按钮：按需请求麦克风权限（浏览器自动弹窗）
         const voiceBtn = document.getElementById('voiceBtn');
         const chatInput = document.getElementById('chatInput');
         let isPressed = false;
@@ -1734,29 +1585,11 @@
                 stream.getTracks().forEach(track => track.stop());
             } catch (err) {
                 if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    const modal = document.createElement('div');
-                    modal.className = 'custom-modal';
-                    modal.innerHTML = `
-                        <div class="custom-modal-content">
-                            <h3>🎤 麦克风权限</h3>
-                            <p>需要麦克风权限来发送语音消息。请在浏览器设置中允许访问麦克风。</p>
-                            <div class="custom-modal-buttons">
-                                <button class="confirm-btn" id="micGoSettings">去设置</button>
-                                <button class="cancel-btn" id="micCancel">取消</button>
-                            </div>
-                        </div>
-                    `;
-                    document.body.appendChild(modal);
-                    modal.querySelector('#micGoSettings').onclick = () => {
-                        modal.remove();
-                        showAlert('如何开启麦克风权限', '请打开浏览器设置 → 隐私与安全 → 网站设置 → 麦克风，允许此网站访问。');
-                    };
-                    modal.querySelector('#micCancel').onclick = () => modal.remove();
-                    return;
+                    showAlert('麦克风权限被拒绝', '请在浏览器设置中允许访问麦克风后重试。');
                 } else {
                     showAlert('录音失败', err.message || '无法访问麦克风');
-                    return;
                 }
+                return;
             }
             isPressed = true;
             chatInput.placeholder = '录音中...松开发送';
@@ -2067,11 +1900,6 @@
                         <div class="stat-number">⭐${currentUser.credit||60}</div>
                         <div class="stat-label">信用</div>
                     </div>
-                    <!-- 权限管理入口 -->
-                    <div class="stat-item" id="permissionEntry" style="cursor:pointer;">
-                        <div class="stat-number">🔐</div>
-                        <div class="stat-label">权限管理</div>
-                    </div>
                     <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div>
                 </div>
                 <div class="profile-task-card" onclick="navigateToMyTasks('pub')">
@@ -2091,8 +1919,6 @@
 
             document.getElementById('walletEntry').addEventListener('click', () => switchPage('wallet'));
             document.getElementById('creditEntry').addEventListener('click', () => switchPage('credit'));
-            // 绑定权限管理入口
-            document.getElementById('permissionEntry').addEventListener('click', () => switchPage('permission'));
 
         } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
@@ -2336,7 +2162,7 @@
         const target = document.getElementById(`${page}Page`);
         if (target) target.classList.add('active');
 
-        if (page === 'myTasks' || page === 'wallet' || page === 'credit' || page === 'permission') {
+        if (page === 'myTasks' || page === 'wallet' || page === 'credit') {
             document.body.classList.add('hide-bottom-nav');
         } else {
             document.body.classList.remove('hide-bottom-nav');
@@ -2349,7 +2175,6 @@
         else if (page === 'message') renderMessageList();
         else if (page === 'wallet') renderWalletPage();
         else if (page === 'credit') renderCreditPage();
-        else if (page === 'permission') renderPermissionPage();
     }
 
     // ===== 发布、登录等 =====
@@ -2420,8 +2245,6 @@
                 updateUnreadBadge();
                 switchPage('home');
                 initBackButtonHandler();
-                // 启动后申请权限
-                await requestAllPermissions();
             } else errorDiv.innerText = result.error || '登录失败';
         } catch(err) { errorDiv.innerText = err.message; }
     }
@@ -2658,7 +2481,6 @@
 
         document.getElementById('walletBackBtn').addEventListener('click', () => switchPage('profile'));
         document.getElementById('creditBackBtn').addEventListener('click', () => switchPage('profile'));
-        document.getElementById('permissionBackBtn').addEventListener('click', () => switchPage('profile'));
 
         document.getElementById('openMapBtn').addEventListener('click', openMapModal);
         document.getElementById('mapModalClose').addEventListener('click', closeMapModal);
@@ -2719,7 +2541,7 @@
             document.getElementById('mainApp').style.display = 'flex';
             document.getElementById('loginPage').classList.remove('active');
             const loc = await getNativeUserLocation();
-            if(loc) userLocation = loc;
+            if (loc) userLocation = loc;
             const cached = localStorage.getItem('tasksCache');
             if (cached) {
                 try {
@@ -2737,8 +2559,6 @@
             updateUnreadBadge();
             switchPage('home');
             initBackButtonHandler();
-            // 自动请求权限
-            await requestAllPermissions();
         }
     })();
 </script>
