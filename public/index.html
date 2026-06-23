@@ -400,9 +400,21 @@
 <div class="swipe-back-indicator" id="swipeBackIndicator">‹</div>
 
 <script>
-    // ==================== API 地址 ====================
+    // ==================== API 地址（已修改） ====================
     const getApiBase = () => {
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) return 'https://bounty-app-production.up.railway.app/api';
+        // 检测是否在 Capacitor 原生环境（Android / iOS）
+        if (window.Capacitor && typeof window.Capacitor.getPlatform === 'function') {
+            const platform = window.Capacitor.getPlatform();
+            if (platform === 'android' || platform === 'ios') {
+                // 生产环境完整域名
+                return 'https://bounty-app-production.up.railway.app/api';
+            }
+        }
+        // 备用检测：通过协议判断
+        if (window.location.protocol === 'capacitor:' || window.location.protocol === 'file:') {
+            return 'https://bounty-app-production.up.railway.app/api';
+        }
+        // Web 环境
         return '/api';
     };
     const API_BASE = getApiBase();
@@ -1576,7 +1588,7 @@
             input.click();
         };
 
-        // 语音按钮：按需请求麦克风权限
+        // 语音按钮
         const voiceBtn = document.getElementById('voiceBtn');
         const chatInput = document.getElementById('chatInput');
         let isPressed = false;
@@ -2278,7 +2290,6 @@
                     payModal.querySelector('#paySuccessBtn').onclick = async () => {
                         payModal.remove();
                         showToast(payName + '支付成功');
-                        // 调用发布接口
                         await doPublish(title, reward, locationAddress, mediaList);
                         closeModal();
                     };
