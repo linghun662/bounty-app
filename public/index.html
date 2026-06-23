@@ -19,7 +19,7 @@
         };
     </script>
     <style>
-        /* ===== 样式（完整版） ===== */
+        /* ===== 完整样式（保持不变） ===== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
@@ -229,7 +229,6 @@
         .map-modal-footer .btn-group .btn-cancel{background:#f3f4f6;color:#374151}
         .map-modal-footer .btn-group .btn-confirm{background:#1e4a6b;color:#fff}
         .map-center-marker{position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);font-size:2.4rem;color:#ef4444;pointer-events:none;z-index:10;text-shadow:0 2px 6px rgba(0,0,0,.3)}
-        /* 移除旧的手势指示器，不再需要 */
         .swipe-back-indicator{display:none}
         @media (max-width:380px){html{font-size:14px}.card{padding:14px 16px;margin:10px 12px}.nav-header{padding:10px 14px}.bottom-nav{padding:6px 14px 14px}}
         @media (min-width:600px){.app-container{max-width:600px}}
@@ -417,11 +416,10 @@
     let mediaRecorder = null, audioChunks = [], isRecording = false;
     let pageStack = ['home'];
     let isNavigating = false;
-
-    // ===== 地图变量 =====
     let map = null, geocoder = null, selectedLocation = { lng: 0, lat: 0, address: '' };
     let mapReady = false, mapInitAttempts = 0, mapLocated = false;
     const MAX_MAP_ATTEMPTS = 3;
+    let backPressedOnce = false;
 
     // ===== 工具函数 =====
     function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
@@ -703,8 +701,9 @@
         if (target) target.classList.add('active');
         const hideNav = ['myTasks', 'wallet', 'credit'].includes(page);
         document.querySelector('.bottom-nav').style.display = hideNav ? 'none' : 'flex';
-        if (page === 'home') refreshTaskList(true);
-        else if (page === 'profile') loadProfile();
+        if (page === 'home') {
+            refreshTaskList(true);
+        } else if (page === 'profile') loadProfile();
         else if (page === 'message') renderMessageList();
         else if (page === 'wallet') renderWalletPage();
         else if (page === 'credit') renderCreditPage();
@@ -750,10 +749,10 @@
         refreshThrottle = true;
         setTimeout(() => { refreshThrottle = false; }, 1000);
         const container = document.getElementById('homeContent');
+        // 如果有缓存且不强制刷新，使用缓存并后台更新
         if (!force && tasksCache.data && (Date.now() - tasksCache.timestamp) < tasksCache.ttl) {
             allTasks = tasksCache.data;
             applyFilterAndSort();
-            // 后台更新
             refreshTaskListInBackground();
             return;
         }
@@ -1963,7 +1962,7 @@
         document.querySelector('.bottom-nav').style.display = hideNav ? 'none' : 'flex';
         backPressedOnce = false;
         if (page === 'home') {
-            refreshTaskList(true); // 强制刷新
+            refreshTaskList(true);
         } else if (page === 'profile') loadProfile();
         else if (page === 'message') renderMessageList();
         else if (page === 'wallet') renderWalletPage();
@@ -2378,6 +2377,7 @@
                     history.replaceState({ page: 'home' }, '');
                     pageStack = ['home'];
                     window.addEventListener('popstate', handlePopState);
+                    // 先刷新数据，再切换首页
                     await refreshTaskList(true);
                     loadProfile();
                     renderMessageList();
@@ -2390,8 +2390,6 @@
             }
         }
     });
-
-})();
 </script>
 </body>
 </html>
