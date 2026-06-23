@@ -302,7 +302,10 @@
                     <span class="sort-chip active" data-sort="time">最新发布</span>
                 </div>
                 <div id="refreshIndicator" class="pull-refresh-container" style="display:none;">↓ 下拉刷新</div>
-                <div id="homeContent" style="flex:1;overflow-y:auto;padding-bottom:20px;">加载中...</div>
+                <div id="homeContent" style="flex:1;overflow-y:auto;padding-bottom:20px;">
+                    <div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div>
+                    <div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div>
+                </div>
             </div>
             <!-- 详情页 -->
             <div id="detailPage" class="page">
@@ -903,6 +906,7 @@
             refreshTaskListInBackground();
             return;
         }
+        // 显示骨架
         container.innerHTML = '<div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div><div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div>';
         try {
             const tasks = await callApi('/tasks');
@@ -2353,8 +2357,10 @@
         backPressedOnce = false;
 
         // 加载页面数据
-        if (page === 'home') refreshTaskList();
-        else if (page === 'profile') loadProfile();
+        if (page === 'home') {
+            // 首页强制刷新，确保内容显示
+            refreshTaskList(true);
+        } else if (page === 'profile') loadProfile();
         else if (page === 'message') renderMessageList();
         else if (page === 'wallet') renderWalletPage();
         else if (page === 'credit') renderCreditPage();
@@ -2547,6 +2553,7 @@
                 // 初始化历史记录
                 history.replaceState({ page: 'home' }, '');
                 pageStack = ['home'];
+                // 先刷新数据，再切换首页
                 await refreshTaskList(true);
                 loadProfile();
                 renderMessageList();
@@ -2859,7 +2866,8 @@
             history.replaceState({ page: 'home' }, '');
             pageStack = ['home'];
             window.addEventListener('popstate', handlePopState);
-            await refreshTaskList(false);
+            // 先刷新数据，再切首页
+            await refreshTaskList(true);
             loadProfile();
             renderMessageList();
             updateUnreadBadge();
