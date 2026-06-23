@@ -394,8 +394,6 @@
     let backPressedOnce = false;
     let pageStack = ['home'];
     let isNavigating = false;
-
-    // ===== 地图变量 =====
     let map = null, geocoder = null, selectedLocation = { lng: 0, lat: 0, address: '' };
     let mapReady = false, mapInitAttempts = 0, mapLocated = false;
     const MAX_MAP_ATTEMPTS = 3;
@@ -1338,7 +1336,6 @@
             let lastDateKey = null;
             const today = new Date(); today.setHours(0,0,0,0);
             const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-            // 收集所有图片/视频消息用于浏览器
             let chatMediaList = [];
             for(const m of messages) {
                 const imgMatch = m.text.match(/\[img\](.*?)\[\/img\]/);
@@ -2267,8 +2264,15 @@
         document.getElementById('mediaInput').value = '';
     }
 
-    // ===== 启动 =====
-    document.addEventListener('DOMContentLoaded', function() {
+    // ===== 启动入口 =====
+    // 直接执行，无需等待 DOMContentLoaded（因为页面已经加载）
+    (function initApp() {
+        // 绑定所有事件（在 DOM 加载完成后执行）
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+            return;
+        }
+        // DOM 已加载
         initPullToRefresh();
         initMessagePullToRefresh();
         initFiltersAndCategories();
@@ -2346,7 +2350,7 @@
             document.getElementById('loginPage').style.display = 'flex';
             document.getElementById('loginPage').classList.add('active');
         }
-    });
+    })();
 
 })();
 </script>
