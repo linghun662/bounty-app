@@ -21,8 +21,7 @@
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px);padding-top:0}
-        /* 调整 padding-top 为 40px，减小顶部空白 */
-        .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden;padding-top:40px;box-sizing:border-box}
+        .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden;padding-top:0;box-sizing:border-box}
         #mainApp{display:flex;flex-direction:column;flex:1;overflow:hidden}
         .page{display:none;flex-direction:column;flex:1;overflow:hidden;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1)}
         .page.active{display:flex}
@@ -52,6 +51,7 @@
         .task-meta{display:flex;gap:14px;font-size:.75rem;color:#6c7a91;flex-wrap:wrap}
         .distance-badge{background:#e6f7e6;color:#2b6e2f;padding:2px 12px;border-radius:20px;font-weight:500}
         .category-bar,.sort-bar{display:flex;gap:12px;padding:14px 16px;background:#fff;border-bottom:1px solid #eef2f8;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;flex-shrink:0;align-items:center;position:relative;z-index:5}
+        .category-bar { padding-top: env(safe-area-inset-top, 0px); }
         .category-chip,.sort-chip{background:#f1f5f9;padding:8px 18px;border-radius:40px;font-size:.9rem;font-weight:500;color:#475569;cursor:pointer;display:inline-block;transition:all .25s ease;opacity:.85;flex-shrink:0}
         .category-chip.active,.sort-chip.active{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);color:#fff;font-weight:700;opacity:1;box-shadow:0 4px 12px rgba(0,0,0,.2);transform:scale(1.02);position:relative}
         .category-chip.active::after,.sort-chip.active::after{content:'';position:absolute;bottom:-6px;left:25%;width:50%;height:3px;background:#fff;border-radius:3px;box-shadow:0 0 4px rgba(255,255,255,.5)}
@@ -227,20 +227,30 @@
         .my-tasks-header .back-btn{background:transparent;border:none;font-size:1.8rem;cursor:pointer;padding:4px 8px;color:#1e4a6b}
         .my-tasks-header .title{font-weight:700;font-size:1.2rem;flex:1;color:#0f172a}
         .my-tasks-list{flex:1;overflow-y:auto;padding-bottom:20px}
+        /* 修改地图模态框样式，适配闲鱼风格 */
         .map-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:9998;display:none;flex-direction:column}
         .map-modal.active{display:flex}
-        .map-modal-header{padding:12px 16px;background:#fff;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:10px;flex-shrink:0}
-        .map-modal-header input{flex:1;padding:10px 16px;border-radius:24px;border:1px solid #d1d5db;font-size:1rem;outline:none}
-        .map-modal-header input:focus{border-color:#1e4a6b}
-        .map-modal-header .close-btn{background:none;border:none;font-size:1.8rem;cursor:pointer;color:#6b7280;padding:0 4px}
+        .map-modal-header{position:absolute;top:0;left:0;right:0;z-index:20;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;background:transparent;pointer-events:none}
+        .map-modal-header button{pointer-events:auto}
+        .map-modal-header .close-btn{background:rgba(0,0,0,0.5);color:#fff;border-radius:50%;width:36px;height:36px;border:none;font-size:1.5rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+        .map-modal-header .title-label{color:#fff;font-weight:600;background:rgba(0,0,0,0.4);padding:4px 16px;border-radius:20px;font-size:1rem;pointer-events:none}
+        .map-modal-header .confirm-top{background:#1e4a6b;color:#fff;border:none;border-radius:40px;padding:6px 18px;font-weight:600;cursor:pointer;pointer-events:auto}
         #mapContainer{flex:1;width:100%;position:relative}
-        .map-modal-footer{padding:16px 20px;background:#fff;border-top:1px solid #eef2f8;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:16px}
-        .map-modal-footer .address-preview{flex:1;font-size:.9rem;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .map-modal-footer .btn-group{display:flex;gap:10px}
-        .map-modal-footer .btn-group button{padding:8px 20px;border-radius:40px;border:none;font-weight:600;cursor:pointer;font-size:1rem}
-        .map-modal-footer .btn-group .btn-cancel{background:#f3f4f6;color:#374151}
-        .map-modal-footer .btn-group .btn-confirm{background:#1e4a6b;color:#fff}
         .map-center-marker{position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);font-size:2.4rem;color:#ef4444;pointer-events:none;z-index:10;text-shadow:0 2px 6px rgba(0,0,0,.3)}
+        .map-modal-footer{position:absolute;bottom:0;left:0;right:0;background:rgba(255,255,255,0.96);backdrop-filter:blur(10px);border-radius:20px 20px 0 0;padding:12px 16px max(12px, env(safe-area-inset-bottom));display:flex;flex-direction:column;z-index:20;max-height:45%;min-height:120px}
+        .map-modal-footer .list-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+        .map-modal-footer .list-header .title{font-weight:600;font-size:1rem}
+        .map-modal-footer .list-header .count{font-size:.8rem;color:#94a3b8}
+        .map-modal-footer .nearby-list{flex:1;overflow-y:auto;padding:4px 0;margin-bottom:8px}
+        .map-modal-footer .nearby-item{padding:10px 0;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+        .map-modal-footer .nearby-item:active{background:#f8fafc}
+        .map-modal-footer .nearby-item .name{font-weight:500}
+        .map-modal-footer .nearby-item .address{font-size:.8rem;color:#64748b}
+        .map-modal-footer .nearby-item .dist{font-size:.8rem;color:#94a3b8}
+        .map-modal-footer .btn-row{display:flex;gap:8px;padding-top:8px;border-top:1px solid #eef2f8}
+        .map-modal-footer .btn-row .btn-cancel{flex:1;padding:10px;border-radius:40px;border:none;background:#f3f4f6;color:#374151;font-weight:600;cursor:pointer}
+        .map-modal-footer .btn-row .btn-confirm{flex:2;padding:10px;border-radius:40px;border:none;background:#1e4a6b;color:#fff;font-weight:600;cursor:pointer}
+        .map-modal-footer .btn-row button:active{transform:scale(.96)}
         .swipe-back-indicator{position:fixed;left:10px;top:50%;transform:translateY(-50%);font-size:2rem;color:rgba(30,74,107,.6);background:rgba(255,255,255,.8);backdrop-filter:blur(4px);padding:8px 12px;border-radius:40px;box-shadow:0 2px 10px rgba(0,0,0,.1);pointer-events:none;opacity:0;transition:opacity .2s;z-index:999}
         .swipe-back-indicator.show{opacity:1}
         @media (max-width:380px){html{font-size:14px}.card{padding:14px 16px;margin:10px 12px}.category-bar,.sort-bar{padding:10px 12px}.category-chip,.sort-chip{padding:6px 12px;font-size:.75rem}}
@@ -257,7 +267,6 @@
         .payment-option .info .name{font-weight:600;font-size:1rem}
         .payment-option .info .desc{font-size:.8rem;color:#64748b}
         .payment-option.disabled{opacity:0.5;pointer-events:none}
-        /* 消息页下拉刷新指示器 */
         .msg-pull-indicator{text-align:center;padding:10px 0;font-size:.85rem;color:#64748b;background:transparent;width:100%;transition:transform .2s}
         #messageContainer{flex:1;display:flex;flex-direction:column;overflow-y:auto;position:relative}
     </style>
@@ -365,7 +374,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 消息页，添加下拉刷新指示器 -->
+            <!-- 消息页 -->
             <div id="messagePage" class="page">
                 <div id="messageContainer" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;">
                     <div id="msgPullIndicator" class="msg-pull-indicator" style="display:none;">↓ 下拉刷新</div>
@@ -405,24 +414,73 @@
         </div>
     </div>
 </div>
+
+<!-- ===== 新的地图模态框（闲鱼风格） ===== -->
 <div class="map-modal" id="mapModal">
     <div class="map-modal-header">
         <button class="close-btn" id="mapModalClose">✕</button>
-        <input type="text" id="mapSearchInput" placeholder="搜索地点">
-        <button class="btn-location" id="mapSearchBtn" style="padding:8px 12px;font-size:.9rem;">搜索</button>
+        <span class="title-label">选择位置</span>
+        <button class="confirm-top" id="mapConfirmBtn">确定</button>
     </div>
     <div id="mapContainer">
         <div class="map-center-marker">📍</div>
     </div>
     <div class="map-modal-footer">
-        <div class="address-preview" id="selectedAddress">请拖动地图或搜索选择位置</div>
-        <div class="btn-group">
+        <div class="list-header">
+            <span class="title">附近地点</span>
+            <span class="count" id="nearbyCount">0个结果</span>
+        </div>
+        <div class="nearby-list" id="nearbyList">
+            <div style="text-align:center; color:#94a3b8; padding:20px;">加载附近地点...</div>
+        </div>
+        <div class="btn-row">
             <button class="btn-cancel" id="mapCancelBtn">取消</button>
-            <button class="btn-confirm" id="mapConfirmBtn">确定</button>
+            <button class="btn-confirm" id="mapConfirmBtn2">确定</button>
         </div>
     </div>
 </div>
+
 <div class="swipe-back-indicator" id="swipeBackIndicator">‹</div>
+
+<!-- ==================== 通知与状态栏模块（ES Module） ==================== -->
+<script type="module">
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        try {
+            const { StatusBar } = await import('@capacitor/status-bar');
+            const { LocalNotifications } = await import('@capacitor/local-notifications');
+            await StatusBar.setOverlaysWebView({ overlay: true });
+            await StatusBar.setStyle({ style: 'DARK' });
+            await StatusBar.setBackgroundColor({ color: '#00000000' });
+            const appContainer = document.querySelector('.app-container');
+            if (appContainer) appContainer.style.paddingTop = '28px';
+
+            const perm = await LocalNotifications.requestPermissions();
+            if (perm.display === 'granted') console.log('通知权限已授予');
+            else console.warn('通知权限被拒绝');
+
+            window.showLocalNotification = async function(title, body, id = Date.now()) {
+                try {
+                    await LocalNotifications.schedule({
+                        notifications: [{
+                            id: id,
+                            title: title,
+                            body: body,
+                            schedule: { at: new Date(Date.now() + 1000) },
+                            sound: 'default',
+                        }]
+                    });
+                } catch (err) { console.error('通知发送失败', err); }
+            };
+            console.log('通知模块已初始化');
+        } catch (err) {
+            console.error('插件加载失败，可能未安装', err);
+            window.showLocalNotification = function() {};
+        }
+    } else {
+        window.showLocalNotification = function() {};
+        console.log('非 Capacitor 环境，通知功能已禁用');
+    }
+</script>
 
 <script>
     // ==================== API 地址 ====================
@@ -444,6 +502,7 @@
     // ===== 地图变量 =====
     let map = null;
     let geocoder = null;
+    let placeSearch = null; // 新增周边搜索
     let selectedLocation = { lng: 0, lat: 0, address: '' };
     let mapReady = false;
     let mapInitAttempts = 0;
@@ -642,7 +701,7 @@
         } catch (e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
     }
 
-    // ===== 地图功能 =====
+    // ===== 地图功能（新） =====
     function initMap() {
         if (mapReady) return;
         if (typeof AMap === 'undefined') {
@@ -690,8 +749,87 @@
             extensions: 'all'
         });
 
+        // 初始化周边搜索
+        placeSearch = new AMap.PlaceSearch({
+            type: '地名|餐饮|购物|生活服务|住宅|公司企业',
+            pageSize: 20,
+            pageIndex: 1,
+            city: '全国',
+            citylimit: false,
+            extensions: 'all'
+        });
+
+        // 监听地图移动结束事件，刷新附近列表
+        map.on('moveend', function() {
+            var center = map.getCenter();
+            var lng = center.getLng();
+            var lat = center.getLat();
+            searchNearby(lng, lat);
+        });
+
         mapReady = true;
         locateUserOnMap();
+    }
+
+    function searchNearby(lng, lat) {
+        if (!placeSearch) return;
+        placeSearch.searchNearBy('', [lng, lat], 2000, function(status, result) {
+            var listEl = document.getElementById('nearbyList');
+            var countEl = document.getElementById('nearbyCount');
+            if (status === 'complete' && result.poiList) {
+                var pois = result.poiList.pois;
+                renderNearbyList(pois, lng, lat);
+            } else {
+                if (listEl) listEl.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:20px;">未找到附近地点</div>';
+                if (countEl) countEl.innerText = '0个结果';
+            }
+        });
+    }
+
+    function renderNearbyList(pois, centerLng, centerLat) {
+        var listEl = document.getElementById('nearbyList');
+        var countEl = document.getElementById('nearbyCount');
+        if (!listEl) return;
+        if (!pois || pois.length === 0) {
+            listEl.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:20px;">无附近地点</div>';
+            if (countEl) countEl.innerText = '0个结果';
+            return;
+        }
+        var html = '';
+        pois.forEach(function(poi, index) {
+            var distance = poi.distance ? (poi.distance/1000).toFixed(1) + 'km' : '未知';
+            var name = poi.name || '未命名';
+            var address = poi.address || '';
+            var fullAddress = name + (address ? ' ' + address : '');
+            var lng = poi.location.getLng();
+            var lat = poi.location.getLat();
+            html += `
+                <div class="nearby-item" data-lng="${lng}" data-lat="${lat}" data-address="${escapeHtml(fullAddress)}">
+                    <div>
+                        <div class="name">${escapeHtml(name)}</div>
+                        <div class="address">${escapeHtml(address)}</div>
+                    </div>
+                    <div class="dist">${distance}</div>
+                </div>
+            `;
+        });
+        listEl.innerHTML = html;
+        if (countEl) countEl.innerText = pois.length + '个结果';
+
+        // 点击列表项选中
+        listEl.querySelectorAll('.nearby-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+                var lng = parseFloat(this.dataset.lng);
+                var lat = parseFloat(this.dataset.lat);
+                var address = this.dataset.address;
+                selectedLocation.lng = lng;
+                selectedLocation.lat = lat;
+                selectedLocation.address = address;
+                document.getElementById('pubAddress').value = address;
+                closeMapModal();
+                showToast('已选择位置：' + address);
+            });
+        });
     }
 
     function locateUserOnMap() {
@@ -715,6 +853,8 @@
                 map.setCenter([lng, lat]);
                 updateAddress(lng, lat);
                 showToast('定位成功', 1500);
+                // 初次定位后搜索附近
+                setTimeout(() => searchNearby(lng, lat), 500);
             } else {
                 console.warn('高德定位失败，回退到浏览器定位', result);
                 fallbackLocate();
@@ -733,6 +873,7 @@
                     }
                     updateAddress(lng, lat);
                     showToast('定位成功（浏览器）', 1500);
+                    setTimeout(() => searchNearby(lng, lat), 500);
                 },
                 (err) => {
                     console.warn('浏览器定位失败', err);
@@ -746,23 +887,16 @@
     async function updateAddress(lng, lat) {
         selectedLocation.lng = lng;
         selectedLocation.lat = lat;
-        const addrEl = document.getElementById('selectedAddress');
-        addrEl.textContent = '获取地址中...';
-        try {
-            const address = await getDetailedAddress(lat, lng);
-            selectedLocation.address = address;
-            addrEl.textContent = address;
-        } catch (e) {
-            const coordStr = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-            addrEl.textContent = coordStr;
-            selectedLocation.address = coordStr;
-        }
+        // 不在这里更新地址，留待选择列表或确认时再填充
     }
 
     function openMapModal() {
         const modal = document.getElementById('mapModal');
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+        // 清空旧列表
+        document.getElementById('nearbyList').innerHTML = '<div style="text-align:center; color:#94a3b8; padding:20px;">加载附近地点...</div>';
+        document.getElementById('nearbyCount').innerText = '0个结果';
         mapInitAttempts = 0;
         setTimeout(() => {
             initMap();
@@ -775,10 +909,30 @@
     function closeMapModal() {
         document.getElementById('mapModal').classList.remove('active');
         document.body.style.overflow = '';
+        // 销毁地图实例释放资源
+        if (map) {
+            map.destroy();
+            map = null;
+            mapReady = false;
+        }
     }
 
-    async function confirmLocation() {
+    function confirmLocation() {
         const addressInput = document.getElementById('pubAddress');
+        if (selectedLocation.lng && selectedLocation.lat) {
+            // 如果已经有选中的地点，直接使用
+            if (selectedLocation.address) {
+                addressInput.value = selectedLocation.address;
+                const hint = document.getElementById('locationHint');
+                if (hint) {
+                    hint.innerHTML = '✅ 已选择位置：' + selectedLocation.address;
+                    setTimeout(() => { hint.innerHTML = '点击"选择位置"打开地图选点'; }, 3000);
+                }
+                closeMapModal();
+                return;
+            }
+        }
+        // 否则使用当前地图中心
         if (!map) {
             showAlert('地图未就绪', '请稍候再试或手动输入地址');
             closeMapModal();
@@ -787,10 +941,9 @@
         const center = map.getCenter();
         const lng = center.getLng();
         const lat = center.getLat();
-        selectedLocation.lng = lng;
-        selectedLocation.lat = lat;
-        try {
-            const address = await getDetailedAddress(lat, lng);
+        getDetailedAddress(lat, lng).then(address => {
+            selectedLocation.lng = lng;
+            selectedLocation.lat = lat;
             selectedLocation.address = address;
             addressInput.value = address;
             const hint = document.getElementById('locationHint');
@@ -798,12 +951,13 @@
                 hint.innerHTML = '✅ 已选择位置：' + address;
                 setTimeout(() => { hint.innerHTML = '点击"选择位置"打开地图选点'; }, 3000);
             }
-        } catch (e) {
+            closeMapModal();
+        }).catch(() => {
             const coordStr = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
             addressInput.value = coordStr;
             selectedLocation.address = coordStr;
-        }
-        closeMapModal();
+            closeMapModal();
+        });
     }
 
     // ===== 返回按钮处理 =====
@@ -962,7 +1116,7 @@
         });
     }
 
-    // ===== 消息页下拉刷新（新实现）=====
+    // ===== 消息页下拉刷新 =====
     function initMessagePullToRefresh() {
         const container = document.getElementById('messageContainer');
         const wrapper = document.getElementById('messageListWrapper');
@@ -994,7 +1148,6 @@
         container.addEventListener('touchend', async () => {
             isPulling = false;
             if (indicator.style.display === 'block' && indicator.style.transform !== '') {
-                // 触发刷新
                 isRefreshing = true;
                 indicator.innerText = '刷新中...';
                 indicator.style.transform = '';
@@ -1893,6 +2046,9 @@
         });
     }
 
+    // ===== 更新未读标记并触发本地通知 =====
+    let prevUnreadCount = parseInt(localStorage.getItem('prevUnread') || '0');
+
     async function updateUnreadBadge() {
         if(!currentUser) return;
         try {
@@ -1901,6 +2057,21 @@
             const totalUnread = filtered.reduce((sum,c) => sum + (c.unread||0), 0);
             const badge = document.getElementById('msgBadge');
             if(badge) { if(totalUnread>0) { badge.innerText = totalUnread>99?'99+':totalUnread; badge.style.display='inline-block'; } else badge.style.display='none'; }
+
+            if (totalUnread > prevUnreadCount && totalUnread > 0 && typeof window.showLocalNotification === 'function') {
+                if (document.hidden || document.visibilityState === 'hidden') {
+                    const unreadConv = filtered.find(c => c.unread > 0);
+                    if (unreadConv) {
+                        const title = `💬 ${unreadConv.otherName}`;
+                        const body = unreadConv.lastMsg || '您有新消息';
+                        window.showLocalNotification(title, body);
+                    } else {
+                        window.showLocalNotification('新消息', `您有 ${totalUnread} 条未读消息`);
+                    }
+                }
+            }
+            prevUnreadCount = totalUnread;
+            localStorage.setItem('prevUnread', totalUnread.toString());
         } catch(e) {}
     }
 
@@ -2221,9 +2392,7 @@
         if (page === 'home') refreshTaskList();
         else if (page === 'profile') loadProfile();
         else if (page === 'message') {
-            // 切换消息页时刷新列表
             renderMessageList();
-            // 隐藏可能残留的刷新指示器
             const indicator = document.getElementById('msgPullIndicator');
             if(indicator) { indicator.style.display='none'; indicator.style.transform=''; }
         }
@@ -2756,23 +2925,10 @@
 
     // ===== 启动 =====
     document.addEventListener('DOMContentLoaded', () => {
-        // 状态栏透明设置（使用 Capacitor Status Bar 插件）
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            // 如果安装了 @capacitor/status-bar 插件，取消注释以下代码
-            /*
-            import('@capacitor/status-bar').then(({ StatusBar }) => {
-                StatusBar.setOverlaysWebView({ overlay: true });
-                StatusBar.setStyle({ style: 'DARK' });
-                StatusBar.setBackgroundColor({ color: '#00000000' });
-            }).catch(() => {});
-            */
-            console.log('Capacitor 原生环境，状态栏已配置透明');
-        }
-
         initPullToRefresh();
         initFiltersAndCategories();
         initSearchAndFilter();
-        initMessagePullToRefresh(); // 初始化消息页下拉刷新
+        initMessagePullToRefresh();
 
         document.getElementById('walletBackBtn').addEventListener('click', () => switchPage('profile'));
         document.getElementById('creditBackBtn').addEventListener('click', () => switchPage('profile'));
@@ -2781,22 +2937,9 @@
         document.getElementById('mapModalClose').addEventListener('click', closeMapModal);
         document.getElementById('mapCancelBtn').addEventListener('click', closeMapModal);
         document.getElementById('mapConfirmBtn').addEventListener('click', confirmLocation);
-        document.getElementById('mapSearchBtn').addEventListener('click', () => {
-            const keyword = document.getElementById('mapSearchInput').value.trim();
-            if (!keyword || !mapReady) { if (!mapReady) showToast('地图尚未加载完成，请稍候'); return; }
-            geocoder.getLocation(keyword, (status, result) => {
-                if (status === 'complete' && result.geocodes.length) {
-                    const loc = result.geocodes[0].location;
-                    map.setCenter([loc.getLng(), loc.getLat()]);
-                    updateAddress(loc.getLng(), loc.getLat());
-                } else {
-                    showToast('未找到该地点，请尝试更详细的关键词');
-                }
-            });
-        });
-        document.getElementById('mapSearchInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') document.getElementById('mapSearchBtn').click();
-        });
+        // 底部确定按钮
+        document.getElementById('mapConfirmBtn2').addEventListener('click', confirmLocation);
+
         document.getElementById('myTasksBackBtn').addEventListener('click', () => {
             switchPage('profile');
             loadProfile();
