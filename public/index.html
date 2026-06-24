@@ -6,11 +6,12 @@
     <title>赏金集市 · 双向议价</title>
     <script>
         const AMAP_KEY = 'f9b32373eb484fc1f0e5b04f2c746a41';
+        const AMAP_JSCODE = '77f6c7a3b6e20b72297435ba1bc481af';
         window.loadAMap = function() {
             return new Promise((resolve, reject) => {
                 if (window.AMap) { resolve(); return; }
                 const script = document.createElement('script');
-                script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onAMapReady`;
+                script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&jscode=${AMAP_JSCODE}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onAMapReady`;
                 script.async = true;
                 script.onerror = reject;
                 window.onAMapReady = resolve;
@@ -18,6 +19,7 @@
             });
         };
         window.AMAP_KEY = AMAP_KEY;
+        window.AMAP_JSCODE = AMAP_JSCODE;
     </script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -272,6 +274,7 @@
 <body>
     <div id="app">
         <div class="app-container">
+            <!-- 登录页 -->
             <div id="loginPage" class="page active">
                 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
                     <div class="card" style="width:100%;cursor:default;text-align:center;">
@@ -287,6 +290,7 @@
                     </div>
                 </div>
             </div>
+            <!-- 注册页 -->
             <div id="registerPage" class="page">
                 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
                     <div class="card" style="width:100%;cursor:default;">
@@ -302,6 +306,7 @@
                     </div>
                 </div>
             </div>
+            <!-- 主应用 -->
             <div id="mainApp" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
                 <div id="homePage" class="page">
                     <div class="category-bar" id="categoryBar">
@@ -369,6 +374,7 @@
                         </div>
                     </div>
                 </div>
+                <!-- 消息页 -->
                 <div id="messagePage" class="page">
                     <div id="messageContainer" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;">
                         <div id="msgPullIndicator" class="msg-pull-indicator" style="display:none;">↓ 下拉刷新</div>
@@ -409,6 +415,7 @@
         </div>
     </div>
 
+    <!-- ===== 地图模态框（仿微信发送位置） ===== -->
     <div class="map-modal" id="mapModal">
         <div class="map-modal-header">
             <button class="cancel-btn" id="mapCancelBtn">取消</button>
@@ -424,6 +431,289 @@
             </div>
         </div>
     </div>
+    <div class="swipe-back-indicator" id="swipeBackIndicator">‹</div>
+
+    <!-- Capacitor 插件模块 -->
+    <script type="module">
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            try {
+                const { StatusBar } = await import('@capacitor/status-bar');
+                const { LocalNotifications } = await import('@capacitor/local-notifications');
+                await StatusBar.setOverlaysWebView({ overlay: true });
+                await StatusBar.setStyle({ style: 'DARK' });
+                await StatusBar.setBackgroundColor({ color: '#00000000' });
+                const appContainer = document.querySelector('.app-container');
+                if (appContainer) appContainer.style.paddingTop = '0';
+                const perm = await LocalNotifications.requestPermissions();
+                if (perm.display === 'granted') console.log('通知权限已授予');
+                else console.warn('通知权限被拒绝');
+                window.showLocalNotification = async function(title, body, id = Date.now()) {
+                    try {
+                        await LocalNotifications.schedule({
+                            notifications: [{
+                                id: id,
+                                title: title,
+                                body: body,
+                                schedule: { at: new Date(Date.now() + 1000) },
+                                sound: 'default',
+                            }]
+                        });
+                    } catch (err) { console.error('通知发送失败', err); }
+                };
+                console.log('通知模块已初始化');
+            } catch (err) {
+                console.error('插件加载失败', err);
+                window.showLocalNotification = function() {};
+            }
+        } else {
+            window.showLocalNotification = function() {};
+            console.log('非 Capacitor 环境，通知功能已禁用');
+        }
+    </script>
+
+    <script>
+        // ==================== API 配置 ====================
+        const getApiBase = () => 'https://bounty-app-production.up.railway.app/api';
+        const API_BASE = getApiBase();
+
+        // ===== 全局状态 =====
+        let currentUser = null,
+            pendingMedia = [],
+            userLocation = null,
+            allTasks = [],
+            currentCategory = 'all',
+            currentSort = 'time',
+            countdownTimer = null,
+            lastPage = null;
+        let chatState = { active: false, taskId: null, otherId: null, otherName: '', reward: 0, title: '', pollInterval: null,
+            messagesArea: null, lastMessageCount: 0 };
+        let geocodeCache = new Map();
+        let deletedConversations = new Set();
+        let tasksCache = { data: null, timestamp: 0, ttl: 10 * 60 * 1000 };
+        let refreshThrottle = false,
+            networkToast = null;
+        let mediaRecorder = null,
+            audioChunks = [],
+            isRecording = false;
+        let backPressedOnce = false;
+
+        // ===== 地图变量 =====
+        let map = null,
+            geocoder = null,
+            placeSearch = null,
+            selectedLocation = { lng: 0, lat: 0, address: '' };
+        let mapReady = false,
+            mapInitAttempts = 0,
+            MAX_MAP_ATTEMPTS = 3,
+            isMapOpen = false;
+
+        // ===== 筛选变量 =====
+        let filterDistance = null,
+            filterKeyword = '';
+
+        // ===== 工具函数 =====
+        function showNetworkSlow() {
+            if (networkToast) return;
+            networkToast = document.createElement('div');
+            networkToast.className = 'network-toast';
+            networkToast.innerText = '⚠️ 网络较慢，请稍候...';
+            document.body.appendChild(networkToast);
+            setTimeout(() => { if (networkToast) networkToast.remove();
+                networkToast = null; }, 3000);
+        }
+
+        async function fetchWithTimeout(url, options = {}, timeout = 8000, retries = 1) {
+            let lastError;
+            for (let i = 0; i <= retries; i++) {
+                try {
+                    const controller = new AbortController();
+                    const id = setTimeout(() => controller.abort(), timeout);
+                    const response = await fetch(url, { ...options, signal: controller.signal });
+                    clearTimeout(id);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return response;
+                } catch (err) {
+                    lastError = err;
+                    if (err.name === 'AbortError') {
+                        console.warn(`请求超时 (${timeout}ms)，第 ${i+1} 次重试`);
+                        if (i < retries) await new Promise(r => setTimeout(r, 800));
+                        continue;
+                    }
+                    if (i < retries) { await new Promise(r => setTimeout(r, 800));
+                        showNetworkSlow(); }
+                }
+            }
+            throw lastError;
+        }
+
+        async function callApi(url, options = {}) {
+            const fullUrl = API_BASE + url;
+            const token = localStorage.getItem('token');
+            const headers = { 'Content-Type': 'application/json', ...options.headers };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            try {
+                const res = await fetchWithTimeout(fullUrl, { ...options, headers }, 10000, 1);
+                if (res.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    currentUser = null;
+                    document.getElementById('mainApp').style.display = 'none';
+                    document.getElementById('loginPage').classList.add('active');
+                    showAlert('登录已过期', '请重新登录');
+                    throw new Error('Unauthorized');
+                }
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+                return data;
+            } catch (err) {
+                console.error('[API错误]', err);
+                if (err.name === 'AbortError') { showToast('请求超时，请检查网络后重试');
+                    throw new Error('请求超时'); }
+                showNetworkSlow();
+                throw err;
+            }
+        }
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            const fullUrl = API_BASE + '/upload';
+            const token = localStorage.getItem('token');
+            const res = await fetch(fullUrl, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            if (!res.ok) throw new Error('上传失败');
+            const data = await res.json();
+            return data.url;
+        }
+
+        function escapeHtml(s) { if (!s) return ''; return s.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' :
+                '&gt;'); }
+
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180,
+                dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(
+                dLng / 2) ** 2;
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return (R * c).toFixed(1);
+        }
+
+        async function geocodeAddress(address) {
+            if (!address) return null;
+            if (geocodeCache.has(address)) return geocodeCache.get(address);
+            try {
+                const result = await callApi('/geocode', { method: 'POST', body: JSON.stringify({ address }) });
+                if (result && result.lat && result.lng) { geocodeCache.set(address, result); return result; }
+                return null;
+            } catch (e) { console.error('地理编码失败', e); return null; }
+        }
+
+        async function enrichTasksWithDistance(tasks) {
+            if (!userLocation) return tasks;
+            const enriched = [];
+            for (let task of tasks) {
+                if (!task.locationAddress) { enriched.push({ ...task, distance: null }); continue; }
+                const coords = await geocodeAddress(task.locationAddress);
+                const distance = coords ? calculateDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng) :
+                null;
+                enriched.push({ ...task, distance });
+            }
+            return enriched;
+        }
+
+        async function getNativeUserLocation() {
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                try {
+                    const { Geolocation } = Capacitor.Plugins;
+                    let permission = await Geolocation.checkPermissions();
+                    if (permission.location !== 'granted') {
+                        permission = await Geolocation.requestPermissions();
+                        if (permission.location !== 'granted') return null;
+                    }
+                    const position = await Geolocation.getCurrentPosition({ timeout: 15000, enableHighAccuracy: true });
+                    return { lat: position.coords.latitude, lng: position.coords.longitude };
+                } catch (err) { return null; }
+            } else {
+                return new Promise((resolve) => {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                        () => resolve(null), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                    );
+                });
+            }
+        }
+
+        function showToast(msg, duration = 2000) {
+            let toast = document.createElement('div');
+            toast.className = 'toast-message';
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        function showAlert(title, message) {
+            let modal = document.createElement('div');
+            modal.className = 'custom-modal';
+            modal.innerHTML =
+                `<div class="custom-modal-content"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(message)}</p><div class="custom-modal-buttons"><button class="confirm-btn">知道了</button></div></div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('.confirm-btn').onclick = () => modal.remove();
+        }
+
+        function showConfirm(title, message, onConfirm, onCancel) {
+            let modal = document.createElement('div');
+            modal.className = 'custom-modal';
+            modal.innerHTML =
+                `<div class="custom-modal-content"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(message)}</p><div class="custom-modal-buttons"><button class="confirm-btn">确定</button><button class="cancel-btn">取消</button></div></div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('.confirm-btn').onclick = () => { modal.remove(); if (onConfirm) onConfirm(); };
+            modal.querySelector('.cancel-btn').onclick = () => { modal.remove(); if (onCancel) onCancel(); };
+        }
+
+        function showPrompt(title, placeholder, callback) {
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal';
+            modal.innerHTML = `
+                <div class="custom-modal-content">
+                    <h3>${escapeHtml(title)}</h3>
+                    <input type="number" id="promptInput" class="prompt-input" placeholder="${escapeHtml(placeholder)}" step="1" min="1">
+                    <div class="custom-modal-buttons">
+                        <button class="confirm-btn" id="promptOk">确定</button>
+                        <button class="cancel-btn" id="promptCancel">取消</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            const input = modal.querySelector('#promptInput');
+            const ok = modal.querySelector('#promptOk');
+            const cancel = modal.querySelector('#promptCancel');
+            const cleanup = () => modal.remove();
+            ok.onclick = () => {
+                const val = parseFloat(input.value);
+                if (!isNaN(val) && val > 0) {
+                    cleanup();
+                    callback(val);
+                } else {
+                    showAlert('提示', '请输入有效的金额');
+                }
+            };
+            cancel.onclick = cleanup;
+            input.focus();
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok.click(); });
+        }
+        window.alert = function(msg) { showAlert('提示', msg); };
+        window.confirm = function(msg, onOk, onCancel) { showConfirm('确认', msg, onOk, onCancel); return true; };
+
+        async function getDetailedAddress(lat, lng) {
+            try {
+                const res = await callApi('/regeo', { method: 'POST', body: JSON.stringify({ lat, lng }) });
+                return res.address;
+            } catch (e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
+        }
     <div class="swipe-back-indicator" id="swipeBackIndicator">‹</div>
 
     <script type="module">
@@ -699,7 +989,7 @@
             } catch (e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
         }
 
-        // ==================== 地图功能 ====================
+        // ==================== 地图功能（已添加 jscode） ====================
         function initMap() {
             if (mapReady) {
                 if (map) { map.destroy();
@@ -714,8 +1004,10 @@
                 }
                 mapInitAttempts++;
                 const script = document.createElement('script');
+                const key = window.AMAP_KEY || 'f9b32373eb484fc1f0e5b04f2c746a41';
+                const jscode = window.AMAP_JSCODE || '77f6c7a3b6e20b72297435ba1bc481af';
                 script.src =
-                    `https://webapi.amap.com/maps?v=2.0&key=${window.AMAP_KEY || 'f9b32373eb484fc1f0e5b04f2c746a41'}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onMapScriptLoaded`;
+                    `https://webapi.amap.com/maps?v=2.0&key=${key}&jscode=${jscode}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onMapScriptLoaded`;
                 script.async = true;
                 document.head.appendChild(script);
                 window.onMapScriptLoaded = function() {
@@ -819,12 +1111,15 @@
             if (!placeSearch) { console.warn('placeSearch未初始化'); return; }
             const listEl = document.getElementById('nearbyList');
             listEl.innerHTML = '<div class="loading-tip">搜索附近地点...</div>';
+            console.log('🔍 搜索附近:', lng, lat);
             placeSearch.searchNearBy('', [lng, lat], 3000, function(status, result) {
+                console.log('📡 搜索回调:', status, result);
                 if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
                     renderNearbyList(result.poiList.pois);
                 } else {
                     let msg = '未找到附近地点，请拖动地图重试';
                     if (result && result.message) msg += ' (' + result.message + ')';
+                    if (result && result.info) msg += ' ' + result.info;
                     listEl.innerHTML = '<div class="loading-tip">' + msg + '</div>';
                 }
             });
