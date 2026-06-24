@@ -18,24 +18,25 @@
         };
     </script>
     <style>
+        /* ===== 全局重置 & 基础 ===== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent
+            -webkit-tap-highlight-color: transparent;
         }
         html,
         body {
             height: 100%;
             overflow: hidden;
-            font-size: calc(16px + 0.2vw)
+            font-size: calc(16px + 0.2vw);
         }
         body {
             background: #f8fafc;
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             color: #0f172a;
             padding-bottom: env(safe-area-inset-bottom, 70px);
-            padding-top: 0
+            padding-top: 0;
         }
         .app-container {
             max-width: 500px;
@@ -48,32 +49,32 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, .05);
             overflow: hidden;
             padding-top: 0;
-            box-sizing: border-box
+            box-sizing: border-box;
         }
         #mainApp {
             display: flex;
             flex-direction: column;
             flex: 1;
-            overflow: hidden
+            overflow: hidden;
         }
         .page {
             display: none;
             flex-direction: column;
             flex: 1;
             overflow: hidden;
-            animation: fadeInUp .25s cubic-bezier(.2, .9, .4, 1.1)
+            animation: fadeInUp .25s cubic-bezier(.2, .9, .4, 1.1);
         }
         .page.active {
-            display: flex
+            display: flex;
         }
         @keyframes fadeInUp {
             from {
                 opacity: 0;
-                transform: translateY(8px)
+                transform: translateY(8px);
             }
             to {
                 opacity: 1;
-                transform: translateY(0)
+                transform: translateY(0);
             }
         }
         .bottom-nav {
@@ -91,12 +92,12 @@
             border-top: 1px solid rgba(226, 232, 240, .6);
             z-index: 20;
             flex-shrink: 0;
-            transition: transform .3s ease, opacity .3s ease
+            transition: transform .3s ease, opacity .3s ease;
         }
         body.hide-bottom-nav .bottom-nav {
             transform: translateY(100%);
             opacity: 0;
-            pointer-events: none
+            pointer-events: none;
         }
         .nav-item {
             display: flex;
@@ -106,15 +107,15 @@
             font-size: .7rem;
             color: #94a3b8;
             cursor: pointer;
-            position: relative
+            position: relative;
         }
         .nav-item.active {
             color: #1e4a6b;
             font-weight: 500;
-            transform: translateY(-2px)
+            transform: translateY(-2px);
         }
         .nav-icon {
-            font-size: 1.6rem
+            font-size: 1.6rem;
         }
         .msg-badge {
             position: absolute;
@@ -127,7 +128,7 @@
             font-size: .6rem;
             min-width: 18px;
             display: none;
-            font-weight: 600
+            font-weight: 600;
         }
         .card {
             background: #fff;
@@ -139,22 +140,22 @@
             cursor: pointer;
             font-size: 1rem;
             position: relative;
-            transition: transform .2s
+            transition: transform .2s;
         }
         .card:active {
             transform: scale(.98);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, .05)
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .05);
         }
         .task-card-wrapper {
             position: relative;
             overflow: hidden;
             margin: 12px 16px;
             border-radius: 24px;
-            touch-action: pan-y
+            touch-action: pan-y;
         }
         .task-card-wrapper .card {
             margin: 0;
-            border-radius: 24px
+            border-radius: 24px;
         }
         .task-card-wrapper .delete-btn {
             position: absolute;
@@ -173,14 +174,14 @@
             cursor: pointer;
             transition: opacity .2s;
             opacity: 0;
-            pointer-events: none
+            pointer-events: none;
         }
         .task-card-wrapper.swiped .delete-btn {
             opacity: 1;
-            pointer-events: auto
+            pointer-events: auto;
         }
         .task-card-wrapper.swiped .card {
-            transform: translateX(-80px)
+            transform: translateX(-80px);
         }
         .skeleton-card {
             background: #fff;
@@ -188,17 +189,17 @@
             padding: 18px 20px;
             margin: 12px 16px;
             border: 1px solid #eef2f8;
-            animation: pulse 1.2s infinite
+            animation: pulse 1.2s infinite;
         }
         @keyframes pulse {
             0% {
-                opacity: .6
+                opacity: .6;
             }
             50% {
-                opacity: 1
+                opacity: 1;
             }
             100% {
-                opacity: .6
+                opacity: .6;
             }
         }
         .skeleton-title {
@@ -206,32 +207,32 @@
             background: #e2e8f0;
             border-radius: 12px;
             width: 60%;
-            margin-bottom: 12px
+            margin-bottom: 12px;
         }
         .skeleton-desc {
             height: 16px;
             background: #e2e8f0;
             border-radius: 12px;
             width: 90%;
-            margin-bottom: 8px
+            margin-bottom: 8px;
         }
         .skeleton-meta {
             height: 14px;
             background: #e2e8f0;
             border-radius: 12px;
-            width: 40%
+            width: 40%;
         }
         .task-header {
             display: flex;
             justify-content: space-between;
             align-items: baseline;
             flex-wrap: wrap;
-            margin-bottom: 8px
+            margin-bottom: 8px;
         }
         .task-title {
             font-size: 1.1rem;
             font-weight: 700;
-            color: #0f172a
+            color: #0f172a;
         }
         .reward-badge {
             background: linear-gradient(135deg, #fef3c7, #fde68a);
@@ -239,28 +240,29 @@
             border-radius: 40px;
             font-weight: 700;
             font-size: .75rem;
-            color: #b45309
+            color: #b45309;
         }
         .task-desc {
             font-size: .95rem;
             color: #475569;
             margin-bottom: 8px;
-            line-height: 1.5
+            line-height: 1.5;
         }
         .task-meta {
             display: flex;
             gap: 14px;
             font-size: .75rem;
             color: #6c7a91;
-            flex-wrap: wrap
+            flex-wrap: wrap;
         }
         .distance-badge {
             background: #e6f7e6;
             color: #2b6e2f;
             padding: 2px 12px;
             border-radius: 20px;
-            font-weight: 500
+            font-weight: 500;
         }
+        /* ===== 分类栏 – 下移避开状态栏 ===== */
         .category-bar,
         .sort-bar {
             display: flex;
@@ -274,10 +276,10 @@
             flex-shrink: 0;
             align-items: center;
             position: relative;
-            z-index: 5
+            z-index: 5;
         }
         .category-bar {
-            padding-top: max(env(safe-area-inset-top, 0px), 20px);
+            padding-top: max(env(safe-area-inset-top, 0px), 24px);
         }
         .category-chip,
         .sort-chip {
@@ -291,7 +293,7 @@
             display: inline-block;
             transition: all .25s ease;
             opacity: .85;
-            flex-shrink: 0
+            flex-shrink: 0;
         }
         .category-chip.active,
         .sort-chip.active {
@@ -301,7 +303,7 @@
             opacity: 1;
             box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
             transform: scale(1.02);
-            position: relative
+            position: relative;
         }
         .category-chip.active::after,
         .sort-chip.active::after {
@@ -313,7 +315,7 @@
             height: 3px;
             background: #fff;
             border-radius: 3px;
-            box-shadow: 0 0 4px rgba(255, 255, 255, .5)
+            box-shadow: 0 0 4px rgba(255, 255, 255, .5);
         }
         .category-bar .search-btn {
             background: transparent;
@@ -322,10 +324,10 @@
             cursor: pointer;
             padding: 0 6px;
             color: #1e4a6b;
-            flex-shrink: 0
+            flex-shrink: 0;
         }
         .category-bar .search-btn:active {
-            transform: scale(.9)
+            transform: scale(.9);
         }
         .sort-bar .filter-btn {
             background: #e2e8f0;
@@ -339,16 +341,16 @@
             gap: 4px;
             flex-shrink: 0;
             color: #1e4a6b;
-            font-weight: 500
+            font-weight: 500;
         }
         .sort-bar .filter-btn:active {
-            background: #cbd5e1
+            background: #cbd5e1;
         }
         .filter-status {
             font-size: .7rem;
             color: #64748b;
             margin-left: 8px;
-            flex-shrink: 0
+            flex-shrink: 0;
         }
         .search-panel {
             display: none;
@@ -356,12 +358,12 @@
             padding: 8px 16px;
             border-bottom: 1px solid #eef2f8;
             z-index: 6;
-            position: relative
+            position: relative;
         }
         .search-panel.show {
             display: flex;
             align-items: center;
-            gap: 8px
+            gap: 8px;
         }
         .search-panel input {
             flex: 1;
@@ -370,18 +372,18 @@
             border: 1px solid #e2e8f0;
             outline: none;
             font-size: .9rem;
-            background: #f1f5f9
+            background: #f1f5f9;
         }
         .search-panel input:focus {
             background: #fff;
-            border-color: #1e4a6b
+            border-color: #1e4a6b;
         }
         .search-panel .close-search {
             background: transparent;
             border: none;
             font-size: 1.2rem;
             cursor: pointer;
-            color: #94a3b8
+            color: #94a3b8;
         }
         .filter-overlay {
             display: none;
@@ -392,10 +394,10 @@
             bottom: 0;
             z-index: 100;
             background: rgba(0, 0, 0, .3);
-            backdrop-filter: blur(2px)
+            backdrop-filter: blur(2px);
         }
         .filter-overlay.show {
-            display: block
+            display: block;
         }
         .filter-panel {
             position: absolute;
@@ -409,7 +411,7 @@
             border: 1px solid #eef2f8;
             z-index: 101;
             max-height: 70vh;
-            overflow-y: auto
+            overflow-y: auto;
         }
         .filter-panel .dist-option {
             padding: 8px 12px;
@@ -418,23 +420,23 @@
             font-size: .85rem;
             color: #1e293b;
             transition: background .1s;
-            display: block
+            display: block;
         }
         .filter-panel .dist-option:active {
-            background: #f1f5f9
+            background: #f1f5f9;
         }
         .filter-panel .dist-option.custom {
             display: flex;
             gap: 6px;
             align-items: center;
-            padding: 8px 12px
+            padding: 8px 12px;
         }
         .filter-panel .dist-option.custom input {
             width: 60px;
             padding: 4px;
             border: 1px solid #ddd;
             border-radius: 10px;
-            font-size: .75rem
+            font-size: .75rem;
         }
         .filter-panel .dist-option.custom button {
             padding: 2px 8px;
@@ -443,13 +445,13 @@
             background: #1e4a6b;
             color: #fff;
             font-size: .7rem;
-            cursor: pointer
+            cursor: pointer;
         }
         .filter-panel .dist-option.reset {
             color: #ef4444;
             border-top: 1px solid #eef2f8;
             margin-top: 4px;
-            padding-top: 8px
+            padding-top: 8px;
         }
         .detail-hero {
             background: linear-gradient(135deg, #1e4a6b, #0f2b3d);
@@ -458,7 +460,7 @@
             padding: 28px 24px;
             color: #fff;
             position: relative;
-            overflow: hidden
+            overflow: hidden;
         }
         .detail-hero::before {
             content: "💰";
@@ -466,12 +468,12 @@
             right: -20px;
             bottom: -20px;
             font-size: 80px;
-            opacity: .15
+            opacity: .15;
         }
         .detail-reward {
             font-size: 2rem;
             font-weight: 800;
-            margin-top: 8px
+            margin-top: 8px;
         }
         .detail-status {
             display: inline-block;
@@ -480,46 +482,46 @@
             font-size: .7rem;
             font-weight: 600;
             background: rgba(255, 255, 255, .2);
-            backdrop-filter: blur(4px)
+            backdrop-filter: blur(4px);
         }
         .info-row {
             display: flex;
             align-items: center;
             gap: 14px;
             padding: 14px 0;
-            border-bottom: 1px solid #eef2f8
+            border-bottom: 1px solid #eef2f8;
         }
         .info-icon {
             width: 36px;
             font-size: 1.2rem;
-            text-align: center
+            text-align: center;
         }
         .info-label {
             font-size: .8rem;
             color: #64748b;
-            margin-bottom: 2px
+            margin-bottom: 2px;
         }
         .info-value {
             font-weight: 600;
             color: #1e293b;
             cursor: pointer;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .desc-section {
             background: #f9fafc;
             border-radius: 20px;
             padding: 18px;
-            margin-top: 16px
+            margin-top: 16px;
         }
         .form-group {
-            margin-bottom: 20px
+            margin-bottom: 20px;
         }
         .form-label {
             font-size: .95rem;
             font-weight: 600;
             color: #1e293b;
             margin-bottom: 6px;
-            display: block
+            display: block;
         }
         .form-input,
         .form-textarea,
@@ -531,12 +533,12 @@
             font-size: 1rem;
             outline: none;
             background: #fff;
-            transition: all .2s
+            transition: all .2s;
         }
         .form-input:focus,
         .form-textarea:focus {
             border-color: #1e4a6b;
-            box-shadow: 0 0 0 3px rgba(30, 74, 107, .1)
+            box-shadow: 0 0 0 3px rgba(30, 74, 107, .1);
         }
         .btn-primary {
             background: linear-gradient(95deg, #059669, #047857);
@@ -550,16 +552,16 @@
             cursor: pointer;
             font-size: 1.1rem;
             transition: all .2s;
-            box-shadow: 0 2px 6px rgba(5, 150, 105, .2)
+            box-shadow: 0 2px 6px rgba(5, 150, 105, .2);
         }
         .btn-primary:active {
             transform: scale(.97);
-            box-shadow: 0 1px 3px rgba(5, 150, 105, .2)
+            box-shadow: 0 1px 3px rgba(5, 150, 105, .2);
         }
         .btn-primary:disabled {
             opacity: .6;
             transform: none;
-            cursor: not-allowed
+            cursor: not-allowed;
         }
         .btn-secondary {
             background: #f1f5f9;
@@ -571,11 +573,11 @@
             width: 100%;
             cursor: pointer;
             transition: all .2s;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .btn-secondary:active {
             background: #e2e8f0;
-            transform: scale(.98)
+            transform: scale(.98);
         }
         .btn-danger {
             background: #fee2e2;
@@ -585,11 +587,11 @@
             font-weight: 600;
             border: none;
             cursor: pointer;
-            transition: all .2s
+            transition: all .2s;
         }
         .btn-danger:active {
             background: #fecaca;
-            transform: scale(.96)
+            transform: scale(.96);
         }
         .btn-phone,
         .btn-nav,
@@ -604,29 +606,29 @@
             border: none;
             cursor: pointer;
             transition: all .2s;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .btn-phone {
             background: #10b981;
-            color: #fff
+            color: #fff;
         }
         .btn-nav {
             background: #3b82f6;
-            color: #fff
+            color: #fff;
         }
         .btn-location {
             background: #eef2ff;
-            color: #1e4a6b
+            color: #1e4a6b;
         }
         .btn-phone:active,
         .btn-nav:active,
         .btn-location:active {
-            transform: scale(.96)
+            transform: scale(.96);
         }
         .slide-confirm,
         .slide-action {
             margin: 18px 0;
-            user-select: none
+            user-select: none;
         }
         .slide-track {
             position: relative;
@@ -636,7 +638,7 @@
             border-radius: 60px;
             overflow: hidden;
             border: 1px solid #cbd5e1;
-            touch-action: none
+            touch-action: none;
         }
         .slide-thumb {
             position: absolute;
@@ -653,7 +655,7 @@
             font-size: 1.8rem;
             touch-action: none;
             transition: none;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, .2)
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
         }
         .slide-text {
             position: absolute;
@@ -667,12 +669,12 @@
             font-size: 1rem;
             gap: 8px;
             z-index: 1;
-            text-align: center
+            text-align: center;
         }
         .slide-confirm.completed .slide-track,
         .slide-action.completed .slide-track {
             background: #d1fae5;
-            border-color: #059669
+            border-color: #059669;
         }
         .countdown-timer {
             background: #fef3c7;
@@ -686,20 +688,20 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .countdown-timer.warning {
             background: #fee2e2;
             color: #dc2626;
-            animation: pulseWarning 1s infinite
+            animation: pulseWarning 1s infinite;
         }
         @keyframes pulseWarning {
             0%,
             100% {
-                opacity: 1
+                opacity: 1;
             }
             50% {
-                opacity: .7
+                opacity: .7;
             }
         }
         .custom-modal {
@@ -713,7 +715,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000
+            z-index: 1000;
         }
         .custom-modal-content {
             background: #fff;
@@ -722,17 +724,17 @@
             max-width: 340px;
             padding: 28px;
             text-align: center;
-            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, .3)
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, .3);
         }
         .custom-modal-content h3 {
             margin-bottom: 14px;
-            font-size: 1.3rem
+            font-size: 1.3rem;
         }
         .custom-modal-buttons {
             display: flex;
             gap: 12px;
             margin-top: 24px;
-            justify-content: center
+            justify-content: center;
         }
         .custom-modal-buttons button {
             flex: 1;
@@ -741,15 +743,15 @@
             border: none;
             font-weight: 600;
             cursor: pointer;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .confirm-btn {
             background: #1e4a6b;
-            color: #fff
+            color: #fff;
         }
         .cancel-btn {
             background: #e2e8f0;
-            color: #1e293b
+            color: #1e293b;
         }
         .toast-message {
             position: fixed;
@@ -764,25 +766,25 @@
             z-index: 1100;
             pointer-events: none;
             animation: fadeOut 2s forwards;
-            backdrop-filter: blur(8px)
+            backdrop-filter: blur(8px);
         }
         @keyframes fadeOut {
             0% {
-                opacity: 1
+                opacity: 1;
             }
             70% {
-                opacity: 1
+                opacity: 1;
             }
             100% {
                 opacity: 0;
-                visibility: hidden
+                visibility: hidden;
             }
         }
         .chat-container {
             display: flex;
             flex-direction: column;
             height: 100%;
-            background: #f8fafc
+            background: #f8fafc;
         }
         .chat-header-bar {
             background: rgba(255, 255, 255, .96);
@@ -792,7 +794,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            flex-shrink: 0
+            flex-shrink: 0;
         }
         .chat-back-btn {
             background: #f1f5f9;
@@ -804,16 +806,16 @@
             align-items: center;
             justify-content: center;
             font-size: 1.3rem;
-            cursor: pointer
+            cursor: pointer;
         }
         .chat-back-btn:active {
             background: #e2e8f0;
-            transform: scale(.94)
+            transform: scale(.94);
         }
         .chat-header-name {
             font-weight: 700;
             font-size: 1.1rem;
-            flex: 1
+            flex: 1;
         }
         .chat-messages-area {
             flex: 1;
@@ -822,23 +824,23 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            min-height: 0
+            min-height: 0;
         }
         .chat-bubble {
             max-width: 80%;
             display: flex;
             flex-direction: column;
-            cursor: pointer
+            cursor: pointer;
         }
         .chat-bubble:active {
             background: rgba(0, 0, 0, .03);
-            border-radius: 16px
+            border-radius: 16px;
         }
         .chat-bubble-mine {
-            align-self: flex-end
+            align-self: flex-end;
         }
         .chat-bubble-other {
-            align-self: flex-start
+            align-self: flex-start;
         }
         .bubble-text {
             padding: 12px 18px;
@@ -848,40 +850,40 @@
             word-break: break-word;
             background: #fff;
             border: 1px solid #e2e8f0;
-            border-bottom-left-radius: 4px
+            border-bottom-left-radius: 4px;
         }
         .chat-bubble-mine .bubble-text {
             background: #1e4a6b;
             color: #fff;
             border-bottom-right-radius: 4px;
-            border: none
+            border: none;
         }
         .bubble-image {
             max-width: 100%;
             border-radius: 16px;
             margin-top: 4px;
             display: block;
-            cursor: zoom-in
+            cursor: zoom-in;
         }
         .bubble-image-wrapper {
             background: transparent;
-            border: none
+            border: none;
         }
         .bubble-audio {
             max-width: 100%;
             margin-top: 4px;
             border-radius: 16px;
-            display: block
+            display: block;
         }
         .bubble-time {
             font-size: .7rem;
             color: #94a3b8;
             margin-top: 4px;
             margin-left: 10px;
-            margin-right: 10px
+            margin-right: 10px;
         }
         .chat-bubble-mine .bubble-time {
-            text-align: right
+            text-align: right;
         }
         .chat-input-wrapper {
             flex-shrink: 0;
@@ -889,13 +891,13 @@
             backdrop-filter: blur(12px);
             border-top: 1px solid #eef2f8;
             padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-            border-radius: 24px 24px 0 0
+            border-radius: 24px 24px 0 0;
         }
         .chat-action-row {
             display: flex;
             gap: 8px;
             align-items: center;
-            flex-wrap: nowrap
+            flex-wrap: nowrap;
         }
         .chat-message-input {
             flex: 1;
@@ -905,11 +907,11 @@
             border: 1px solid #e2e8f0;
             background: #fff;
             font-size: 1rem;
-            transition: all .2s
+            transition: all .2s;
         }
         .chat-message-input.recording {
             background: #fee2e2;
-            border-color: #ef4444
+            border-color: #ef4444;
         }
         .send-btn {
             background: #1e4a6b;
@@ -919,7 +921,7 @@
             font-weight: 600;
             color: #fff;
             flex-shrink: 0;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .chat-icon-btn {
             background: transparent;
@@ -931,11 +933,11 @@
             transition: all .2s;
             display: inline-flex;
             align-items: center;
-            justify-content: center
+            justify-content: center;
         }
         .chat-icon-btn:active {
             background: rgba(0, 0, 0, .05);
-            transform: scale(.95)
+            transform: scale(.95);
         }
         .chat-plus-panel {
             display: none;
@@ -945,10 +947,10 @@
             border-top: 1px solid #eef2f8;
             margin-top: 8px;
             background: #fff;
-            border-radius: 12px
+            border-radius: 12px;
         }
         .chat-plus-panel.show {
-            display: flex
+            display: flex;
         }
         .plus-item {
             background: #f1f5f9;
@@ -960,11 +962,11 @@
             transition: background .2s;
             display: inline-flex;
             align-items: center;
-            gap: 6px
+            gap: 6px;
         }
         .plus-item:active {
             background: #e2e8f0;
-            transform: scale(.96)
+            transform: scale(.96);
         }
         .profile-header {
             background: linear-gradient(135deg, #1e4a6b, #0f2b3d);
@@ -975,7 +977,7 @@
             display: flex;
             align-items: center;
             gap: 16px;
-            cursor: pointer
+            cursor: pointer;
         }
         .profile-avatar {
             width: 72px;
@@ -987,15 +989,15 @@
             justify-content: center;
             font-size: 2rem;
             font-weight: 600;
-            overflow: hidden
+            overflow: hidden;
         }
         .profile-name {
             font-weight: 700;
-            font-size: 1.2rem
+            font-size: 1.2rem;
         }
         .profile-signature {
             font-size: .85rem;
-            opacity: .8
+            opacity: .8;
         }
         .stats-row {
             display: flex;
@@ -1005,25 +1007,25 @@
             padding: 16px;
             justify-content: space-around;
             box-shadow: 0 2px 6px rgba(0, 0, 0, .03);
-            cursor: pointer
+            cursor: pointer;
         }
         .stat-item {
             text-align: center;
             flex: 1;
             cursor: pointer;
-            transition: all .2s
+            transition: all .2s;
         }
         .stat-item:active {
-            transform: scale(.96)
+            transform: scale(.96);
         }
         .stat-number {
             font-size: 1.4rem;
             font-weight: 800;
-            color: #1e4a6b
+            color: #1e4a6b;
         }
         .stat-label {
             font-size: .85rem;
-            color: #475569
+            color: #475569;
         }
         .profile-task-card {
             background: #fff;
@@ -1035,28 +1037,28 @@
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
-            transition: all .2s
+            transition: all .2s;
         }
         .profile-task-card:active {
             transform: scale(.98);
-            background: #f8fafc
+            background: #f8fafc;
         }
         .profile-task-card .left {
             display: flex;
             flex-direction: column;
-            gap: 4px
+            gap: 4px;
         }
         .profile-task-card .left .title {
             font-weight: 600;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .profile-task-card .left .count {
             font-size: .85rem;
-            color: #64748b
+            color: #64748b;
         }
         .profile-task-card .arrow {
             font-size: 1.5rem;
-            color: #94a3b8
+            color: #94a3b8;
         }
         .logout-btn {
             background: linear-gradient(135deg, #ef4444, #dc2626);
@@ -1069,10 +1071,10 @@
             margin: 16px;
             cursor: pointer;
             transition: all .2s;
-            font-size: 1.1rem
+            font-size: 1.1rem;
         }
         .logout-btn:active {
-            transform: scale(.97)
+            transform: scale(.97);
         }
         .image-preview-modal {
             position: fixed;
@@ -1085,12 +1087,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: zoom-out
+            cursor: zoom-out;
         }
         .image-preview-modal img {
             max-width: 90%;
             max-height: 90%;
-            object-fit: contain
+            object-fit: contain;
         }
         .close-preview {
             position: absolute;
@@ -1105,36 +1107,36 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer
+            cursor: pointer;
         }
         .empty-state {
             text-align: center;
             padding: 40px 20px;
             color: #94a3b8;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .loading {
             text-align: center;
             padding: 40px;
             color: #94a3b8;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .flex-between {
             display: flex;
             justify-content: space-between;
-            align-items: center
+            align-items: center;
         }
         .text-center {
-            text-align: center
+            text-align: center;
         }
         .mt-2 {
-            margin-top: 8px
+            margin-top: 8px;
         }
         .image-preview-grid {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            margin-top: 10px
+            margin-top: 10px;
         }
         .preview-img-wrapper {
             position: relative;
@@ -1143,13 +1145,13 @@
             border-radius: 16px;
             overflow: hidden;
             background: #f1f5f9;
-            border: 1px solid #e2e8f0
+            border: 1px solid #e2e8f0;
         }
         .preview-img-wrapper img,
         .preview-img-wrapper video {
             width: 100%;
             height: 100%;
-            object-fit: cover
+            object-fit: cover;
         }
         .remove-img-btn {
             position: absolute;
@@ -1164,7 +1166,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 12px
+            font-size: 12px;
         }
         .upload-btn {
             background: #f1f5f9;
@@ -1175,10 +1177,10 @@
             cursor: pointer;
             margin-top: 8px;
             font-size: .95rem;
-            transition: all .2s
+            transition: all .2s;
         }
         .upload-btn:active {
-            background: #e2e8f0
+            background: #e2e8f0;
         }
         .task-card-in-chat {
             background: #f8fafc;
@@ -1189,13 +1191,13 @@
             justify-content: space-between;
             align-items: center;
             border: 1px solid #e2e8f0;
-            flex-shrink: 0
+            flex-shrink: 0;
         }
         .chat-refresh-indicator {
             text-align: center;
             padding: 10px;
             font-size: .85rem;
-            color: #64748b
+            color: #64748b;
         }
         .network-toast {
             position: fixed;
@@ -1208,20 +1210,20 @@
             border-radius: 40px;
             font-size: .8rem;
             z-index: 2000;
-            white-space: nowrap
+            white-space: nowrap;
         }
         .rating-section {
             background: #fff;
             border-radius: 24px;
             padding: 18px;
             margin: 12px 16px;
-            border: 1px solid #eef2f8
+            border: 1px solid #eef2f8;
         }
         .rating-buttons {
             display: flex;
             gap: 12px;
             justify-content: center;
-            margin: 8px 0
+            margin: 8px 0;
         }
         .rating-buttons button {
             padding: 10px 28px;
@@ -1230,26 +1232,26 @@
             font-weight: 600;
             cursor: pointer;
             transition: all .2s;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .rating-buttons button:active {
-            transform: scale(.96)
+            transform: scale(.96);
         }
         .rating-buttons .btn-good {
             background: #d1fae5;
-            color: #065f46
+            color: #065f46;
         }
         .rating-buttons .btn-bad {
             background: #fee2e2;
-            color: #b91c1c
+            color: #b91c1c;
         }
         .rating-buttons .btn-good.selected {
             background: #059669;
-            color: #fff
+            color: #fff;
         }
         .rating-buttons .btn-bad.selected {
             background: #dc2626;
-            color: #fff
+            color: #fff;
         }
         .rating-comment {
             width: 100%;
@@ -1257,7 +1259,7 @@
             border-radius: 20px;
             border: 1px solid #e2e8f0;
             margin-top: 8px;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .rating-submit {
             margin-top: 12px;
@@ -1269,17 +1271,17 @@
             font-weight: 600;
             width: 100%;
             cursor: pointer;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .rating-submit:disabled {
             opacity: .5;
-            cursor: not-allowed
+            cursor: not-allowed;
         }
         .already-rated {
             text-align: center;
             color: #64748b;
             padding: 12px;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .prompt-input {
             width: 100%;
@@ -1287,19 +1289,19 @@
             border-radius: 20px;
             border: 1px solid #e2e8f0;
             margin: 12px 0;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .contact-row {
             display: flex;
             gap: 12px;
-            margin: 8px 16px
+            margin: 8px 16px;
         }
         .contact-row .btn {
             flex: 1;
             min-width: 0;
             padding: 12px 8px;
             font-size: .95rem;
-            text-align: center
+            text-align: center;
         }
         .pull-refresh-container {
             text-align: center;
@@ -1307,12 +1309,12 @@
             color: #94a3b8;
             font-size: .9rem;
             position: relative;
-            transition: transform .2s
+            transition: transform .2s;
         }
         .audio-player {
             max-width: 100%;
             margin-top: 4px;
-            border-radius: 16px
+            border-radius: 16px;
         }
         .voice-call-modal {
             position: fixed;
@@ -1326,7 +1328,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: #fff
+            color: #fff;
         }
         .voice-call-modal .avatar {
             font-size: 4rem;
@@ -1337,17 +1339,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px
+            margin-bottom: 20px;
         }
         .voice-call-modal .name {
             font-size: 1.5rem;
             font-weight: 600;
-            margin-bottom: 8px
+            margin-bottom: 8px;
         }
         .voice-call-modal .status {
             font-size: .9rem;
             opacity: .7;
-            margin-bottom: 30px
+            margin-bottom: 30px;
         }
         .voice-call-modal .hangup-btn {
             background: #ef4444;
@@ -1360,10 +1362,10 @@
             cursor: pointer;
             display: flex;
             align-items: center;
-            justify-content: center
+            justify-content: center;
         }
         .voice-call-modal .hangup-btn:active {
-            transform: scale(.9)
+            transform: scale(.9);
         }
         .withdraw-btn-sm {
             padding: 6px 14px;
@@ -1372,7 +1374,7 @@
             background: #1e4a6b;
             color: #fff;
             border: none;
-            cursor: pointer
+            cursor: pointer;
         }
         .wallet-modal {
             position: fixed;
@@ -1386,7 +1388,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px
+            padding: 20px;
         }
         .wallet-modal-content {
             background: #fff;
@@ -1398,18 +1400,18 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, .3)
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
         }
         .wallet-modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px
+            margin-bottom: 16px;
         }
         .wallet-modal-title {
             font-size: 1.4rem;
             font-weight: 700;
-            color: #1e4a6b
+            color: #1e4a6b;
         }
         .wallet-modal-close {
             background: transparent;
@@ -1417,31 +1419,31 @@
             font-size: 2rem;
             cursor: pointer;
             color: #94a3b8;
-            padding: 0 8px
+            padding: 0 8px;
         }
         .wallet-balance-box {
             background: #eef2ff;
             border-radius: 20px;
             padding: 20px;
             margin-bottom: 16px;
-            text-align: center
+            text-align: center;
         }
         .wallet-balance-box .amount {
             font-size: 2.5rem;
             font-weight: 800;
-            color: #1e4a6b
+            color: #1e4a6b;
         }
         .wallet-balance-box .frozen {
             font-size: .85rem;
             color: #64748b;
-            margin-top: 4px
+            margin-top: 4px;
         }
         .wallet-bills {
             flex: 1;
             overflow-y: auto;
             margin-top: 8px;
             border-top: 1px solid #eef2f8;
-            padding-top: 12px
+            padding-top: 12px;
         }
         .wallet-bills .title {
             font-weight: 600;
@@ -1450,7 +1452,7 @@
             margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
-            align-items: center
+            align-items: center;
         }
         .wallet-bill-item {
             padding: 14px 0;
@@ -1458,42 +1460,42 @@
             display: flex;
             align-items: center;
             gap: 14px;
-            cursor: pointer
+            cursor: pointer;
         }
         .wallet-bill-item:active {
-            background: #f8fafc
+            background: #f8fafc;
         }
         .wallet-bill-item .icon {
             font-size: 1.5rem;
             width: 36px;
-            text-align: center
+            text-align: center;
         }
         .wallet-bill-item .info {
-            flex: 1
+            flex: 1;
         }
         .wallet-bill-item .info .desc {
             font-weight: 600;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .wallet-bill-item .info .time {
             font-size: .8rem;
-            color: #94a3b8
+            color: #94a3b8;
         }
         .wallet-bill-item .amount {
             font-weight: 700;
-            font-size: 1.1rem
+            font-size: 1.1rem;
         }
         .wallet-bill-item .amount.income {
-            color: #059669
+            color: #059669;
         }
         .wallet-bill-item .amount.expense {
-            color: #dc2626
+            color: #dc2626;
         }
         .withdraw-modal {
-            z-index: 9999 !important
+            z-index: 9999 !important;
         }
         .withdraw-modal .custom-modal-content {
-            max-width: 340px
+            max-width: 340px;
         }
         .my-tasks-header {
             background: rgba(255, 255, 255, .96);
@@ -1503,7 +1505,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            flex-shrink: 0
+            flex-shrink: 0;
         }
         .my-tasks-header .back-btn {
             background: transparent;
@@ -1511,19 +1513,20 @@
             font-size: 1.8rem;
             cursor: pointer;
             padding: 4px 8px;
-            color: #1e4a6b
+            color: #1e4a6b;
         }
         .my-tasks-header .title {
             font-weight: 700;
             font-size: 1.2rem;
             flex: 1;
-            color: #0f172a
+            color: #0f172a;
         }
         .my-tasks-list {
             flex: 1;
             overflow-y: auto;
-            padding-bottom: 20px
+            padding-bottom: 20px;
         }
+        /* ===== 地图模态框 – 完全仿微信发送位置 ===== */
         .map-modal {
             position: fixed;
             top: 0;
@@ -1533,10 +1536,10 @@
             background: #fff;
             z-index: 9998;
             display: none;
-            flex-direction: column
+            flex-direction: column;
         }
         .map-modal.active {
-            display: flex
+            display: flex;
         }
         .map-modal-header {
             position: absolute;
@@ -1544,55 +1547,63 @@
             left: 0;
             right: 0;
             z-index: 20;
-            padding: 10px 12px;
+            padding: 8px 12px;
             display: flex;
             align-items: center;
             gap: 8px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05)
+            background: rgba(255, 255, 255, 0.97);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            height: 52px;
         }
-        .map-modal-header .back-btn {
-            background: transparent;
+        .map-modal-header .cancel-btn {
+            background: none;
             border: none;
-            font-size: 1.6rem;
+            font-size: 1.1rem;
+            color: #1e4a6b;
+            padding: 6px 10px;
             cursor: pointer;
-            padding: 4px 6px;
-            color: #333;
-            display: flex;
-            align-items: center
+            font-weight: 500;
+            flex-shrink: 0;
         }
-        .map-modal-header .search-input {
+        .map-modal-header .cancel-btn:active {
+            opacity: 0.6;
+        }
+        .map-modal-header .search-box {
             flex: 1;
-            height: 36px;
-            border-radius: 20px;
-            border: 1px solid #ddd;
+            height: 34px;
+            border-radius: 8px;
+            border: none;
+            background: #f0f0f0;
             padding: 0 12px;
             font-size: 1rem;
             outline: none;
-            background: #f5f5f5
+            color: #333;
         }
-        .map-modal-header .search-input:focus {
+        .map-modal-header .search-box::placeholder {
+            color: #999;
+        }
+        .map-modal-header .search-box:focus {
             background: #fff;
-            border-color: #1e4a6b
+            box-shadow: 0 0 0 1px #1e4a6b;
         }
-        .map-modal-header .confirm-btn {
+        .map-modal-header .send-btn {
             background: #1e4a6b;
             color: #fff;
             border: none;
-            border-radius: 20px;
+            border-radius: 6px;
             padding: 6px 16px;
             font-weight: 600;
+            font-size: 1rem;
             cursor: pointer;
-            font-size: .95rem
+            flex-shrink: 0;
         }
-        .map-modal-header .confirm-btn:active {
-            opacity: .7
+        .map-modal-header .send-btn:active {
+            opacity: 0.7;
         }
         #mapContainer {
             flex: 1;
             width: 100%;
-            position: relative
+            position: relative;
         }
         .map-center-marker {
             position: absolute;
@@ -1603,116 +1614,68 @@
             color: #ef4444;
             pointer-events: none;
             z-index: 10;
-            text-shadow: 0 2px 6px rgba(0, 0, 0, .3)
+            text-shadow: 0 2px 6px rgba(0, 0, 0, .3);
         }
         .map-modal-footer {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
             border-radius: 16px 16px 0 0;
-            padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+            padding: 10px 16px max(10px, env(safe-area-inset-bottom));
             display: flex;
             flex-direction: column;
             z-index: 20;
-            max-height: 50%;
-            min-height: 140px;
-            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06)
-        }
-        .map-modal-footer .current-location {
-            padding: 8px 0;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: .95rem;
-            color: #1e293b
-        }
-        .map-modal-footer .current-location .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #1e4a6b;
-            display: inline-block;
-            flex-shrink: 0
-        }
-        .map-modal-footer .current-location .addr {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis
-        }
-        .map-modal-footer .nearby-title {
-            font-weight: 600;
-            font-size: .9rem;
-            color: #1e293b;
-            margin: 8px 0 4px
+            max-height: 45%;
+            min-height: 130px;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
         }
         .map-modal-footer .nearby-list {
             flex: 1;
             overflow-y: auto;
-            padding: 4px 0
+            padding: 4px 0;
         }
         .map-modal-footer .nearby-item {
-            padding: 8px 0;
-            border-bottom: 1px solid #f5f7fa;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
-            align-items: center
+            align-items: center;
         }
         .map-modal-footer .nearby-item:active {
-            background: #f8fafc
+            background: #f5f5f5;
+        }
+        .map-modal-footer .nearby-item .info {
+            flex: 1;
+            min-width: 0;
         }
         .map-modal-footer .nearby-item .name {
             font-weight: 500;
-            font-size: .95rem;
-            color: #0f172a
+            font-size: 1rem;
+            color: #0f172a;
         }
         .map-modal-footer .nearby-item .address {
-            font-size: .8rem;
+            font-size: .85rem;
             color: #64748b;
-            margin-top: 2px
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .map-modal-footer .nearby-item .dist {
-            font-size: .8rem;
+            font-size: .85rem;
             color: #94a3b8;
             flex-shrink: 0;
-            margin-left: 8px
+            margin-left: 12px;
         }
-        .map-modal-footer .btn-row {
-            display: flex;
-            gap: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #eef2f8;
-            margin-top: 4px
-        }
-        .map-modal-footer .btn-row .btn-cancel {
-            flex: 1;
-            padding: 10px;
-            border-radius: 40px;
-            border: none;
-            background: #f3f4f6;
-            color: #374151;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: .95rem
-        }
-        .map-modal-footer .btn-row .btn-confirm {
-            flex: 2;
-            padding: 10px;
-            border-radius: 40px;
-            border: none;
-            background: #1e4a6b;
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: .95rem
-        }
-        .map-modal-footer .btn-row button:active {
-            transform: scale(.96)
+        .map-modal-footer .loading-tip {
+            text-align: center;
+            color: #94a3b8;
+            padding: 20px 0;
+            font-size: .9rem;
         }
         .swipe-back-indicator {
             position: fixed;
@@ -1729,32 +1692,32 @@
             pointer-events: none;
             opacity: 0;
             transition: opacity .2s;
-            z-index: 999
+            z-index: 999;
         }
         .swipe-back-indicator.show {
-            opacity: 1
+            opacity: 1;
         }
         @media (max-width:380px) {
             html {
-                font-size: 14px
+                font-size: 14px;
             }
             .card {
                 padding: 14px 16px;
-                margin: 10px 12px
+                margin: 10px 12px;
             }
             .category-bar,
             .sort-bar {
-                padding: 10px 12px
+                padding: 10px 12px;
             }
             .category-chip,
             .sort-chip {
                 padding: 6px 12px;
-                font-size: .75rem
+                font-size: .75rem;
             }
         }
         @media (min-width:600px) {
             .app-container {
-                max-width: 600px
+                max-width: 600px;
             }
         }
         .fullscreen-header {
@@ -1765,7 +1728,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            flex-shrink: 0
+            flex-shrink: 0;
         }
         .fullscreen-header .back-btn {
             background: transparent;
@@ -1773,18 +1736,18 @@
             font-size: 1.8rem;
             cursor: pointer;
             padding: 4px 8px;
-            color: #1e4a6b
+            color: #1e4a6b;
         }
         .fullscreen-header .title {
             font-weight: 700;
             font-size: 1.2rem;
             flex: 1;
-            color: #0f172a
+            color: #0f172a;
         }
         .fullscreen-content {
             flex: 1;
             overflow-y: auto;
-            padding: 16px
+            padding: 16px;
         }
         .date-separator {
             text-align: center;
@@ -1797,7 +1760,7 @@
             width: fit-content;
             margin-left: auto;
             margin-right: auto;
-            padding: 4px 16px
+            padding: 4px 16px;
         }
         .payment-option {
             display: flex;
@@ -1808,32 +1771,32 @@
             border-radius: 16px;
             margin-bottom: 10px;
             cursor: pointer;
-            transition: all .2s
+            transition: all .2s;
         }
         .payment-option:active {
             transform: scale(.98);
-            background: #f8fafc
+            background: #f8fafc;
         }
         .payment-option .icon {
             font-size: 1.8rem;
             width: 40px;
-            text-align: center
+            text-align: center;
         }
         .payment-option .info {
             flex: 1;
-            text-align: left
+            text-align: left;
         }
         .payment-option .info .name {
             font-weight: 600;
-            font-size: 1rem
+            font-size: 1rem;
         }
         .payment-option .info .desc {
             font-size: .8rem;
-            color: #64748b
+            color: #64748b;
         }
         .payment-option.disabled {
             opacity: 0.5;
-            pointer-events: none
+            pointer-events: none;
         }
         .msg-pull-indicator {
             text-align: center;
@@ -1842,21 +1805,21 @@
             color: #64748b;
             background: transparent;
             width: 100%;
-            transition: transform .2s
+            transition: transform .2s;
         }
         #messageContainer {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            position: relative
+            position: relative;
         }
     </style>
 </head>
 <body>
     <div id="app">
         <div class="app-container">
-            <!-- 登录页 -->
+            <!-- ===== 登录页 ===== -->
             <div id="loginPage" class="page active">
                 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
                     <div class="card" style="width:100%;cursor:default;text-align:center;">
@@ -1872,7 +1835,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 注册页 -->
+            <!-- ===== 注册页 ===== -->
             <div id="registerPage" class="page">
                 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
                     <div class="card" style="width:100%;cursor:default;">
@@ -1888,7 +1851,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 主应用 -->
+            <!-- ===== 主应用 ===== -->
             <div id="mainApp" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
                 <div id="homePage" class="page">
                     <div class="category-bar" id="categoryBar">
@@ -1956,7 +1919,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- 消息页 -->
                 <div id="messagePage" class="page">
                     <div id="messageContainer" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;">
                         <div id="msgPullIndicator" class="msg-pull-indicator" style="display:none;">↓ 下拉刷新</div>
@@ -1997,34 +1959,26 @@
         </div>
     </div>
 
-    <!-- 地图模态框 - 完全仿微信 -->
+    <!-- ===== 地图模态框 – 完全仿微信发送位置 ===== -->
     <div class="map-modal" id="mapModal">
         <div class="map-modal-header">
-            <button class="back-btn" id="mapModalClose">‹</button>
-            <input type="text" class="search-input" id="mapSearchInput" placeholder="搜索地点">
-            <button class="confirm-btn" id="mapConfirmBtn">确定</button>
+            <button class="cancel-btn" id="mapCancelBtn">取消</button>
+            <input type="text" class="search-box" id="mapSearchInput" placeholder="搜索地点">
+            <button class="send-btn" id="mapConfirmBtn">确定</button>
         </div>
         <div id="mapContainer">
             <div class="map-center-marker">📍</div>
         </div>
         <div class="map-modal-footer">
-            <div class="current-location">
-                <span class="dot"></span>
-                <span class="addr" id="currentLocationAddr">正在定位...</span>
-            </div>
-            <div class="nearby-title">附近地点</div>
             <div class="nearby-list" id="nearbyList">
-                <div style="text-align:center; color:#94a3b8; padding:20px;">加载附近地点...</div>
-            </div>
-            <div class="btn-row">
-                <button class="btn-cancel" id="mapCancelBtn">取消</button>
-                <button class="btn-confirm" id="mapConfirmBtn2">确定</button>
+                <div class="loading-tip">加载附近地点...</div>
             </div>
         </div>
     </div>
 
     <div class="swipe-back-indicator" id="swipeBackIndicator">‹</div>
 
+    <!-- ===== Capacitor 插件模块（状态栏 + 通知） ===== -->
     <script type="module">
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             try {
@@ -2065,11 +2019,11 @@
     </script>
 
     <script>
-        const getApiBase = () => {
-            return 'https://bounty-app-production.up.railway.app/api';
-        };
+        // ==================== API 地址 ====================
+        const getApiBase = () => 'https://bounty-app-production.up.railway.app/api';
         const API_BASE = getApiBase();
 
+        // ===== 全局状态 =====
         let currentUser = null,
             pendingMedia = [],
             userLocation = null,
@@ -2090,6 +2044,7 @@
             isRecording = false;
         let backPressedOnce = false;
 
+        // ===== 地图变量 =====
         let map = null;
         let geocoder = null;
         let placeSearch = null;
@@ -2099,9 +2054,11 @@
         const MAX_MAP_ATTEMPTS = 3;
         let isMapOpen = false;
 
+        // ===== 筛选相关 =====
         let filterDistance = null;
         let filterKeyword = '';
 
+        // ===== 工具函数 =====
         function showNetworkSlow() {
             if (networkToast) return;
             networkToast = document.createElement('div');
@@ -2305,6 +2262,7 @@
             } catch (e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
         }
 
+        // ===== 地图功能（全新实现） =====
         function initMap() {
             if (mapReady) {
                 if (map) {
@@ -2315,9 +2273,9 @@
             }
 
             if (typeof AMap === 'undefined') {
-                console.warn('AMap 未加载，尝试重新加载脚本...');
+                console.warn('AMap 未加载，尝试重新加载...');
                 if (mapInitAttempts >= MAX_MAP_ATTEMPTS) {
-                    showAlert('地图加载失败', '请检查网络或高德地图 Key 是否正确。您可以直接在输入框中手动输入地址。');
+                    showAlert('地图加载失败', '请检查网络或高德地图 Key。');
                     closeMapModal();
                     return;
                 }
@@ -2328,15 +2286,15 @@
                 script.async = true;
                 document.head.appendChild(script);
                 window.onMapScriptLoaded = function() {
-                    console.log('高德地图脚本加载成功，重新初始化地图');
+                    console.log('高德脚本加载成功');
                     mapReady = false;
                     initMap();
                 };
                 setTimeout(() => {
                     if (!mapReady) {
-                        console.error('高德地图脚本加载超时');
+                        console.error('地图加载超时');
                         mapInitAttempts = MAX_MAP_ATTEMPTS;
-                        showAlert('地图加载超时', '请检查网络后重试，或手动输入地址。');
+                        showAlert('地图加载超时', '请检查网络后重试。');
                         closeMapModal();
                     }
                 }, 8000);
@@ -2363,7 +2321,7 @@
             });
 
             placeSearch = new AMap.PlaceSearch({
-                type: '地名|餐饮|购物|生活服务|住宅|公司企业',
+                type: '综合|餐饮服务|购物服务|生活服务|住宿服务|公司企业|政府机构|交通设施|教育服务|医疗保健|体育休闲|汽车服务|地名地址',
                 pageSize: 20,
                 pageIndex: 1,
                 city: '全国',
@@ -2378,7 +2336,6 @@
                 var lng = center.getLng();
                 var lat = center.getLat();
                 searchNearby(lng, lat);
-                updateCurrentLocation(lng, lat);
             });
 
             locateUserOnMap();
@@ -2403,8 +2360,7 @@
                         map.setCenter([lng, lat]);
                         setTimeout(() => {
                             searchNearby(lng, lat);
-                            updateCurrentLocation(lng, lat);
-                        }, 300);
+                        }, 500);
                         showToast('定位成功', 1500);
                     } else {
                         console.warn('高德定位失败，回退到浏览器定位', result);
@@ -2428,8 +2384,7 @@
                         showToast('定位成功（浏览器）', 1500);
                         setTimeout(() => {
                             searchNearby(lng, lat);
-                            updateCurrentLocation(lng, lat);
-                        }, 300);
+                        }, 500);
                     },
                     (err) => {
                         console.warn('浏览器定位失败', err);
@@ -2438,11 +2393,10 @@
                         if (map) {
                             map.setCenter([defaultLng, defaultLat]);
                         }
-                        showAlert('定位失败', '无法获取您的位置，已使用默认位置，请手动拖动地图选择。');
+                        showAlert('定位失败', '使用默认位置，请手动拖动地图。');
                         setTimeout(() => {
                             searchNearby(defaultLng, defaultLat);
-                            updateCurrentLocation(defaultLng, defaultLat);
-                        }, 300);
+                        }, 500);
                     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
             } else {
@@ -2451,27 +2405,11 @@
                 if (map) {
                     map.setCenter([defaultLng, defaultLat]);
                 }
-                showAlert('定位失败', '您的浏览器不支持定位，已使用默认位置。');
+                showAlert('定位失败', '浏览器不支持定位，使用默认位置。');
                 setTimeout(() => {
                     searchNearby(defaultLng, defaultLat);
-                    updateCurrentLocation(defaultLng, defaultLat);
-                }, 300);
+                }, 500);
             }
-        }
-
-        function updateCurrentLocation(lng, lat) {
-            const addrEl = document.getElementById('currentLocationAddr');
-            getDetailedAddress(lat, lng).then(address => {
-                addrEl.textContent = address || '未知位置';
-                selectedLocation.lng = lng;
-                selectedLocation.lat = lat;
-                selectedLocation.address = address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-            }).catch(() => {
-                addrEl.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                selectedLocation.lng = lng;
-                selectedLocation.lat = lat;
-                selectedLocation.address = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-            });
         }
 
         function searchNearby(lng, lat) {
@@ -2480,44 +2418,44 @@
                 return;
             }
             const listEl = document.getElementById('nearbyList');
-            if (listEl) listEl.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:20px;">搜索附近地点...</div>';
+            listEl.innerHTML = '<div class="loading-tip">搜索附近地点...</div>';
 
             placeSearch.searchNearBy('', [lng, lat], 2000, function(status, result) {
                 if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
                     var pois = result.poiList.pois;
-                    renderNearbyList(pois, lng, lat);
+                    renderNearbyList(pois);
                 } else {
-                    if (listEl) listEl.innerHTML =
-                        '<div style="text-align:center; color:#94a3b8; padding:20px;">未找到附近地点，请拖动地图重试</div>';
+                    listEl.innerHTML = '<div class="loading-tip">未找到附近地点，请拖动地图重试</div>';
                     console.warn('周边搜索无结果或失败', status, result);
                 }
             });
         }
 
-        function renderNearbyList(pois, centerLng, centerLat) {
+        function renderNearbyList(pois) {
             var listEl = document.getElementById('nearbyList');
             if (!listEl) return;
             if (!pois || pois.length === 0) {
-                listEl.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:20px;">无附近地点</div>';
+                listEl.innerHTML = '<div class="loading-tip">无附近地点</div>';
                 return;
             }
             var html = '';
-            pois.forEach(function(poi, index) {
-                var distance = poi.distance ? (poi.distance / 1000).toFixed(1) + 'km' : '未知';
+            pois.forEach(function(poi) {
+                var distance = poi.distance ? (poi.distance < 1000 ? poi.distance + 'm' : (poi.distance / 1000).toFixed(
+                    1) + 'km') : '未知';
                 var name = poi.name || '未命名';
                 var address = poi.address || '';
                 var fullAddress = name + (address ? ' ' + address : '');
                 var lng = poi.location.getLng();
                 var lat = poi.location.getLat();
                 html += `
-                <div class="nearby-item" data-lng="${lng}" data-lat="${lat}" data-address="${escapeHtml(fullAddress)}">
-                    <div>
-                        <div class="name">${escapeHtml(name)}</div>
-                        <div class="address">${escapeHtml(address)}</div>
+                    <div class="nearby-item" data-lng="${lng}" data-lat="${lat}" data-address="${escapeHtml(fullAddress)}">
+                        <div class="info">
+                            <div class="name">${escapeHtml(name)}</div>
+                            <div class="address">${escapeHtml(address)}</div>
+                        </div>
+                        <div class="dist">${distance}</div>
                     </div>
-                    <div class="dist">${distance}</div>
-                </div>
-            `;
+                `;
             });
             listEl.innerHTML = html;
 
@@ -2526,9 +2464,7 @@
                     var lng = parseFloat(this.dataset.lng);
                     var lat = parseFloat(this.dataset.lat);
                     var address = this.dataset.address;
-                    selectedLocation.lng = lng;
-                    selectedLocation.lat = lat;
-                    selectedLocation.address = address;
+                    selectedLocation = { lng, lat, address };
                     document.getElementById('pubAddress').value = address;
                     closeMapModal();
                     showToast('已选择位置：' + address);
@@ -2536,6 +2472,7 @@
             });
         }
 
+        // 打开地图
         function openMapModal() {
             if (map) {
                 map.destroy();
@@ -2550,8 +2487,7 @@
             document.body.style.overflow = 'hidden';
 
             const listEl = document.getElementById('nearbyList');
-            if (listEl) listEl.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:20px;">加载地图...</div>';
-            document.getElementById('currentLocationAddr').textContent = '定位中...';
+            listEl.innerHTML = '<div class="loading-tip">加载地图...</div>';
 
             setTimeout(() => {
                 initMap();
@@ -2571,7 +2507,7 @@
 
         function confirmLocation() {
             const addressInput = document.getElementById('pubAddress');
-            if (selectedLocation.lng && selectedLocation.lat && selectedLocation.address) {
+            if (selectedLocation && selectedLocation.address) {
                 addressInput.value = selectedLocation.address;
                 const hint = document.getElementById('locationHint');
                 if (hint) {
@@ -2590,9 +2526,7 @@
             const lng = center.getLng();
             const lat = center.getLat();
             getDetailedAddress(lat, lng).then(address => {
-                selectedLocation.lng = lng;
-                selectedLocation.lat = lat;
-                selectedLocation.address = address;
+                selectedLocation = { lng, lat, address };
                 addressInput.value = address;
                 const hint = document.getElementById('locationHint');
                 if (hint) {
@@ -2603,17 +2537,17 @@
             }).catch(() => {
                 const coordStr = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                 addressInput.value = coordStr;
-                selectedLocation.address = coordStr;
+                selectedLocation = { lng, lat, address: coordStr };
                 closeMapModal();
             });
         }
 
-        // 搜索地点
+        // 搜索框事件
         document.getElementById('mapSearchInput').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 const keyword = this.value.trim();
                 if (!keyword || !mapReady) {
-                    if (!mapReady) showToast('地图尚未加载完成，请稍候');
+                    if (!mapReady) showToast('地图尚未加载');
                     return;
                 }
                 geocoder.getLocation(keyword, function(status, result) {
@@ -2621,74 +2555,40 @@
                         const loc = result.geocodes[0].location;
                         map.setCenter([loc.getLng(), loc.getLat()]);
                         searchNearby(loc.getLng(), loc.getLat());
-                        updateCurrentLocation(loc.getLng(), loc.getLat());
                     } else {
-                        showToast('未找到该地点，请尝试更详细的关键词');
+                        showToast('未找到该地点');
                     }
                 });
             }
         });
 
-        // 地图搜索按钮（点击搜索图标触发）
-        document.getElementById('mapSearchBtn') && document.getElementById('mapSearchBtn').addEventListener('click', function() {
-            const keyword = document.getElementById('mapSearchInput').value.trim();
-            if (!keyword || !mapReady) {
-                if (!mapReady) showToast('地图尚未加载完成，请稍候');
-                return;
+        // ===== 页面切换与业务逻辑 =====
+        function switchPage(page) {
+            if (chatState.active && page !== 'message') {
+                closeChat();
             }
-            geocoder.getLocation(keyword, function(status, result) {
-                if (status === 'complete' && result.geocodes.length) {
-                    const loc = result.geocodes[0].location;
-                    map.setCenter([loc.getLng(), loc.getLat()]);
-                    searchNearby(loc.getLng(), loc.getLat());
-                    updateCurrentLocation(loc.getLng(), loc.getLat());
-                } else {
-                    showToast('未找到该地点，请尝试更详细的关键词');
-                }
-            });
-        });
-
-        function handleBackButton() {
-            const activePage = document.querySelector('.page.active');
-            if (!activePage) {
-                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                    Capacitor.Plugins.App.exitApp();
-                }
-                return;
-            }
-            const pageId = activePage.id;
-            const pageStack = ['home', 'publish', 'message', 'profile', 'detail', 'myTasks', 'wallet', 'credit'];
-            const currentIndex = pageStack.indexOf(pageId);
-
-            if (pageId === 'home' || currentIndex === -1) {
-                if (backPressedOnce) {
-                    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                        Capacitor.Plugins.App.exitApp();
-                    } else {
-                        window.close();
-                    }
-                } else {
-                    backPressedOnce = true;
-                    showToast('再按一次退出应用');
-                    setTimeout(() => { backPressedOnce = false; }, 2000);
-                }
-                return;
-            }
-
-            if (pageId === 'detail') {
-                document.getElementById('detailBackBtn')?.click();
-            } else if (pageId === 'myTasks') {
-                document.getElementById('myTasksBackBtn')?.click();
-            } else if (pageId === 'wallet') {
-                document.getElementById('walletBackBtn')?.click();
-            } else if (pageId === 'credit') {
-                document.getElementById('creditBackBtn')?.click();
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            const target = document.getElementById(`${page}Page`);
+            if (target) target.classList.add('active');
+            if (page === 'myTasks' || page === 'wallet' || page === 'credit') {
+                document.body.classList.add('hide-bottom-nav');
             } else {
-                switchPage('home');
+                document.body.classList.remove('hide-bottom-nav');
             }
             backPressedOnce = false;
+            if (page === 'home') refreshTaskList();
+            else if (page === 'profile') loadProfile();
+            else if (page === 'message') {
+                renderMessageList();
+                const indicator = document.getElementById('msgPullIndicator');
+                if (indicator) { indicator.style.display = 'none';
+                    indicator.style.transform = ''; }
+            } else if (page === 'wallet') renderWalletPage();
+            else if (page === 'credit') renderCreditPage();
+            localStorage.setItem('lastPage', page);
         }
 
+        // ===== 任务列表刷新 =====
         async function refreshTaskList(force = false) {
             if (refreshThrottle) return;
             refreshThrottle = true;
@@ -2781,102 +2681,12 @@
             });
         }
 
-        function initPullToRefresh() {
-            const homePage = document.getElementById('homePage');
-            let startY = 0,
-                isRefreshing = false;
-            const indicator = document.getElementById('refreshIndicator');
-            homePage.addEventListener('touchstart', (e) => { if (homePage.scrollTop === 0) startY = e.touches[0].clientY; });
-            homePage.addEventListener('touchmove', (e) => {
-                if (isRefreshing || homePage.scrollTop > 0) return;
-                const diff = e.touches[0].clientY - startY;
-                if (diff > 30) {
-                    e.preventDefault();
-                    indicator.style.display = 'block';
-                    indicator.style.transform = `translateY(${Math.min(diff - 30, 60)}px)`;
-                }
-            });
-            homePage.addEventListener('touchend', async () => {
-                if (indicator.style.display === 'block') {
-                    indicator.style.transform = '';
-                    indicator.style.display = 'none';
-                    isRefreshing = true;
-                    indicator.innerText = '刷新中...';
-                    indicator.style.display = 'block';
-                    await refreshTaskList(true);
-                    isRefreshing = false;
-                    indicator.style.display = 'none';
-                    indicator.innerText = '↓ 下拉刷新';
-                }
-            });
-        }
-
-        function initMessagePullToRefresh() {
-            const container = document.getElementById('messageContainer');
-            const wrapper = document.getElementById('messageListWrapper');
-            const indicator = document.getElementById('msgPullIndicator');
-            if (!container || !wrapper || !indicator) return;
-            let startY = 0,
-                isRefreshing = false,
-                isPulling = false;
-
-            container.addEventListener('touchstart', (e) => {
-                if (container.scrollTop <= 0 && !isRefreshing) {
-                    startY = e.touches[0].clientY;
-                    isPulling = true;
-                }
-            }, { passive: true });
-
-            container.addEventListener('touchmove', (e) => {
-                if (!isPulling || isRefreshing) return;
-                const diff = e.touches[0].clientY - startY;
-                if (diff > 30) {
-                    e.preventDefault();
-                    indicator.style.display = 'block';
-                    indicator.style.transform = `translateY(${Math.min(diff - 30, 60)}px)`;
-                    indicator.innerText = '松开刷新';
-                } else {
-                    indicator.style.transform = '';
-                    indicator.innerText = '↓ 下拉刷新';
-                }
-            }, { passive: false });
-
-            container.addEventListener('touchend', async () => {
-                isPulling = false;
-                if (indicator.style.display === 'block' && indicator.style.transform !== '') {
-                    isRefreshing = true;
-                    indicator.innerText = '刷新中...';
-                    indicator.style.transform = '';
-                    await renderMessageList();
-                    isRefreshing = false;
-                    indicator.style.display = 'none';
-                    indicator.innerText = '↓ 下拉刷新';
-                    showToast('消息已刷新');
-                } else {
-                    indicator.style.display = 'none';
-                    indicator.style.transform = '';
-                    indicator.innerText = '↓ 下拉刷新';
-                }
-            }, { passive: true });
-        }
-
-        function initFiltersAndCategories() {
-            document.querySelectorAll('.category-chip').forEach(chip => {
-                chip.addEventListener('click', () => {
-                    document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
-                    chip.classList.add('active');
-                    currentCategory = chip.getAttribute('data-cat');
-                    applyFilterAndSort();
-                });
-            });
-            document.querySelectorAll('.sort-chip').forEach(chip => {
-                chip.addEventListener('click', () => {
-                    document.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
-                    chip.classList.add('active');
-                    currentSort = chip.getAttribute('data-sort');
-                    applyFilterAndSort();
-                });
-            });
+        function updateFilterStatus() {
+            const status = document.getElementById('filterStatus');
+            let parts = [];
+            if (filterDistance !== null) parts.push(`≤${filterDistance}km`);
+            if (filterKeyword) parts.push(`搜索: ${filterKeyword}`);
+            status.innerText = parts.length ? parts.join(' | ') : '';
         }
 
         const categoryMap = { '取件': ['取件', '快递', '包裹', '取货'], '调试': ['调试', 'bug', '修复', '代码', '前端', '后端', '程序'],
@@ -2889,66 +2699,7 @@
             return '其他';
         }
 
-        function initSlide(container, onComplete) {
-            const track = container.querySelector('.slide-track');
-            const thumb = container.querySelector('.slide-thumb');
-            if (!track || !thumb) return;
-            if (track.clientWidth === 0 || thumb.clientWidth === 0) { setTimeout(() => initSlide(container, onComplete),
-                    100); return; }
-            let startX = 0,
-                isDragging = false;
-            const maxLeft = track.clientWidth - thumb.clientWidth;
-
-            function setTransform(x) { thumb.style.transform = `translateX(${x}px)`; }
-
-            function onMove(clientX) {
-                if (!isDragging) return;
-                let delta = clientX - startX;
-                let newLeft = Math.min(maxLeft, Math.max(0, delta));
-                setTransform(newLeft);
-                if (newLeft >= maxLeft - 5) {
-                    isDragging = false;
-                    container.classList.add('completed');
-                    setTransform(maxLeft);
-                    document.removeEventListener('mousemove', onMouseMove);
-                    document.removeEventListener('mouseup', onMouseUp);
-                    document.removeEventListener('touchmove', onTouchMove);
-                    document.removeEventListener('touchend', onTouchEnd);
-                    if (onComplete) onComplete();
-                }
-            }
-
-            function onMouseMove(e) { onMove(e.clientX); }
-
-            function onMouseUp() { isDragging = false;
-                setTransform(0);
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-                container.classList.remove('completed'); }
-
-            function onTouchMove(e) { onMove(e.touches[0].clientX);
-                e.preventDefault(); }
-
-            function onTouchEnd() { isDragging = false;
-                setTransform(0);
-                document.removeEventListener('touchmove', onTouchMove);
-                document.removeEventListener('touchend', onTouchEnd);
-                container.classList.remove('completed'); }
-
-            function onStart(clientX) { startX = clientX;
-                isDragging = true;
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-                document.addEventListener('touchmove', onTouchMove);
-                document.addEventListener('touchend', onTouchEnd); }
-            thumb.addEventListener('mousedown', (e) => { e.preventDefault();
-                onStart(e.clientX); });
-            thumb.addEventListener('touchstart', (e) => { e.preventDefault();
-                onStart(e.touches[0].clientX); });
-            container.classList.remove('completed');
-            setTransform(0);
-        }
-
+        // ===== 任务详情 =====
         window.viewTask = async function(taskId, fromPage = 'home') {
             lastPage = fromPage;
             if (countdownTimer) clearInterval(countdownTimer);
@@ -3256,17 +3007,67 @@
             }
         };
 
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'detailBackBtn') {
-                if (lastPage === 'profile') switchPage('profile');
-                else if (lastPage === 'message') {
-                    if (chatState.taskId) openChat(chatState.taskId, chatState.otherId, chatState.otherName, chatState
-                        .reward, chatState.title);
-                    else switchPage('message');
-                } else switchPage('home');
-            }
-        });
+        function initSlide(container, onComplete) {
+            const track = container.querySelector('.slide-track');
+            const thumb = container.querySelector('.slide-thumb');
+            if (!track || !thumb) return;
+            if (track.clientWidth === 0 || thumb.clientWidth === 0) { setTimeout(() => initSlide(container, onComplete),
+                    100); return; }
+            let startX = 0,
+                isDragging = false;
+            const maxLeft = track.clientWidth - thumb.clientWidth;
 
+            function setTransform(x) { thumb.style.transform = `translateX(${x}px)`; }
+
+            function onMove(clientX) {
+                if (!isDragging) return;
+                let delta = clientX - startX;
+                let newLeft = Math.min(maxLeft, Math.max(0, delta));
+                setTransform(newLeft);
+                if (newLeft >= maxLeft - 5) {
+                    isDragging = false;
+                    container.classList.add('completed');
+                    setTransform(maxLeft);
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    document.removeEventListener('touchmove', onTouchMove);
+                    document.removeEventListener('touchend', onTouchEnd);
+                    if (onComplete) onComplete();
+                }
+            }
+
+            function onMouseMove(e) { onMove(e.clientX); }
+
+            function onMouseUp() { isDragging = false;
+                setTransform(0);
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                container.classList.remove('completed'); }
+
+            function onTouchMove(e) { onMove(e.touches[0].clientX);
+                e.preventDefault(); }
+
+            function onTouchEnd() { isDragging = false;
+                setTransform(0);
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+                container.classList.remove('completed'); }
+
+            function onStart(clientX) { startX = clientX;
+                isDragging = true;
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+                document.addEventListener('touchmove', onTouchMove);
+                document.addEventListener('touchend', onTouchEnd); }
+            thumb.addEventListener('mousedown', (e) => { e.preventDefault();
+                onStart(e.clientX); });
+            thumb.addEventListener('touchstart', (e) => { e.preventDefault();
+                onStart(e.touches[0].clientX); });
+            container.classList.remove('completed');
+            setTransform(0);
+        }
+
+        // ===== 聊天相关 =====
         const CHAT_POLL_INTERVAL = 3000;
 
         function updateConversationTimestamp(taskId) {
@@ -3395,48 +3196,6 @@
                     bubble.addEventListener('touchmove', cancelPress);
                 });
             } catch (e) { console.error('刷新消息失败', e); }
-        }
-
-        function initChatPullToRefresh() {
-            const messagesArea = document.getElementById('chatMsgsArea');
-            if (!messagesArea) return;
-            let startY = 0,
-                isRefreshing = false;
-            let indicator = null;
-            const createIndicator = () => {
-                if (document.getElementById('chatRefreshIndicator')) return;
-                const div = document.createElement('div');
-                div.id = 'chatRefreshIndicator';
-                div.className = 'chat-refresh-indicator';
-                div.innerText = '↓ 下拉刷新';
-                messagesArea.parentNode.insertBefore(div, messagesArea);
-                return div;
-            };
-            messagesArea.addEventListener('touchstart', (e) => { if (messagesArea.scrollTop === 0) startY = e.touches[0]
-                    .clientY; });
-            messagesArea.addEventListener('touchmove', (e) => {
-                if (isRefreshing || messagesArea.scrollTop > 0) return;
-                const diff = e.touches[0].clientY - startY;
-                if (diff > 30) {
-                    e.preventDefault();
-                    indicator = indicator || createIndicator();
-                    if (indicator) { indicator.style.display = 'block';
-                        indicator.style.transform = `translateY(${Math.min(diff-30,60)}px)`; }
-                }
-            });
-            messagesArea.addEventListener('touchend', async () => {
-                if (indicator && indicator.style.display === 'block') {
-                    indicator.style.transform = '';
-                    indicator.style.display = 'none';
-                    isRefreshing = true;
-                    indicator.innerText = '刷新中...';
-                    indicator.style.display = 'block';
-                    await refreshMessagesOnly();
-                    isRefreshing = false;
-                    indicator.style.display = 'none';
-                    indicator.innerText = '↓ 下拉刷新';
-                }
-            });
         }
 
         function showChatView() {
@@ -3619,7 +3378,6 @@
             document.addEventListener('click', outsideClickHandler);
 
             refreshMessagesOnly();
-            initChatPullToRefresh();
             if (chatState.pollInterval) clearInterval(chatState.pollInterval);
             chatState.pollInterval = setInterval(async () => {
                 if (chatState.active && chatState.taskId) {
@@ -3706,6 +3464,7 @@
             }
         }
 
+        // ===== 消息列表 =====
         function renderMessageList() {
             const wrapper = document.getElementById('messageListWrapper');
             if (!wrapper) return;
@@ -3831,6 +3590,7 @@
             });
         }
 
+        // ===== 更新未读标记并触发本地通知 =====
         let prevUnreadCount = parseInt(localStorage.getItem('prevUnread') || '0');
 
         async function updateUnreadBadge() {
@@ -3861,6 +3621,7 @@
             } catch (e) {}
         }
 
+        // ===== 个人主页 =====
         async function loadProfile() {
             const container = document.getElementById('profileContainer');
             container.innerHTML = '<div class="loading">加载中...</div>';
@@ -3917,6 +3678,7 @@
             } catch (err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
         }
 
+        // ===== 钱包页面 =====
         async function renderWalletPage() {
             const container = document.getElementById('walletContent');
             container.innerHTML = '<div class="loading">加载中...</div>';
@@ -4001,6 +3763,7 @@
         `;
         }
 
+        // ===== 信用页面 =====
         async function renderCreditPage() {
             const container = document.getElementById('creditContent');
             container.innerHTML = '<div class="loading">加载中...</div>';
@@ -4026,6 +3789,7 @@
             }
         }
 
+        // ===== 我的任务 =====
         let currentMyTasksType = 'pub';
 
         async function navigateToMyTasks(type) {
@@ -4091,6 +3855,7 @@
             }
         }
 
+        // ===== 其他功能 =====
         window.cancelAcceptedTask = async function(taskId) {
             showConfirm('确认取消', '取消接取将扣除5信用分，确定吗？', async () => {
                 const result = await callApi(`/tasks/${taskId}/cancel-accept`, { method: 'PUT', body: JSON
@@ -4183,31 +3948,7 @@
             });
         }
 
-        function switchPage(page) {
-            if (chatState.active && page !== 'message') {
-                closeChat();
-            }
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            const target = document.getElementById(`${page}Page`);
-            if (target) target.classList.add('active');
-            if (page === 'myTasks' || page === 'wallet' || page === 'credit') {
-                document.body.classList.add('hide-bottom-nav');
-            } else {
-                document.body.classList.remove('hide-bottom-nav');
-            }
-            backPressedOnce = false;
-            if (page === 'home') refreshTaskList();
-            else if (page === 'profile') loadProfile();
-            else if (page === 'message') {
-                renderMessageList();
-                const indicator = document.getElementById('msgPullIndicator');
-                if (indicator) { indicator.style.display = 'none';
-                    indicator.style.transform = ''; }
-            } else if (page === 'wallet') renderWalletPage();
-            else if (page === 'credit') renderCreditPage();
-            localStorage.setItem('lastPage', page);
-        }
-
+        // ===== 发布任务 =====
         async function publishTask() {
             if (!currentUser.idCardVerified) { showAlert('提示', '请先实名认证'); return; }
             const title = document.getElementById('pubTitle').value.trim();
@@ -4361,6 +4102,7 @@
             document.getElementById('locationHint').innerHTML = '点击"选择位置"打开地图选点';
         }
 
+        // ===== 取消任务 =====
         async function cancelTask(taskId) {
             showConfirm('确认取消', '确定取消该任务吗？取消后赏金将退还到您的账户。', async () => {
                 try {
@@ -4377,6 +4119,7 @@
             });
         }
 
+        // ===== 登录 =====
         async function doLogin() {
             const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value;
@@ -4422,6 +4165,48 @@
             }
         }
 
+        function handleBackButton() {
+            const activePage = document.querySelector('.page.active');
+            if (!activePage) {
+                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                    Capacitor.Plugins.App.exitApp();
+                }
+                return;
+            }
+            const pageId = activePage.id;
+            const pageStack = ['home', 'publish', 'message', 'profile', 'detail', 'myTasks', 'wallet', 'credit'];
+            const currentIndex = pageStack.indexOf(pageId);
+
+            if (pageId === 'home' || currentIndex === -1) {
+                if (backPressedOnce) {
+                    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                        Capacitor.Plugins.App.exitApp();
+                    } else {
+                        window.close();
+                    }
+                } else {
+                    backPressedOnce = true;
+                    showToast('再按一次退出应用');
+                    setTimeout(() => { backPressedOnce = false; }, 2000);
+                }
+                return;
+            }
+
+            if (pageId === 'detail') {
+                document.getElementById('detailBackBtn')?.click();
+            } else if (pageId === 'myTasks') {
+                document.getElementById('myTasksBackBtn')?.click();
+            } else if (pageId === 'wallet') {
+                document.getElementById('walletBackBtn')?.click();
+            } else if (pageId === 'credit') {
+                document.getElementById('creditBackBtn')?.click();
+            } else {
+                switchPage('home');
+            }
+            backPressedOnce = false;
+        }
+
+        // ===== 语音录制 =====
         async function startRecording() {
             const hasPerm = await requestMicrophonePermission();
             if (!hasPerm) {
@@ -4470,6 +4255,7 @@
             }
         }
 
+        // ===== 评价相关 =====
         async function getRating(taskId) {
             try {
                 return await callApi(`/ratings/task/${taskId}/user/${currentUser.id}`);
@@ -4483,6 +4269,7 @@
             } catch (e) { showAlert('评价失败', e.message); return null; }
         }
 
+        // ===== 凭证提交 =====
         async function submitProof(taskId, proofFiles) {
             const proofMedia = [];
             for (let file of proofFiles) {
@@ -4548,6 +4335,7 @@
             });
         }
 
+        // ===== 图片预览 =====
         function showImagePreview(url) {
             const modal = document.createElement('div');
             modal.className = 'image-preview-modal';
@@ -4557,6 +4345,7 @@
             modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
         }
 
+        // ===== 导航 =====
         async function navigateTo(lat, lng, address) {
             const destName = encodeURIComponent(address || '目的地');
             let url = '';
@@ -4578,6 +4367,7 @@
             }, 2500);
         }
 
+        // ===== 图片压缩与上传 =====
         function compressImage(file, quality = 0.5, maxWidth = 600, maxHeight = 600) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -4652,6 +4442,7 @@
             });
         }
 
+        // ===== 搜索与筛选 =====
         function initSearchAndFilter() {
             const searchToggle = document.getElementById('searchToggleBtn');
             const searchPanel = document.getElementById('searchPanel');
@@ -4735,16 +4526,107 @@
                 applyFilterAndSort();
                 filterOverlay.classList.remove('show');
             });
-
-            function updateFilterStatus() {
-                const status = document.getElementById('filterStatus');
-                let parts = [];
-                if (filterDistance !== null) parts.push(`≤${filterDistance}km`);
-                if (filterKeyword) parts.push(`搜索: ${filterKeyword}`);
-                status.innerText = parts.length ? parts.join(' | ') : '';
-            }
         }
 
+        function initPullToRefresh() {
+            const homePage = document.getElementById('homePage');
+            let startY = 0,
+                isRefreshing = false;
+            const indicator = document.getElementById('refreshIndicator');
+            homePage.addEventListener('touchstart', (e) => { if (homePage.scrollTop === 0) startY = e.touches[0].clientY; });
+            homePage.addEventListener('touchmove', (e) => {
+                if (isRefreshing || homePage.scrollTop > 0) return;
+                const diff = e.touches[0].clientY - startY;
+                if (diff > 30) {
+                    e.preventDefault();
+                    indicator.style.display = 'block';
+                    indicator.style.transform = `translateY(${Math.min(diff - 30, 60)}px)`;
+                }
+            });
+            homePage.addEventListener('touchend', async () => {
+                if (indicator.style.display === 'block') {
+                    indicator.style.transform = '';
+                    indicator.style.display = 'none';
+                    isRefreshing = true;
+                    indicator.innerText = '刷新中...';
+                    indicator.style.display = 'block';
+                    await refreshTaskList(true);
+                    isRefreshing = false;
+                    indicator.style.display = 'none';
+                    indicator.innerText = '↓ 下拉刷新';
+                }
+            });
+        }
+
+        function initMessagePullToRefresh() {
+            const container = document.getElementById('messageContainer');
+            const wrapper = document.getElementById('messageListWrapper');
+            const indicator = document.getElementById('msgPullIndicator');
+            if (!container || !wrapper || !indicator) return;
+            let startY = 0,
+                isRefreshing = false,
+                isPulling = false;
+
+            container.addEventListener('touchstart', (e) => {
+                if (container.scrollTop <= 0 && !isRefreshing) {
+                    startY = e.touches[0].clientY;
+                    isPulling = true;
+                }
+            }, { passive: true });
+
+            container.addEventListener('touchmove', (e) => {
+                if (!isPulling || isRefreshing) return;
+                const diff = e.touches[0].clientY - startY;
+                if (diff > 30) {
+                    e.preventDefault();
+                    indicator.style.display = 'block';
+                    indicator.style.transform = `translateY(${Math.min(diff - 30, 60)}px)`;
+                    indicator.innerText = '松开刷新';
+                } else {
+                    indicator.style.transform = '';
+                    indicator.innerText = '↓ 下拉刷新';
+                }
+            }, { passive: false });
+
+            container.addEventListener('touchend', async () => {
+                isPulling = false;
+                if (indicator.style.display === 'block' && indicator.style.transform !== '') {
+                    isRefreshing = true;
+                    indicator.innerText = '刷新中...';
+                    indicator.style.transform = '';
+                    await renderMessageList();
+                    isRefreshing = false;
+                    indicator.style.display = 'none';
+                    indicator.innerText = '↓ 下拉刷新';
+                    showToast('消息已刷新');
+                } else {
+                    indicator.style.display = 'none';
+                    indicator.style.transform = '';
+                    indicator.innerText = '↓ 下拉刷新';
+                }
+            }, { passive: true });
+        }
+
+        function initFiltersAndCategories() {
+            document.querySelectorAll('.category-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    currentCategory = chip.getAttribute('data-cat');
+                    applyFilterAndSort();
+                });
+            });
+            document.querySelectorAll('.sort-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    currentSort = chip.getAttribute('data-sort');
+                    applyFilterAndSort();
+                });
+            });
+        }
+
+        // ===== 启动 =====
         document.addEventListener('DOMContentLoaded', () => {
             initPullToRefresh();
             initFiltersAndCategories();
@@ -4755,10 +4637,8 @@
             document.getElementById('creditBackBtn').addEventListener('click', () => switchPage('profile'));
 
             document.getElementById('openMapBtn').addEventListener('click', openMapModal);
-            document.getElementById('mapModalClose').addEventListener('click', closeMapModal);
             document.getElementById('mapCancelBtn').addEventListener('click', closeMapModal);
             document.getElementById('mapConfirmBtn').addEventListener('click', confirmLocation);
-            document.getElementById('mapConfirmBtn2').addEventListener('click', confirmLocation);
 
             document.getElementById('myTasksBackBtn').addEventListener('click', () => {
                 switchPage('profile');
@@ -4806,6 +4686,7 @@
             }
         });
 
+        // ===== 自动登录 =====
         (async () => {
             const savedUser = localStorage.getItem('user');
             if (savedUser && localStorage.getItem('token')) {
