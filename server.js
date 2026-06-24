@@ -156,11 +156,10 @@ const RatingSchema = new mongoose.Schema({
   taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', required: true },
   fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   toUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  rating: { type: Number, min: 1, max: 5, required: true }, // 1-5 分
+  rating: { type: Number, min: 1, max: 5, required: true },
   comment: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 });
-// 复合唯一索引：一个用户对某个任务只能评价一次
 RatingSchema.index({ taskId: 1, fromUserId: 1, toUserId: 1 }, { unique: true });
 const Rating = mongoose.model('Rating', RatingSchema);
 
@@ -212,6 +211,8 @@ async function initDefaultData() {
       credit: 72,
       idCardVerified: true
     });
+
+    // 原有2个任务
     await Task.create({
       title: '帮忙取快递',
       description: '西门驿站取件送到3栋',
@@ -230,7 +231,55 @@ async function initDefaultData() {
       locationAddress: '徐家汇',
       category: '调试'
     });
-    console.log('默认测试数据创建完成');
+
+    // ===== 新增30个测试任务，分布在上海各区 =====
+    const testTaskAddresses = [
+      { title: '浦东新区取文件', description: '张江高科园区', reward: 15, category: '取件', locationAddress: '上海市浦东新区张江路1号' },
+      { title: '帮忙调试代码', description: '漕河泾开发区', reward: 30, category: '调试', locationAddress: '上海市徐汇区漕宝路100号' },
+      { title: '送文件到陆家嘴', description: '陆家嘴金融中心', reward: 20, category: '跑腿', locationAddress: '上海市浦东新区陆家嘴环路1000号' },
+      { title: '修理电脑', description: '五角场', reward: 50, category: '调试', locationAddress: '上海市杨浦区邯郸路220号' },
+      { title: '帮忙取快递', description: '闵行区莘庄', reward: 10, category: '取件', locationAddress: '上海市闵行区莘建路100号' },
+      { title: '代购咖啡', description: '静安寺', reward: 8, category: '跑腿', locationAddress: '上海市静安区南京西路1600号' },
+      { title: '拍照修图', description: '黄浦区外滩', reward: 25, category: '调试', locationAddress: '上海市黄浦区中山东一路1号' },
+      { title: '送钥匙', description: '长宁区中山公园', reward: 12, category: '跑腿', locationAddress: '上海市长宁区长宁路800号' },
+      { title: '搬家帮忙', description: '虹口区', reward: 60, category: '跑腿', locationAddress: '上海市虹口区四川北路2000号' },
+      { title: '网络设置', description: '普陀区', reward: 22, category: '调试', locationAddress: '上海市普陀区武宁路300号' },
+      { title: '取文件', description: '宝山区', reward: 18, category: '取件', locationAddress: '上海市宝山区牡丹江路1000号' },
+      { title: '陪去医院', description: '徐汇区', reward: 40, category: '跑腿', locationAddress: '上海市徐汇区枫林路200号' },
+      { title: '遛狗', description: '浦东新区', reward: 15, category: '跑腿', locationAddress: '上海市浦东新区花木路1000号' },
+      { title: '安装软件', description: '闵行区', reward: 20, category: '调试', locationAddress: '上海市闵行区都市路200号' },
+      { title: '送花', description: '静安区', reward: 10, category: '跑腿', locationAddress: '上海市静安区北京西路1000号' },
+      { title: '取快递', description: '徐汇区', reward: 8, category: '取件', locationAddress: '上海市徐汇区龙华路300号' },
+      { title: '教老人用手机', description: '杨浦区', reward: 25, category: '调试', locationAddress: '上海市杨浦区控江路500号' },
+      { title: '帮忙做饭', description: '虹口区', reward: 30, category: '跑腿', locationAddress: '上海市虹口区大连路200号' },
+      { title: '维修灯具', description: '普陀区', reward: 35, category: '调试', locationAddress: '上海市普陀区金沙江路1000号' },
+      { title: '取药', description: '黄浦区', reward: 12, category: '取件', locationAddress: '上海市黄浦区瑞金二路100号' },
+      { title: '买衣服', description: '长宁区', reward: 10, category: '跑腿', locationAddress: '上海市长宁区虹桥路1000号' },
+      { title: '手机维修', description: '浦东新区', reward: 40, category: '调试', locationAddress: '上海市浦东新区世纪大道1000号' },
+      { title: '翻译文件', description: '徐汇区', reward: 20, category: '调试', locationAddress: '上海市徐汇区衡山路200号' },
+      { title: '送文件', description: '静安区', reward: 10, category: '跑腿', locationAddress: '上海市静安区石门一路100号' },
+      { title: '取快递', description: '闵行区', reward: 8, category: '取件', locationAddress: '上海市闵行区沪闵路1000号' },
+      { title: '帮忙搬家', description: '杨浦区', reward: 50, category: '跑腿', locationAddress: '上海市杨浦区政立路500号' },
+      { title: '清灰电脑', description: '虹口区', reward: 20, category: '调试', locationAddress: '上海市虹口区东江湾路100号' },
+      { title: '送餐', description: '普陀区', reward: 10, category: '跑腿', locationAddress: '上海市普陀区长寿路200号' },
+      { title: '取文件', description: '黄浦区', reward: 12, category: '取件', locationAddress: '上海市黄浦区人民大道100号' },
+      { title: '帮忙修车', description: '宝山区', reward: 45, category: '调试', locationAddress: '上海市宝山区蕴川路1000号' }
+    ];
+
+    for (const taskData of testTaskAddresses) {
+      await Task.create({
+        title: taskData.title,
+        description: taskData.description,
+        reward: taskData.reward,
+        publisherId: user1._id,
+        publisherName: '小明',
+        locationAddress: taskData.locationAddress,
+        category: taskData.category,
+        status: 'available'
+      });
+    }
+
+    console.log('默认测试数据（含30个任务）创建完成');
   }
 }
 
@@ -613,7 +662,6 @@ app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
 });
 
 // ==================== 评价 API ====================
-// 获取用户对某个任务的评价（返回 null 或评价对象）
 app.get('/api/ratings/task/:taskId/user/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
@@ -621,7 +669,6 @@ app.get('/api/ratings/task/:taskId/user/:userId', authMiddleware, async (req, re
   res.json(rating || null);
 });
 
-// 获取用户收到的所有评价（用于展示）
 app.get('/api/ratings/user/:userId', authMiddleware, async (req, res) => {
   if (req.params.userId !== req.userId) return res.status(403).json({ error: '无权查看' });
   const ratings = await Rating.find({ toUserId: req.params.userId })
@@ -631,7 +678,6 @@ app.get('/api/ratings/user/:userId', authMiddleware, async (req, res) => {
   res.json(ratings);
 });
 
-// 提交评价
 app.post('/api/ratings', authMiddleware, async (req, res) => {
   const { taskId, toUserId, rating, comment } = req.body;
   const fromUserId = req.userId;
@@ -646,32 +692,26 @@ app.post('/api/ratings', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: '不能给自己评价' });
   }
 
-  // 检查任务是否存在且已完成
   const task = await Task.findById(taskId);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.status !== 'completed') {
     return res.status(400).json({ error: '任务尚未完成，不能评价' });
   }
-  // 验证当前用户是任务的参与者（发布者或接取者）
   if (task.publisherId.toString() !== fromUserId && task.takerId.toString() !== fromUserId) {
     return res.status(403).json({ error: '您不是该任务的参与者' });
   }
-  // 验证被评价人是任务参与者且不是自己
   if (task.publisherId.toString() !== toUserId && task.takerId.toString() !== toUserId) {
     return res.status(400).json({ error: '被评价人不是该任务的参与者' });
   }
 
-  // 检查是否已经评价过
   const existing = await Rating.findOne({ taskId, fromUserId, toUserId });
   if (existing) {
     return res.status(400).json({ error: '您已经评价过该任务了' });
   }
 
-  // 保存评价
   const newRating = new Rating({ taskId, fromUserId, toUserId, rating, comment: comment || '' });
   await newRating.save();
 
-  // 更新信用分：rating >= 4 好评 +2，rating <= 2 差评 -2，其他不变
   let creditChange = 0;
   if (rating >= 4) creditChange = 2;
   else if (rating <= 2) creditChange = -2;

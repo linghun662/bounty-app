@@ -19,7 +19,7 @@
         };
     </script>
     <style>
-        /* ===== 基础样式（完整保留） ===== */
+        /* ===== 基础样式 ===== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
@@ -28,10 +28,8 @@
         .page{display:none;flex-direction:column;flex:1;overflow:hidden;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1)}
         .page.active{display:flex}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        .nav-header{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 18px;border-bottom:1px solid rgba(226,232,240,.6);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:20}
-        .logo{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,#0f2b3d,#1e4a6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .header-balance{background:rgba(30,74,107,.1);padding:6px 14px;border-radius:40px;font-size:.75rem;font-weight:600;color:#1e4a6b;cursor:pointer}
-        .header-balance:active{background:rgba(30,74,107,.2);transform:scale(.96)}
+        .nav-header{background:rgba(255,255,255,0.9);backdrop-filter:blur(12px);padding:12px 18px;padding-top:env(safe-area-inset-top,12px);border-bottom:1px solid rgba(226,232,240,.6);display:flex;justify-content:center;align-items:center;flex-shrink:0;z-index:20}
+        .nav-header .logo{font-size:1rem;font-weight:600;color:#1e4a6b;letter-spacing:0.5px}
         .bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);display:flex;justify-content:space-around;padding:8px 20px max(18px,env(safe-area-inset-bottom));border-top:1px solid rgba(226,232,240,.6);z-index:20;flex-shrink:0;transition:transform .3s ease,opacity .3s ease}
         body.hide-bottom-nav .bottom-nav{transform:translateY(100%);opacity:0;pointer-events:none}
         .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;color:#94a3b8;cursor:pointer;position:relative}
@@ -285,9 +283,10 @@
         </div>
         <!-- 主应用 -->
         <div id="mainApp" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+            <!-- ===== 修改后的导航栏：移除“赏金集市”和“余额”，仅保留透明背景与标题 ===== -->
             <div class="nav-header">
-                <span class="logo">💰 赏金集市</span>
-                <div><span class="header-balance" id="headerBalance">余额: ¥0</span></div>
+                <span class="logo">💰</span>
+                <!-- 此处留空，仅显示一个图标，可以根据需要添加其他内容 -->
             </div>
             <!-- 首页 -->
             <div id="homePage" class="page">
@@ -301,6 +300,29 @@
                     <span class="sort-chip" data-sort="distance">距离最近</span>
                     <span class="sort-chip" data-sort="reward">赏金最高</span>
                     <span class="sort-chip active" data-sort="time">最新发布</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; padding:4px 12px; background:#fff; border-bottom:1px solid #eef2f8;">
+                    <button id="filterToggleBtn" style="background:#1e4a6b; color:#fff; border:none; border-radius:20px; padding:4px 12px; font-size:.8rem;">🔍 筛选</button>
+                    <span id="filterStatus" style="font-size:.75rem; color:#64748b;"></span>
+                </div>
+                <div id="filterPanel" style="display:none; background:#fff; padding:12px; border-bottom:1px solid #eef2f8;">
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+                        <span class="distance-option" data-dist="1" style="background:#f1f5f9; padding:2px 10px; border-radius:20px; font-size:.75rem; cursor:pointer;">1km</span>
+                        <span class="distance-option" data-dist="5" style="background:#f1f5f9; padding:2px 10px; border-radius:20px; font-size:.75rem; cursor:pointer;">5km</span>
+                        <span class="distance-option" data-dist="10" style="background:#f1f5f9; padding:2px 10px; border-radius:20px; font-size:.75rem; cursor:pointer;">10km</span>
+                        <span class="distance-option" data-dist="15" style="background:#f1f5f9; padding:2px 10px; border-radius:20px; font-size:.75rem; cursor:pointer;">15km</span>
+                        <span class="distance-option" data-dist="50" style="background:#f1f5f9; padding:2px 10px; border-radius:20px; font-size:.75rem; cursor:pointer;">50km</span>
+                        <span class="distance-option" data-dist="custom" style="background:#f1f5f9; padding:2px 10px; border-radius:20px; font-size:.75rem; cursor:pointer;">自定义</span>
+                    </div>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="number" id="customDistInput" placeholder="距离(km)" style="width:80px; padding:2px 4px; border:1px solid #ddd; border-radius:10px; font-size:.75rem; display:none;">
+                        <button id="applyFilterBtn" style="background:#1e4a6b; color:#fff; border:none; border-radius:20px; padding:2px 12px; font-size:.75rem;">应用</button>
+                        <button id="resetFilterBtn" style="background:#e2e8f0; border:none; border-radius:20px; padding:2px 12px; font-size:.75rem;">重置</button>
+                        <span style="font-size:.75rem; margin-left:auto;" id="filterResultCount">全部</span>
+                    </div>
+                    <div style="margin-top:6px;">
+                        <input type="text" id="searchInput" placeholder="搜索任务标题或描述..." style="width:100%; padding:4px 8px; border:1px solid #ddd; border-radius:20px; font-size:.8rem;">
+                    </div>
                 </div>
                 <div id="refreshIndicator" class="pull-refresh-container" style="display:none;">↓ 下拉刷新</div>
                 <div id="homeContent" style="flex:1;overflow-y:auto;padding-bottom:20px;">加载中...</div>
@@ -400,22 +422,9 @@
 <div class="swipe-back-indicator" id="swipeBackIndicator">‹</div>
 
 <script>
-    // ==================== API 地址（已修改） ====================
+    // ==================== API 地址（硬编码） ====================
     const getApiBase = () => {
-        // 检测是否在 Capacitor 原生环境（Android / iOS）
-        if (window.Capacitor && typeof window.Capacitor.getPlatform === 'function') {
-            const platform = window.Capacitor.getPlatform();
-            if (platform === 'android' || platform === 'ios') {
-                // 生产环境完整域名
-                return 'https://bounty-app-production.up.railway.app/api';
-            }
-        }
-        // 备用检测：通过协议判断
-        if (window.location.protocol === 'capacitor:' || window.location.protocol === 'file:') {
-            return 'https://bounty-app-production.up.railway.app/api';
-        }
-        // Web 环境
-        return '/api';
+        return 'https://bounty-app-production.up.railway.app/api';
     };
     const API_BASE = getApiBase();
 
@@ -436,6 +445,10 @@
     let mapReady = false;
     let mapInitAttempts = 0;
     const MAX_MAP_ATTEMPTS = 3;
+
+    // ===== 筛选相关 =====
+    let filterDistance = null; // null 表示不限
+    let filterKeyword = '';
 
     // ===== 工具函数 =====
     function showNetworkSlow() {
@@ -761,109 +774,57 @@
         document.body.style.overflow = '';
     }
 
+    // ===== 修改后的 confirmLocation（地图精确定位） =====
     async function confirmLocation() {
         const addressInput = document.getElementById('pubAddress');
-        const addrEl = document.getElementById('selectedAddress');
-
-        const isCoord = /^[-+]?\d+\.\d+,\s*[-+]?\d+\.\d+$/.test(selectedLocation.address);
-        if (!selectedLocation.address || isCoord) {
-            if (!map) {
-                showAlert('地图未就绪', '请稍候再试或手动输入地址');
-                closeMapModal();
-                return;
-            }
-            const center = map.getCenter();
-            const lng = center.getLng();
-            const lat = center.getLat();
-            addrEl.textContent = '获取地址中...';
-            try {
-                const address = await getDetailedAddress(lat, lng);
-                selectedLocation.address = address;
-                addrEl.textContent = address;
-                addressInput.value = address;
-                const hint = document.getElementById('locationHint');
-                if (hint) {
-                    hint.innerHTML = '✅ 已选择位置：' + address;
-                    setTimeout(() => { hint.innerHTML = '点击"选择位置"打开地图选点'; }, 3000);
-                }
-                closeMapModal();
-            } catch (e) {
-                const coordStr = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                showAlert('地址解析失败', '无法获取详细地址，已填入坐标，您可手动修改。');
-                addressInput.value = coordStr;
-                selectedLocation.address = coordStr;
-                closeMapModal();
-            }
+        if (!map) {
+            showAlert('地图未就绪', '请稍候再试或手动输入地址');
+            closeMapModal();
             return;
         }
-
-        addressInput.value = selectedLocation.address;
-        const hint = document.getElementById('locationHint');
-        if (hint) {
-            hint.innerHTML = '✅ 已选择位置：' + selectedLocation.address;
-            setTimeout(() => { hint.innerHTML = '点击"选择位置"打开地图选点'; }, 3000);
+        const center = map.getCenter();
+        const lng = center.getLng();
+        const lat = center.getLat();
+        selectedLocation.lng = lng;
+        selectedLocation.lat = lat;
+        try {
+            const address = await getDetailedAddress(lat, lng);
+            selectedLocation.address = address;
+            addressInput.value = address;
+            const hint = document.getElementById('locationHint');
+            if (hint) {
+                hint.innerHTML = '✅ 已选择位置：' + address;
+                setTimeout(() => { hint.innerHTML = '点击"选择位置"打开地图选点'; }, 3000);
+            }
+        } catch (e) {
+            const coordStr = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            addressInput.value = coordStr;
+            selectedLocation.address = coordStr;
         }
         closeMapModal();
     }
 
-    // ===== 全局手势返回 =====
-    let swipeIndicator = null;
-    let swipeActive = false;
-    function initGlobalSwipeBack() {
-        const pages = document.querySelectorAll('.page:not(#homePage)');
-        swipeIndicator = document.getElementById('swipeBackIndicator');
-        let startX = 0, startY = 0, isSwiping = false;
+    // ===== 全局手势返回（已废弃，改用 Capacitor App 插件） =====
+    // 保留旧函数但不再使用
 
-        pages.forEach(page => {
-            const touchStart = (e) => {
-                if (!page.classList.contains('active')) return;
-                const rect = page.getBoundingClientRect();
-                const touchX = e.touches[0].clientX - rect.left;
-                if (touchX > rect.width * 0.15) return;
-                if (page.scrollTop > 0) return;
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-                isSwiping = true;
-                swipeActive = true;
-            };
-            const touchMove = (e) => {
-                if (!isSwiping || !page.classList.contains('active')) return;
-                const deltaX = e.touches[0].clientX - startX;
-                const deltaY = e.touches[0].clientY - startY;
-                if (deltaX > 10 && Math.abs(deltaY) < 80) {
-                    if (swipeIndicator) {
-                        swipeIndicator.classList.add('show');
-                        swipeIndicator.style.opacity = Math.min(1, (deltaX - 10) / 30);
-                    }
-                    e.preventDefault();
-                    if (deltaX > 45) {
-                        isSwiping = false;
-                        swipeActive = false;
-                        if (swipeIndicator) swipeIndicator.classList.remove('show');
-                        handleBackButton();
-                    }
-                } else {
-                    if (swipeIndicator) swipeIndicator.classList.remove('show');
-                }
-            };
-            const touchEnd = () => {
-                isSwiping = false;
-                swipeActive = false;
-                if (swipeIndicator) swipeIndicator.classList.remove('show');
-            };
-            page.addEventListener('touchstart', touchStart, { passive: true });
-            page.addEventListener('touchmove', touchMove, { passive: false });
-            page.addEventListener('touchend', touchEnd, { passive: true });
-            page.addEventListener('touchcancel', touchEnd, { passive: true });
-        });
-    }
-
-    // ===== 返回按钮处理 =====
+    // ===== 返回按钮处理（由 Capacitor App 监听器调用） =====
     function handleBackButton() {
         const activePage = document.querySelector('.page.active');
-        if (!activePage) return;
-        const id = activePage.id;
-        if (id === 'homePage') {
+        if (!activePage) {
+            // 无活动页面，退出
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                Capacitor.Plugins.App.exitApp();
+            }
+            return;
+        }
+        const pageId = activePage.id;
+
+        // 定义页面层级（按返回顺序）
+        const pageStack = ['home', 'publish', 'message', 'profile', 'detail', 'myTasks', 'wallet', 'credit'];
+        const currentIndex = pageStack.indexOf(pageId);
+
+        // 如果是首页或未知页面，处理退出
+        if (pageId === 'home' || currentIndex === -1) {
             if (backPressedOnce) {
                 if (window.Capacitor && window.Capacitor.isNativePlatform()) {
                     Capacitor.Plugins.App.exitApp();
@@ -875,25 +836,24 @@
                 showToast('再按一次退出应用');
                 setTimeout(() => { backPressedOnce = false; }, 2000);
             }
-        } else if (id === 'myTasksPage') {
-            document.getElementById('myTasksBackBtn').click();
-            backPressedOnce = false;
-        } else if (id === 'walletPage') {
-            document.getElementById('walletBackBtn').click();
-            backPressedOnce = false;
-        } else if (id === 'creditPage') {
-            document.getElementById('creditBackBtn').click();
-            backPressedOnce = false;
-        } else if (id === 'detailPage') {
-            document.getElementById('detailBackBtn')?.click();
-            backPressedOnce = false;
-        } else if (id === 'publishPage' || id === 'messagePage' || id === 'profilePage') {
-            switchPage('home');
-            backPressedOnce = false;
-        } else {
-            switchPage('home');
-            backPressedOnce = false;
+            return;
         }
+
+        // 否则执行返回逻辑
+        if (pageId === 'detail') {
+            document.getElementById('detailBackBtn')?.click();
+        } else if (pageId === 'myTasks') {
+            document.getElementById('myTasksBackBtn')?.click();
+        } else if (pageId === 'wallet') {
+            document.getElementById('walletBackBtn')?.click();
+        } else if (pageId === 'credit') {
+            document.getElementById('creditBackBtn')?.click();
+        } else {
+            // 对于 publish, message, profile 等，返回首页
+            switchPage('home');
+        }
+        // 重置退出确认标志
+        backPressedOnce = false;
     }
 
     // ===== 首页相关 =====
@@ -945,14 +905,36 @@
         } catch(e) { /* 静默更新失败 */ }
     }
 
+    // 修改 applyFilterAndSort 加入距离和关键词筛选
     function applyFilterAndSort() {
         let filtered = [...allTasks];
+        // 分类过滤
         if (currentCategory !== 'all') filtered = filtered.filter(t => t.category === currentCategory);
+        // 距离过滤（需要经纬度）
+        if (filterDistance !== null && userLocation) {
+            filtered = filtered.filter(t => {
+                const dist = t.distance !== undefined ? parseFloat(t.distance) : null;
+                if (dist === null) return false;
+                return dist <= filterDistance;
+            });
+        }
+        // 关键词搜索
+        if (filterKeyword.trim()) {
+            const kw = filterKeyword.toLowerCase().trim();
+            filtered = filtered.filter(t => t.title.toLowerCase().includes(kw) || (t.description && t.description.toLowerCase().includes(kw)));
+        }
+        // 排序
         if (currentSort === 'distance') filtered.sort((a,b) => (parseFloat(a.distance)||999) - (parseFloat(b.distance)||999));
         else if (currentSort === 'reward') filtered.sort((a,b) => b.reward - a.reward);
         else filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+        // 渲染
         const container = document.getElementById('homeContent');
-        if (filtered.length === 0) { container.innerHTML = '<div class="empty-state">✨ 暂无此类任务</div>'; return; }
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="empty-state">✨ 无匹配任务</div>';
+            document.getElementById('filterResultCount').innerText = '0个';
+            return;
+        }
+        document.getElementById('filterResultCount').innerText = filtered.length + '个';
         container.innerHTML = filtered.map(t => `
             <div class="card" data-taskid="${t._id}">
                 <div class="task-header"><span class="task-title">${escapeHtml(t.title)}</span><span class="reward-badge">💰 ${t.reward}元</span></div>
@@ -1593,9 +1575,46 @@
         const chatInput = document.getElementById('chatInput');
         let isPressed = false;
 
+        // 麦克风权限请求函数（新增）
+        async function requestMicrophonePermission() {
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                try {
+                    const { Permissions } = Capacitor.Plugins;
+                    let status = await Permissions.check({ permissions: ['microphone'] });
+                    if (status.microphone !== 'granted') {
+                        const result = await Permissions.request({ permissions: ['microphone'] });
+                        return result.microphone === 'granted';
+                    }
+                    return true;
+                } catch (e) {
+                    console.warn('权限请求失败', e);
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        stream.getTracks().forEach(track => track.stop());
+                        return true;
+                    } catch (err) {
+                        return false;
+                    }
+                }
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                return true;
+            } catch (err) {
+                return false;
+            }
+        }
+
         const startPress = async (e) => {
             e.preventDefault();
             if (isPressed) return;
+            // 请求麦克风权限
+            const hasPerm = await requestMicrophonePermission();
+            if (!hasPerm) {
+                showAlert('麦克风权限被拒绝', '请前往手机设置 -> 应用管理 -> 赏金集市 -> 权限，开启麦克风权限');
+                return;
+            }
             let stream;
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1753,7 +1772,7 @@
         }
     }
 
-    // ===== 消息列表：左滑删除 =====
+    // ===== 消息列表：左滑出现删除，右滑关闭删除 =====
     function renderMessageList() {
         if(!currentUser || !currentUser.id) {
             const container = document.getElementById('messageContainer');
@@ -1817,6 +1836,7 @@
                     if (!isDragging) return;
                     const deltaX = e.touches[0].clientX - startX;
                     if (deltaX < -10) {
+                        // 左滑
                         e.preventDefault();
                         const offset = Math.max(-80, Math.min(0, deltaX));
                         card.style.transform = `translateX(${offset}px)`;
@@ -1826,10 +1846,10 @@
                         } else {
                             wrapper.classList.remove('swiped');
                         }
-                    } else {
-                        if (wrapper.classList.contains('swiped')) {
-                            reset();
-                        }
+                    } else if (deltaX > 10 && wrapper.classList.contains('swiped')) {
+                        // 右滑关闭删除
+                        e.preventDefault();
+                        reset();
                     }
                 };
 
@@ -1886,6 +1906,7 @@
     }
 
     // ===== 个人主页 =====
+    // 注意：已移除 headerBalance 更新
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -1893,7 +1914,7 @@
             const user = await callApi(`/user/${currentUser.id}`);
             currentUser = {...currentUser, ...user};
             localStorage.setItem('user', JSON.stringify(currentUser));
-            document.getElementById('headerBalance').innerHTML = `余额: ¥${(currentUser.balance||0).toFixed(2)}`;
+            // 删除余额更新代码
             const allTasks = await callApi('/tasks/all');
             const myPubOngoing = (allTasks||[]).filter(t => t.publisherId === currentUser.id && t.status !== 'completed' && t.status !== 'cancelled');
             const myAccOngoing = (allTasks||[]).filter(t => t.takerId === currentUser.id && t.status !== 'completed' && t.status !== 'cancelled');
@@ -1940,7 +1961,7 @@
         } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
 
-    // ===== 钱包全屏页 =====
+    // ===== 钱包全屏页（含账单修改） =====
     async function renderWalletPage() {
         const container = document.getElementById('walletContent');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -1986,23 +2007,42 @@
                 chooseModal.querySelector('#withdrawAlipayBtn').onclick = () => { showToast('提现到支付宝（演示模式）'); chooseModal.remove(); };
                 chooseModal.querySelector('.cancel-btn').onclick = () => chooseModal.remove();
             };
+            // 修改账单点击事件（全屏详情）
             container.querySelectorAll('.wallet-bill-item').forEach(item => {
                 item.onclick = () => {
                     const bill = JSON.parse(item.getAttribute('data-bill'));
-                    const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
-                    showAlert('账单详情', `
-                        <div style="text-align:left;">
-                            <div><strong>说明：</strong>${bill.desc}</div>
-                            <div><strong>金额：</strong>${bill.amount}元</div>
-                            <div><strong>时间：</strong>${new Date(bill.createdAt).toLocaleString()}</div>
-                            <div><strong>类型：</strong>${typeLabel}</div>
-                        </div>
-                    `);
+                    renderBillDetail(bill);
                 };
             });
         } catch(e) {
             container.innerHTML = '<div class="empty-state">加载失败</div>';
         }
+    }
+
+    // 新增：账单详情全屏图文（用于renderWalletPage中调用）
+    function renderBillDetail(bill) {
+        const container = document.getElementById('walletContent');
+        const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
+        const sign = bill.amount > 0 ? '+' : '';
+        container.innerHTML = `
+            <div style="padding:16px;">
+                <div onclick="renderWalletPage()" style="font-size:1.2rem; cursor:pointer; margin-bottom:16px;">← 返回</div>
+                <div style="background:#eef2ff; border-radius:20px; padding:20px; text-align:center;">
+                    <div style="font-size:2rem; font-weight:800; color:#1e4a6b;">${sign}${bill.amount}元</div>
+                    <div style="font-size:0.9rem; color:#64748b; margin-top:4px;">${typeLabel}</div>
+                </div>
+                <div style="margin-top:16px;">
+                    <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef2f8;">
+                        <span>说明</span>
+                        <span>${bill.desc}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef2f8;">
+                        <span>时间</span>
+                        <span>${new Date(bill.createdAt).toLocaleString()}</span>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     // ===== 信用全屏页 =====
@@ -2169,7 +2209,7 @@
         });
     }
 
-    // ===== 页面切换 =====
+    // ===== 页面切换（已添加保存 lastPage） =====
     function switchPage(page) {
         if (chatState.active && page !== 'message') {
             closeChat();
@@ -2192,6 +2232,9 @@
         else if (page === 'message') renderMessageList();
         else if (page === 'wallet') renderWalletPage();
         else if (page === 'credit') renderCreditPage();
+
+        // 保存当前页面到 localStorage
+        localStorage.setItem('lastPage', page);
     }
 
     // ===== 发布任务（含支付选择） =====
@@ -2263,7 +2306,7 @@
                     showToast('余额支付成功');
                     currentUser.balance -= reward;
                     localStorage.setItem('user', JSON.stringify(currentUser));
-                    document.getElementById('headerBalance').innerHTML = '余额: ¥' + currentUser.balance.toFixed(2);
+                    // 不再更新 headerBalance
                     await doPublish(title, reward, locationAddress, mediaList);
                     closeModal();
                 } else if (method === 'wechat' || method === 'alipay') {
@@ -2380,20 +2423,43 @@
                 loadProfile();
                 renderMessageList();
                 updateUnreadBadge();
-                switchPage('home');
+                // 恢复上次打开的页面（若存在）
+                const lastPage = localStorage.getItem('lastPage');
+                if (lastPage && ['home','publish','message','profile','detail','myTasks','wallet','credit'].includes(lastPage)) {
+                    switchPage(lastPage);
+                } else {
+                    switchPage('home');
+                }
                 initBackButtonHandler();
             } else errorDiv.innerText = result.error || '登录失败';
-        } catch(err) { errorDiv.innerText = err.message; }
+        } catch(err) {
+            errorDiv.innerText = err.message;
+            console.error('登录错误:', err);
+        }
     }
 
+    // ===== 使用 Capacitor App 插件监听返回事件（替换旧方法） =====
     function initBackButtonHandler() {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            Capacitor.Plugins.App.addListener('backButton', handleBackButton);
-        } else { window.addEventListener('popstate', handleBackButton); }
+            // 使用 Capacitor App 插件监听返回事件
+            const { App } = Capacitor.Plugins;
+            App.addListener('backButton', () => {
+                handleBackButton();
+            });
+        } else {
+            // 浏览器环境使用 popstate 作为降级方案
+            window.addEventListener('popstate', handleBackButton);
+        }
     }
 
-    // ===== 语音相关 =====
+    // ===== 语音相关（已添加权限检查） =====
     async function startRecording() {
+        // 权限检查已在调用前做，但为了安全再检查一次
+        const hasPerm = await requestMicrophonePermission();
+        if (!hasPerm) {
+            showAlert('麦克风权限被拒绝', '请前往手机设置 -> 应用管理 -> 赏金集市 -> 权限，开启麦克风权限');
+            return;
+        }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
@@ -2609,13 +2675,109 @@
         });
     }
 
+    // ===== 筛选面板交互 =====
+    function initFilterPanel() {
+        const filterToggleBtn = document.getElementById('filterToggleBtn');
+        const filterPanel = document.getElementById('filterPanel');
+        const customDistInput = document.getElementById('customDistInput');
+        const applyFilterBtn = document.getElementById('applyFilterBtn');
+        const resetFilterBtn = document.getElementById('resetFilterBtn');
+        const searchInput = document.getElementById('searchInput');
+        const filterStatus = document.getElementById('filterStatus');
+
+        // 切换面板显示
+        filterToggleBtn.addEventListener('click', () => {
+            const isVisible = filterPanel.style.display !== 'none';
+            filterPanel.style.display = isVisible ? 'none' : 'block';
+            filterToggleBtn.textContent = isVisible ? '🔍 筛选' : '🔍 筛选（展开）';
+        });
+
+        // 距离选项点击
+        document.querySelectorAll('.distance-option').forEach(el => {
+            el.addEventListener('click', () => {
+                const dist = el.getAttribute('data-dist');
+                if (dist === 'custom') {
+                    customDistInput.style.display = 'inline-block';
+                    customDistInput.focus();
+                } else {
+                    customDistInput.style.display = 'none';
+                    const val = parseFloat(dist);
+                    filterDistance = val;
+                    updateFilterStatus();
+                    applyFilterAndSort();
+                }
+            });
+        });
+
+        // 自定义输入
+        customDistInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const val = parseFloat(customDistInput.value);
+                if (!isNaN(val) && val > 0) {
+                    filterDistance = val;
+                    updateFilterStatus();
+                    applyFilterAndSort();
+                    customDistInput.style.display = 'none';
+                }
+            }
+        });
+
+        // 应用按钮（手动触发）
+        applyFilterBtn.addEventListener('click', () => {
+            if (customDistInput.style.display !== 'none') {
+                const val = parseFloat(customDistInput.value);
+                if (!isNaN(val) && val > 0) {
+                    filterDistance = val;
+                    updateFilterStatus();
+                    applyFilterAndSort();
+                    customDistInput.style.display = 'none';
+                } else {
+                    showAlert('提示', '请输入有效距离（公里）');
+                }
+            } else {
+                // 如果自定义输入隐藏，但已有选中的距离，再次应用
+                if (filterDistance !== null) {
+                    applyFilterAndSort();
+                }
+            }
+        });
+
+        // 重置筛选
+        resetFilterBtn.addEventListener('click', () => {
+            filterDistance = null;
+            filterKeyword = '';
+            searchInput.value = '';
+            customDistInput.value = '';
+            customDistInput.style.display = 'none';
+            document.querySelectorAll('.distance-option').forEach(el => el.style.background = '#f1f5f9');
+            updateFilterStatus();
+            applyFilterAndSort();
+        });
+
+        // 搜索输入
+        searchInput.addEventListener('input', (e) => {
+            filterKeyword = e.target.value;
+            updateFilterStatus();
+            applyFilterAndSort();
+        });
+
+        function updateFilterStatus() {
+            let parts = [];
+            if (filterDistance !== null) parts.push(`≤${filterDistance}km`);
+            if (filterKeyword.trim()) parts.push(`搜索: ${filterKeyword.trim()}`);
+            filterStatus.innerText = parts.length ? parts.join(' | ') : '';
+        }
+    }
+
     // ===== 启动 =====
     document.addEventListener('DOMContentLoaded', () => {
-        initGlobalSwipeBack();
+        // 初始化页面手势等
         initPullToRefresh();
         initMessagePullToRefresh();
         initFiltersAndCategories();
+        initFilterPanel(); // 初始化筛选面板
 
+        // 绑定导航按钮
         document.getElementById('walletBackBtn').addEventListener('click', () => switchPage('profile'));
         document.getElementById('creditBackBtn').addEventListener('click', () => switchPage('profile'));
 
@@ -2669,6 +2831,16 @@
                 .then(() => console.log('SW registered'))
                 .catch(err => console.warn('SW registration failed:', err));
         }
+
+        // 初始化返回监听（重要）
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            // 延迟一点确保 Capacitor 已完全加载
+            setTimeout(() => {
+                initBackButtonHandler();
+            }, 500);
+        } else {
+            initBackButtonHandler();
+        }
     });
 
     (async () => {
@@ -2694,8 +2866,19 @@
             loadProfile();
             renderMessageList();
             updateUnreadBadge();
-            switchPage('home');
-            initBackButtonHandler();
+            // 恢复上次打开的页面（若存在）
+            const lastPage = localStorage.getItem('lastPage');
+            if (lastPage && ['home','publish','message','profile','detail','myTasks','wallet','credit'].includes(lastPage)) {
+                switchPage(lastPage);
+            } else {
+                switchPage('home');
+            }
+            // 确保返回监听在登录后也生效
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                setTimeout(() => {
+                    initBackButtonHandler();
+                }, 300);
+            }
         }
     })();
 </script>
