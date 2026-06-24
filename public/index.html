@@ -5,13 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=no">
     <title>赏金集市 · 双向议价</title>
     <script>
+        // ===== 高德 Key 和安全密钥（明文方式） =====
+        window._AMapSecurityConfig = {
+            securityJsCode: '77f6c7a3b6e20b72297435ba1bc481af'
+        };
         const AMAP_KEY = 'f9b32373eb484fc1f0e5b04f2c746a41';
-        const AMAP_JSCODE = '77f6c7a3b6e20b72297435ba1bc481af';
+        // ==========================================
+
         window.loadAMap = function() {
             return new Promise((resolve, reject) => {
                 if (window.AMap) { resolve(); return; }
                 const script = document.createElement('script');
-                script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&jscode=${AMAP_JSCODE}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onAMapReady`;
+                // 注意：URL 中不再带 jscode 参数
+                script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onAMapReady`;
                 script.async = true;
                 script.onerror = reject;
                 window.onAMapReady = resolve;
@@ -19,7 +25,6 @@
             });
         };
         window.AMAP_KEY = AMAP_KEY;
-        window.AMAP_JSCODE = AMAP_JSCODE;
     </script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -274,7 +279,7 @@
 <body>
     <div id="app">
         <div class="app-container">
-            <!-- 登录页 -->
+            <!-- ===== 登录页 ===== -->
             <div id="loginPage" class="page active">
                 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
                     <div class="card" style="width:100%;cursor:default;text-align:center;">
@@ -290,7 +295,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 注册页 -->
+            <!-- ===== 注册页 ===== -->
             <div id="registerPage" class="page">
                 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
                     <div class="card" style="width:100%;cursor:default;">
@@ -306,7 +311,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 主应用 -->
+            <!-- ===== 主应用 ===== -->
             <div id="mainApp" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
                 <div id="homePage" class="page">
                     <div class="category-bar" id="categoryBar">
@@ -374,7 +379,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- 消息页 -->
+                <!-- ===== 消息页 ===== -->
                 <div id="messagePage" class="page">
                     <div id="messageContainer" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;">
                         <div id="msgPullIndicator" class="msg-pull-indicator" style="display:none;">↓ 下拉刷新</div>
@@ -415,7 +420,7 @@
         </div>
     </div>
 
-    <!-- ===== 地图模态框（仿微信发送位置） ===== -->
+    <!-- ===== 地图模态框 ===== -->
     <div class="map-modal" id="mapModal">
         <div class="map-modal-header">
             <button class="cancel-btn" id="mapCancelBtn">取消</button>
@@ -431,291 +436,10 @@
             </div>
         </div>
     </div>
+
     <div class="swipe-back-indicator" id="swipeBackIndicator">‹</div>
 
-    <!-- Capacitor 插件模块 -->
-    <script type="module">
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            try {
-                const { StatusBar } = await import('@capacitor/status-bar');
-                const { LocalNotifications } = await import('@capacitor/local-notifications');
-                await StatusBar.setOverlaysWebView({ overlay: true });
-                await StatusBar.setStyle({ style: 'DARK' });
-                await StatusBar.setBackgroundColor({ color: '#00000000' });
-                const appContainer = document.querySelector('.app-container');
-                if (appContainer) appContainer.style.paddingTop = '0';
-                const perm = await LocalNotifications.requestPermissions();
-                if (perm.display === 'granted') console.log('通知权限已授予');
-                else console.warn('通知权限被拒绝');
-                window.showLocalNotification = async function(title, body, id = Date.now()) {
-                    try {
-                        await LocalNotifications.schedule({
-                            notifications: [{
-                                id: id,
-                                title: title,
-                                body: body,
-                                schedule: { at: new Date(Date.now() + 1000) },
-                                sound: 'default',
-                            }]
-                        });
-                    } catch (err) { console.error('通知发送失败', err); }
-                };
-                console.log('通知模块已初始化');
-            } catch (err) {
-                console.error('插件加载失败', err);
-                window.showLocalNotification = function() {};
-            }
-        } else {
-            window.showLocalNotification = function() {};
-            console.log('非 Capacitor 环境，通知功能已禁用');
-        }
-    </script>
-
-    <script>
-        // ==================== API 配置 ====================
-        const getApiBase = () => 'https://bounty-app-production.up.railway.app/api';
-        const API_BASE = getApiBase();
-
-        // ===== 全局状态 =====
-        let currentUser = null,
-            pendingMedia = [],
-            userLocation = null,
-            allTasks = [],
-            currentCategory = 'all',
-            currentSort = 'time',
-            countdownTimer = null,
-            lastPage = null;
-        let chatState = { active: false, taskId: null, otherId: null, otherName: '', reward: 0, title: '', pollInterval: null,
-            messagesArea: null, lastMessageCount: 0 };
-        let geocodeCache = new Map();
-        let deletedConversations = new Set();
-        let tasksCache = { data: null, timestamp: 0, ttl: 10 * 60 * 1000 };
-        let refreshThrottle = false,
-            networkToast = null;
-        let mediaRecorder = null,
-            audioChunks = [],
-            isRecording = false;
-        let backPressedOnce = false;
-
-        // ===== 地图变量 =====
-        let map = null,
-            geocoder = null,
-            placeSearch = null,
-            selectedLocation = { lng: 0, lat: 0, address: '' };
-        let mapReady = false,
-            mapInitAttempts = 0,
-            MAX_MAP_ATTEMPTS = 3,
-            isMapOpen = false;
-
-        // ===== 筛选变量 =====
-        let filterDistance = null,
-            filterKeyword = '';
-
-        // ===== 工具函数 =====
-        function showNetworkSlow() {
-            if (networkToast) return;
-            networkToast = document.createElement('div');
-            networkToast.className = 'network-toast';
-            networkToast.innerText = '⚠️ 网络较慢，请稍候...';
-            document.body.appendChild(networkToast);
-            setTimeout(() => { if (networkToast) networkToast.remove();
-                networkToast = null; }, 3000);
-        }
-
-        async function fetchWithTimeout(url, options = {}, timeout = 8000, retries = 1) {
-            let lastError;
-            for (let i = 0; i <= retries; i++) {
-                try {
-                    const controller = new AbortController();
-                    const id = setTimeout(() => controller.abort(), timeout);
-                    const response = await fetch(url, { ...options, signal: controller.signal });
-                    clearTimeout(id);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    return response;
-                } catch (err) {
-                    lastError = err;
-                    if (err.name === 'AbortError') {
-                        console.warn(`请求超时 (${timeout}ms)，第 ${i+1} 次重试`);
-                        if (i < retries) await new Promise(r => setTimeout(r, 800));
-                        continue;
-                    }
-                    if (i < retries) { await new Promise(r => setTimeout(r, 800));
-                        showNetworkSlow(); }
-                }
-            }
-            throw lastError;
-        }
-
-        async function callApi(url, options = {}) {
-            const fullUrl = API_BASE + url;
-            const token = localStorage.getItem('token');
-            const headers = { 'Content-Type': 'application/json', ...options.headers };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-            try {
-                const res = await fetchWithTimeout(fullUrl, { ...options, headers }, 10000, 1);
-                if (res.status === 401) {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    currentUser = null;
-                    document.getElementById('mainApp').style.display = 'none';
-                    document.getElementById('loginPage').classList.add('active');
-                    showAlert('登录已过期', '请重新登录');
-                    throw new Error('Unauthorized');
-                }
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-                return data;
-            } catch (err) {
-                console.error('[API错误]', err);
-                if (err.name === 'AbortError') { showToast('请求超时，请检查网络后重试');
-                    throw new Error('请求超时'); }
-                showNetworkSlow();
-                throw err;
-            }
-        }
-
-        async function uploadFile(file) {
-            const formData = new FormData();
-            formData.append('file', file);
-            const fullUrl = API_BASE + '/upload';
-            const token = localStorage.getItem('token');
-            const res = await fetch(fullUrl, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-            if (!res.ok) throw new Error('上传失败');
-            const data = await res.json();
-            return data.url;
-        }
-
-        function escapeHtml(s) { if (!s) return ''; return s.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' :
-                '&gt;'); }
-
-        function calculateDistance(lat1, lng1, lat2, lng2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180,
-                dLng = (lng2 - lng1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(
-                dLng / 2) ** 2;
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return (R * c).toFixed(1);
-        }
-
-        async function geocodeAddress(address) {
-            if (!address) return null;
-            if (geocodeCache.has(address)) return geocodeCache.get(address);
-            try {
-                const result = await callApi('/geocode', { method: 'POST', body: JSON.stringify({ address }) });
-                if (result && result.lat && result.lng) { geocodeCache.set(address, result); return result; }
-                return null;
-            } catch (e) { console.error('地理编码失败', e); return null; }
-        }
-
-        async function enrichTasksWithDistance(tasks) {
-            if (!userLocation) return tasks;
-            const enriched = [];
-            for (let task of tasks) {
-                if (!task.locationAddress) { enriched.push({ ...task, distance: null }); continue; }
-                const coords = await geocodeAddress(task.locationAddress);
-                const distance = coords ? calculateDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng) :
-                null;
-                enriched.push({ ...task, distance });
-            }
-            return enriched;
-        }
-
-        async function getNativeUserLocation() {
-            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                try {
-                    const { Geolocation } = Capacitor.Plugins;
-                    let permission = await Geolocation.checkPermissions();
-                    if (permission.location !== 'granted') {
-                        permission = await Geolocation.requestPermissions();
-                        if (permission.location !== 'granted') return null;
-                    }
-                    const position = await Geolocation.getCurrentPosition({ timeout: 15000, enableHighAccuracy: true });
-                    return { lat: position.coords.latitude, lng: position.coords.longitude };
-                } catch (err) { return null; }
-            } else {
-                return new Promise((resolve) => {
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                        () => resolve(null), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-                    );
-                });
-            }
-        }
-
-        function showToast(msg, duration = 2000) {
-            let toast = document.createElement('div');
-            toast.className = 'toast-message';
-            toast.innerText = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), duration);
-        }
-
-        function showAlert(title, message) {
-            let modal = document.createElement('div');
-            modal.className = 'custom-modal';
-            modal.innerHTML =
-                `<div class="custom-modal-content"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(message)}</p><div class="custom-modal-buttons"><button class="confirm-btn">知道了</button></div></div>`;
-            document.body.appendChild(modal);
-            modal.querySelector('.confirm-btn').onclick = () => modal.remove();
-        }
-
-        function showConfirm(title, message, onConfirm, onCancel) {
-            let modal = document.createElement('div');
-            modal.className = 'custom-modal';
-            modal.innerHTML =
-                `<div class="custom-modal-content"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(message)}</p><div class="custom-modal-buttons"><button class="confirm-btn">确定</button><button class="cancel-btn">取消</button></div></div>`;
-            document.body.appendChild(modal);
-            modal.querySelector('.confirm-btn').onclick = () => { modal.remove(); if (onConfirm) onConfirm(); };
-            modal.querySelector('.cancel-btn').onclick = () => { modal.remove(); if (onCancel) onCancel(); };
-        }
-
-        function showPrompt(title, placeholder, callback) {
-            const modal = document.createElement('div');
-            modal.className = 'custom-modal';
-            modal.innerHTML = `
-                <div class="custom-modal-content">
-                    <h3>${escapeHtml(title)}</h3>
-                    <input type="number" id="promptInput" class="prompt-input" placeholder="${escapeHtml(placeholder)}" step="1" min="1">
-                    <div class="custom-modal-buttons">
-                        <button class="confirm-btn" id="promptOk">确定</button>
-                        <button class="cancel-btn" id="promptCancel">取消</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            const input = modal.querySelector('#promptInput');
-            const ok = modal.querySelector('#promptOk');
-            const cancel = modal.querySelector('#promptCancel');
-            const cleanup = () => modal.remove();
-            ok.onclick = () => {
-                const val = parseFloat(input.value);
-                if (!isNaN(val) && val > 0) {
-                    cleanup();
-                    callback(val);
-                } else {
-                    showAlert('提示', '请输入有效的金额');
-                }
-            };
-            cancel.onclick = cleanup;
-            input.focus();
-            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok.click(); });
-        }
-        window.alert = function(msg) { showAlert('提示', msg); };
-        window.confirm = function(msg, onOk, onCancel) { showConfirm('确认', msg, onOk, onCancel); return true; };
-
-        async function getDetailedAddress(lat, lng) {
-            try {
-                const res = await callApi('/regeo', { method: 'POST', body: JSON.stringify({ lat, lng }) });
-                return res.address;
-            } catch (e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
-        }
-    <div class="swipe-back-indicator" id="swipeBackIndicator">‹</div>
-
+    <!-- ===== Capacitor 插件模块（状态栏 + 通知） ===== -->
     <script type="module">
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             try {
@@ -989,7 +713,7 @@
             } catch (e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
         }
 
-        // ==================== 地图功能（已添加 jscode） ====================
+        // ==================== 地图功能 ====================
         function initMap() {
             if (mapReady) {
                 if (map) { map.destroy();
@@ -1004,10 +728,9 @@
                 }
                 mapInitAttempts++;
                 const script = document.createElement('script');
-                const key = window.AMAP_KEY || 'f9b32373eb484fc1f0e5b04f2c746a41';
-                const jscode = window.AMAP_JSCODE || '77f6c7a3b6e20b72297435ba1bc481af';
+                // 注意：不再带 jscode 参数，因为已在 window._AMapSecurityConfig 中设置
                 script.src =
-                    `https://webapi.amap.com/maps?v=2.0&key=${key}&jscode=${jscode}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onMapScriptLoaded`;
+                    `https://webapi.amap.com/maps?v=2.0&key=${window.AMAP_KEY || 'f9b32373eb484fc1f0e5b04f2c746a41'}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onMapScriptLoaded`;
                 script.async = true;
                 document.head.appendChild(script);
                 window.onMapScriptLoaded = function() {
@@ -1111,9 +834,7 @@
             if (!placeSearch) { console.warn('placeSearch未初始化'); return; }
             const listEl = document.getElementById('nearbyList');
             listEl.innerHTML = '<div class="loading-tip">搜索附近地点...</div>';
-            console.log('🔍 搜索附近:', lng, lat);
             placeSearch.searchNearBy('', [lng, lat], 3000, function(status, result) {
-                console.log('📡 搜索回调:', status, result);
                 if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
                     renderNearbyList(result.poiList.pois);
                 } else {
@@ -1142,14 +863,14 @@
                 var lng = poi.location.getLng();
                 var lat = poi.location.getLat();
                 html += `
-                        <div class="nearby-item" data-lng="${lng}" data-lat="${lat}" data-address="${escapeHtml(fullAddress)}">
-                            <div class="info">
-                                <div class="name">${escapeHtml(name)}</div>
-                                <div class="address">${escapeHtml(address)}</div>
-                            </div>
-                            <div class="dist">${distance}</div>
+                    <div class="nearby-item" data-lng="${lng}" data-lat="${lat}" data-address="${escapeHtml(fullAddress)}">
+                        <div class="info">
+                            <div class="name">${escapeHtml(name)}</div>
+                            <div class="address">${escapeHtml(address)}</div>
                         </div>
-                    `;
+                        <div class="dist">${distance}</div>
+                    </div>
+                `;
             });
             listEl.innerHTML = html;
             listEl.querySelectorAll('.nearby-item').forEach(function(item) {
@@ -1233,6 +954,7 @@
                 });
             }
         });
+
         // ===== 页面切换 =====
         function switchPage(page) {
             if (chatState.active && page !== 'message') { closeChat(); }
@@ -1329,12 +1051,12 @@
             }
             updateFilterStatus();
             container.innerHTML = filtered.map(t => `
-                    <div class="card" data-taskid="${t._id}">
-                        <div class="task-header"><span class="task-title">${escapeHtml(t.title)}</span><span class="reward-badge">💰 ${t.reward}元</span></div>
-                        <div class="task-desc">${escapeHtml((t.description||'').substring(0,60))}</div>
-                        <div class="task-meta"><span>👤 ${escapeHtml(t.publisherName)}</span><span>📍 ${t.locationAddress||'未知'}</span>${t.distance?`<span class="distance-badge">📏 距您 ${t.distance}km</span>`:''}<span class="distance-badge">🏷️ ${t.category}</span></div>
-                    </div>
-                `).join('');
+                <div class="card" data-taskid="${t._id}">
+                    <div class="task-header"><span class="task-title">${escapeHtml(t.title)}</span><span class="reward-badge">💰 ${t.reward}元</span></div>
+                    <div class="task-desc">${escapeHtml((t.description||'').substring(0,60))}</div>
+                    <div class="task-meta"><span>👤 ${escapeHtml(t.publisherName)}</span><span>📍 ${t.locationAddress||'未知'}</span>${t.distance?`<span class="distance-badge">📏 距您 ${t.distance}km</span>`:''}<span class="distance-badge">🏷️ ${t.category}</span></div>
+                </div>
+            `).join('');
             container.querySelectorAll('.card').forEach(card => {
                 card.removeEventListener('click', card._taskClick);
                 const handler = () => viewTask(card.getAttribute('data-taskid'), 'home');
@@ -1372,11 +1094,11 @@
                 const isTaker = task.takerId === currentUser.id;
                 const publisherInfo = await callApi(`/user/${task.publisherId}`);
                 let detailHtml = `
-                        <div class="detail-hero"><span class="detail-status">● ${task.status==='available'?'可接取':(task.status==='ongoing'?'进行中':'已完成')}</span><div class="detail-reward" id="detailReward">¥${task.reward}</div></div>
-                        <div class="card" style="margin-top:12px;"><h2>${escapeHtml(task.title)}</h2>
-                        <div class="info-row"><div class="info-icon">📌</div><div class="info-content"><div class="info-label">发布者</div><div class="info-value" id="publisherName">${escapeHtml(task.publisherName)}</div></div></div>
-                        <div class="info-row"><div class="info-icon">📍</div><div class="info-content"><div class="info-label">任务地点</div><div class="info-value">${escapeHtml(task.locationAddress||'未标注')}</div></div></div>
-                        <div class="info-row"><div class="info-icon">⏰</div><div class="info-content"><div class="info-label">发布时间</div><div class="info-value">${task.createdAt?new Date(task.createdAt).toLocaleDateString():'未知'}</div></div></div>`;
+                    <div class="detail-hero"><span class="detail-status">● ${task.status==='available'?'可接取':(task.status==='ongoing'?'进行中':'已完成')}</span><div class="detail-reward" id="detailReward">¥${task.reward}</div></div>
+                    <div class="card" style="margin-top:12px;"><h2>${escapeHtml(task.title)}</h2>
+                    <div class="info-row"><div class="info-icon">📌</div><div class="info-content"><div class="info-label">发布者</div><div class="info-value" id="publisherName">${escapeHtml(task.publisherName)}</div></div></div>
+                    <div class="info-row"><div class="info-icon">📍</div><div class="info-content"><div class="info-label">任务地点</div><div class="info-value">${escapeHtml(task.locationAddress||'未标注')}</div></div></div>
+                    <div class="info-row"><div class="info-icon">⏰</div><div class="info-content"><div class="info-label">发布时间</div><div class="info-value">${task.createdAt?new Date(task.createdAt).toLocaleDateString():'未知'}</div></div></div>`;
                 if (task.takerId) {
                     detailHtml +=
                         `<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${task.takenAt?new Date(task.takenAt).toLocaleString():'时间未知'}</div></div>`;
@@ -1414,15 +1136,15 @@
                 }
                 if (task.status === 'ongoing' && isTaker) {
                     detailHtml += `<div class="contact-row">
-                            <button class="btn-primary btn" id="contactPublisherBtn" style="background:#3b82f6;">💬 联系发布者</button>
-                            ${task.publisherPhone ? `<button class="btn-phone btn" id="callPublisherPhoneBtn">📞 电话</button>` : `<button class="btn-phone btn" disabled style="opacity:0.6;">📞 无电话</button>`}
-                        </div>`;
+                        <button class="btn-primary btn" id="contactPublisherBtn" style="background:#3b82f6;">💬 联系发布者</button>
+                        ${task.publisherPhone ? `<button class="btn-phone btn" id="callPublisherPhoneBtn">📞 电话</button>` : `<button class="btn-phone btn" disabled style="opacity:0.6;">📞 无电话</button>`}
+                    </div>`;
                 }
                 if (task.status === 'ongoing' && isMine && task.takerId) {
                     detailHtml += `<div class="contact-row">
-                            <button class="btn-primary btn" id="contactTakerBtn" style="background:#3b82f6;">💬 联系接取者</button>
-                            <button class="btn-phone btn" id="callTakerBtn">📞 电话</button>
-                        </div>`;
+                        <button class="btn-primary btn" id="contactTakerBtn" style="background:#3b82f6;">💬 联系接取者</button>
+                        <button class="btn-phone btn" id="callTakerBtn">📞 电话</button>
+                    </div>`;
                 }
                 if (task.status === 'available' && !isMine) {
                     detailHtml +=
@@ -1605,22 +1327,22 @@
                     if (myRating) {
                         const scoreText = myRating.rating >= 4 ? '好评' : (myRating.rating <= 2 ? '差评' : '中评');
                         ratingHtml = `
-                                <div class="rating-section">
-                                    <div class="already-rated">✅ 您已评价 (${scoreText} ${myRating.rating}分) ${myRating.comment ? '：'+escapeHtml(myRating.comment) : ''}</div>
-                                </div>
-                            `;
+                            <div class="rating-section">
+                                <div class="already-rated">✅ 您已评价 (${scoreText} ${myRating.rating}分) ${myRating.comment ? '：'+escapeHtml(myRating.comment) : ''}</div>
+                            </div>
+                        `;
                     } else {
                         ratingHtml = `
-                                <div class="rating-section" id="ratingSection">
-                                    <div style="font-weight:600; margin-bottom:8px;">评价 ${escapeHtml(otherUserName)}</div>
-                                    <div class="rating-buttons">
-                                        <button class="btn-good" data-value="5">👍 好评</button>
-                                        <button class="btn-bad" data-value="1">👎 差评</button>
-                                    </div>
-                                    <textarea class="rating-comment" id="ratingComment" placeholder="可选评语..."></textarea>
-                                    <button class="rating-submit" id="submitRatingBtn">提交评价</button>
+                            <div class="rating-section" id="ratingSection">
+                                <div style="font-weight:600; margin-bottom:8px;">评价 ${escapeHtml(otherUserName)}</div>
+                                <div class="rating-buttons">
+                                    <button class="btn-good" data-value="5">👍 好评</button>
+                                    <button class="btn-bad" data-value="1">👎 差评</button>
                                 </div>
-                            `;
+                                <textarea class="rating-comment" id="ratingComment" placeholder="可选评语..."></textarea>
+                                <button class="rating-submit" id="submitRatingBtn">提交评价</button>
+                            </div>
+                        `;
                     }
                     document.getElementById('detailContainer').innerHTML += ratingHtml;
                     if (!myRating) {
@@ -1805,22 +1527,22 @@
                         const imgUrl = imgMatch[1];
                         contentHtml =
                             `<div class="bubble-text ${isMine?'':'bubble-image-wrapper'}" style="background:${isMine?'#1e4a6b':'#fff'}; padding:4px 4px; border:${isMine?'none':'1px solid #e2e8f0'};">
-                                <img src="${imgUrl}" class="bubble-image" onclick="event.stopPropagation(); showImagePreview('${imgUrl}')">
-                            </div>`;
+                            <img src="${imgUrl}" class="bubble-image" onclick="event.stopPropagation(); showImagePreview('${imgUrl}')">
+                        </div>`;
                     } else if (audioMatch) {
                         const audioUrl = audioMatch[1];
                         contentHtml =
                             `<div class="bubble-text ${isMine?'':'bubble-image-wrapper'}" style="background:${isMine?'#1e4a6b':'#fff'}; padding:4px 4px; border:${isMine?'none':'1px solid #e2e8f0'};">
-                                <audio controls class="audio-player" src="${audioUrl}"></audio>
-                            </div>`;
+                            <audio controls class="audio-player" src="${audioUrl}"></audio>
+                        </div>`;
                     } else {
                         contentHtml = `<div class="bubble-text">${escapeHtml(m.text)}</div>`;
                     }
                     html +=
                         `<div class="chat-bubble ${isMine?'chat-bubble-mine':'chat-bubble-other'}" data-message-id="${m._id}" data-is-mine="${isMine}">
-                            ${contentHtml}
-                            <div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div>
-                        </div>`;
+                        ${contentHtml}
+                        <div class="bubble-time">${m.time||new Date(m.createdAt).toLocaleTimeString()}</div>
+                    </div>`;
                     if (!isMine && isNego && negoPrice && m.senderId !== 'system') {
                         html +=
                             `<div style="display:flex; gap:8px; margin:4px 0 8px 12px;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, true)">✅ 同意议价</button><button class="btn-secondary" style="padding:4px 10px; font-size:0.7rem;" onclick="respondToNego('${chatState.taskId}', ${negoPrice}, false)">❌ 拒绝议价</button></div>`;
@@ -1854,27 +1576,27 @@
             document.body.classList.add('hide-bottom-nav');
             const container = document.getElementById('messageContainer');
             container.innerHTML = `
-                    <div class="chat-container" style="display:flex; flex-direction:column; height:100%;">
-                        <div class="chat-header-bar">
-                            <button class="chat-back-btn" id="chatBackBtn">←</button>
-                            <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
+                <div class="chat-container" style="display:flex; flex-direction:column; height:100%;">
+                    <div class="chat-header-bar">
+                        <button class="chat-back-btn" id="chatBackBtn">←</button>
+                        <span class="chat-header-name">${escapeHtml(chatState.otherName)}</span>
+                    </div>
+                    <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div>
+                    <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
+                    <div class="chat-input-wrapper">
+                        <div class="chat-action-row">
+                            <button class="chat-icon-btn" id="chatPlusBtn">➕</button>
+                            <button class="chat-icon-btn" id="voiceBtn" title="按住说话">🎤</button>
+                            <input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息...">
+                            <button class="send-btn" id="sendChatBtn">发送</button>
                         </div>
-                        <div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div>
-                        <div class="chat-messages-area" id="chatMsgsArea">加载中...</div>
-                        <div class="chat-input-wrapper">
-                            <div class="chat-action-row">
-                                <button class="chat-icon-btn" id="chatPlusBtn">➕</button>
-                                <button class="chat-icon-btn" id="voiceBtn" title="按住说话">🎤</button>
-                                <input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息...">
-                                <button class="send-btn" id="sendChatBtn">发送</button>
-                            </div>
-                            <div class="chat-plus-panel" id="chatPlusPanel">
-                                <button class="chat-icon-btn plus-item" id="imageBtn">🖼️ 图片</button>
-                                <button class="chat-icon-btn plus-item" id="sendNegoBtn">💰 议价</button>
-                            </div>
+                        <div class="chat-plus-panel" id="chatPlusPanel">
+                            <button class="chat-icon-btn plus-item" id="imageBtn">🖼️ 图片</button>
+                            <button class="chat-icon-btn plus-item" id="sendNegoBtn">💰 议价</button>
                         </div>
                     </div>
-                `;
+                </div>
+            `;
             chatState.messagesArea = document.getElementById('chatMsgsArea');
             chatState.lastMessageCount = 0;
             document.getElementById('chatBackBtn').onclick = () => {
@@ -2135,14 +1857,14 @@
                     if (c.unread > 0) unreadHtml =
                         `<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;
                     html += `
-                            <div class="task-card-wrapper" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
-                                <div class="card" style="cursor:pointer;">
-                                    <div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div>
-                                    <div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div>
-                                </div>
-                                <div class="delete-btn" onclick="deleteConversation('${c.taskId}')">删除</div>
+                        <div class="task-card-wrapper" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}">
+                            <div class="card" style="cursor:pointer;">
+                                <div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div>
+                                <div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div>
                             </div>
-                        `;
+                            <div class="delete-btn" onclick="deleteConversation('${c.taskId}')">删除</div>
+                        </div>
+                    `;
                 }
                 wrapper.innerHTML = html;
                 document.querySelectorAll('.task-card-wrapper').forEach(wrapper => {
@@ -2263,35 +1985,35 @@
                 const accCount = myAccOngoing.length;
                 const compCount = myCompleted.length;
                 container.innerHTML = `
-                        <div class="profile-header" onclick="showEditProfileModal()">
-                            <div class="profile-avatar">${currentUser.avatar?`<img src="${currentUser.avatar}">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div>
-                            <div><div class="profile-name">${escapeHtml(currentUser.nickname||currentUser.username)}</div><div class="profile-signature">${currentUser.signature||'点击编辑'}</div></div><span>✏️</span>
+                    <div class="profile-header" onclick="showEditProfileModal()">
+                        <div class="profile-avatar">${currentUser.avatar?`<img src="${currentUser.avatar}">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div>
+                        <div><div class="profile-name">${escapeHtml(currentUser.nickname||currentUser.username)}</div><div class="profile-signature">${currentUser.signature||'点击编辑'}</div></div><span>✏️</span>
+                    </div>
+                    <div class="stats-row" id="walletStats">
+                        <div class="stat-item" id="walletEntry" style="cursor:pointer;">
+                            <div class="stat-number">👛</div>
+                            <div class="stat-label">钱包</div>
                         </div>
-                        <div class="stats-row" id="walletStats">
-                            <div class="stat-item" id="walletEntry" style="cursor:pointer;">
-                                <div class="stat-number">👛</div>
-                                <div class="stat-label">钱包</div>
-                            </div>
-                            <div class="stat-item" id="creditEntry" style="cursor:pointer;">
-                                <div class="stat-number">⭐${currentUser.credit||60}</div>
-                                <div class="stat-label">信用</div>
-                            </div>
-                            <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div>
+                        <div class="stat-item" id="creditEntry" style="cursor:pointer;">
+                            <div class="stat-number">⭐${currentUser.credit||60}</div>
+                            <div class="stat-label">信用</div>
                         </div>
-                        <div class="profile-task-card" onclick="navigateToMyTasks('pub')">
-                            <div class="left"><span class="title">📤 我发布</span><span class="count">${pubCount} 个进行中</span></div>
-                            <span class="arrow">›</span>
-                        </div>
-                        <div class="profile-task-card" onclick="navigateToMyTasks('acc')">
-                            <div class="left"><span class="title">📥 我接取</span><span class="count">${accCount} 个进行中</span></div>
-                            <span class="arrow">›</span>
-                        </div>
-                        <div class="profile-task-card" onclick="navigateToMyTasks('completed')">
-                            <div class="left"><span class="title">✅ 已完成</span><span class="count">${compCount} 个</span></div>
-                            <span class="arrow">›</span>
-                        </div>
-                        <button class="logout-btn" onclick="logout()">退出登录</button>
-                    `;
+                        <div class="stat-item" onclick="showRealNameAuth()"><div class="stat-number">🆔</div><div class="stat-label">${currentUser.idCardVerified?'已实名':'未实名'}</div></div>
+                    </div>
+                    <div class="profile-task-card" onclick="navigateToMyTasks('pub')">
+                        <div class="left"><span class="title">📤 我发布</span><span class="count">${pubCount} 个进行中</span></div>
+                        <span class="arrow">›</span>
+                    </div>
+                    <div class="profile-task-card" onclick="navigateToMyTasks('acc')">
+                        <div class="left"><span class="title">📥 我接取</span><span class="count">${accCount} 个进行中</span></div>
+                        <span class="arrow">›</span>
+                    </div>
+                    <div class="profile-task-card" onclick="navigateToMyTasks('completed')">
+                        <div class="left"><span class="title">✅ 已完成</span><span class="count">${compCount} 个</span></div>
+                        <span class="arrow">›</span>
+                    </div>
+                    <button class="logout-btn" onclick="logout()">退出登录</button>
+                `;
                 document.getElementById('walletEntry').addEventListener('click', () => switchPage('wallet'));
                 document.getElementById('creditEntry').addEventListener('click', () => switchPage('credit'));
             } catch (err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
@@ -2311,28 +2033,28 @@
                         const amountClass = b.amount > 0 ? 'income' : 'expense';
                         const sign = b.amount > 0 ? '+' : '';
                         billHtml += `
-                                <div class="wallet-bill-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
-                                    <div class="icon">${icon}</div>
-                                    <div class="info">
-                                        <div class="desc">${b.desc}</div>
-                                        <div class="time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
-                                    </div>
-                                    <div class="amount ${amountClass}">${sign}${b.amount}元</div>
+                            <div class="wallet-bill-item" data-bill='${JSON.stringify(b).replace(/"/g,'&quot;')}'>
+                                <div class="icon">${icon}</div>
+                                <div class="info">
+                                    <div class="desc">${b.desc}</div>
+                                    <div class="time">${b.createdAt ? new Date(b.createdAt).toLocaleString() : ''}</div>
                                 </div>
-                            `;
+                                <div class="amount ${amountClass}">${sign}${b.amount}元</div>
+                            </div>
+                        `;
                     }
                 }
                 container.innerHTML = `
-                        <div class="wallet-balance-box" style="margin:0 0 16px 0; background:#eef2ff; border-radius:20px; padding:20px; text-align:center;">
-                            <div class="amount">¥${(currentUser.balance||0).toFixed(2)}</div>
-                            <div class="frozen">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div>
-                            <button class="btn-primary" id="walletWithdrawBtn" style="margin-top:10px;padding:8px;font-size:.85rem;">💸 提现</button>
-                        </div>
-                        <div style="margin-top:8px; border-top:1px solid #eef2f8; padding-top:12px;">
-                            <div style="font-weight:600; font-size:1rem; color:#1e293b; margin-bottom:8px;">📋 账单明细</div>
-                            ${billHtml}
-                        </div>
-                    `;
+                    <div class="wallet-balance-box" style="margin:0 0 16px 0; background:#eef2ff; border-radius:20px; padding:20px; text-align:center;">
+                        <div class="amount">¥${(currentUser.balance||0).toFixed(2)}</div>
+                        <div class="frozen">冻结余额: ¥${(currentUser.frozenBalance||0).toFixed(2)}</div>
+                        <button class="btn-primary" id="walletWithdrawBtn" style="margin-top:10px;padding:8px;font-size:.85rem;">💸 提现</button>
+                    </div>
+                    <div style="margin-top:8px; border-top:1px solid #eef2f8; padding-top:12px;">
+                        <div style="font-weight:600; font-size:1rem; color:#1e293b; margin-bottom:8px;">📋 账单明细</div>
+                        ${billHtml}
+                    </div>
+                `;
                 document.getElementById('walletWithdrawBtn').onclick = () => {
                     const chooseModal = document.createElement('div');
                     chooseModal.className = 'custom-modal withdraw-modal';
@@ -2361,24 +2083,24 @@
             const typeLabel = bill.type === 'income' ? '收入' : (bill.type === 'expense' ? '支出' : bill.type);
             const sign = bill.amount > 0 ? '+' : '';
             container.innerHTML = `
-                    <div style="padding:16px;">
-                        <div onclick="renderWalletPage()" style="font-size:1.2rem; cursor:pointer; margin-bottom:16px;">← 返回</div>
-                        <div style="background:#eef2ff; border-radius:20px; padding:20px; text-align:center;">
-                            <div style="font-size:2rem; font-weight:800; color:#1e4a6b;">${sign}${bill.amount}元</div>
-                            <div style="font-size:0.9rem; color:#64748b; margin-top:4px;">${typeLabel}</div>
+                <div style="padding:16px;">
+                    <div onclick="renderWalletPage()" style="font-size:1.2rem; cursor:pointer; margin-bottom:16px;">← 返回</div>
+                    <div style="background:#eef2ff; border-radius:20px; padding:20px; text-align:center;">
+                        <div style="font-size:2rem; font-weight:800; color:#1e4a6b;">${sign}${bill.amount}元</div>
+                        <div style="font-size:0.9rem; color:#64748b; margin-top:4px;">${typeLabel}</div>
+                    </div>
+                    <div style="margin-top:16px;">
+                        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef2f8;">
+                            <span>说明</span>
+                            <span>${bill.desc}</span>
                         </div>
-                        <div style="margin-top:16px;">
-                            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef2f8;">
-                                <span>说明</span>
-                                <span>${bill.desc}</span>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef2f8;">
-                                <span>时间</span>
-                                <span>${new Date(bill.createdAt).toLocaleString()}</span>
-                            </div>
+                        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef2f8;">
+                            <span>时间</span>
+                            <span>${new Date(bill.createdAt).toLocaleString()}</span>
                         </div>
                     </div>
-                `;
+                </div>
+            `;
         }
 
         async function renderCreditPage() {
@@ -2393,10 +2115,10 @@
                     html += '<div style="border-top:1px solid #eef2f8; padding-top:12px;">';
                     for (const l of logs) {
                         html += `<div style="padding:10px 0; border-bottom:1px solid #eef2f8;">
-                                <div>${l.reason}</div>
-                                <div style="color:${l.change>0?'#059669':'#dc2626'};">${l.change>0?`+${l.change}`:l.change} 分</div>
-                                <div style="font-size:0.75rem; color:#94a3b8;">${new Date(l.createdAt).toLocaleString()}</div>
-                            </div>`;
+                            <div>${l.reason}</div>
+                            <div style="color:${l.change>0?'#059669':'#dc2626'};">${l.change>0?`+${l.change}`:l.change} 分</div>
+                            <div style="font-size:0.75rem; color:#94a3b8;">${new Date(l.createdAt).toLocaleString()}</div>
+                        </div>`;
                     }
                     html += '</div>';
                 }
@@ -2454,15 +2176,15 @@
                     if (task.publisherId === currentUser.id && task.takerId) role = '发布者';
                     else if (task.takerId === currentUser.id) role = '接取者';
                     html += `<div class="card" data-taskid="${task._id}" onclick="viewTask('${task._id}','myTasks')">
-                            <div class="task-header"><span class="task-title">${escapeHtml(task.title)}</span><span class="reward-badge">💰 ${task.reward}元</span></div>
-                            <div class="task-desc">${escapeHtml((task.description||'').substring(0,60))}</div>
-                            <div class="task-meta">
-                                <span>👤 ${escapeHtml(task.publisherName)}</span>
-                                <span>📍 ${task.locationAddress||'未知'}</span>
-                                <span class="distance-badge">${statusText}</span>
-                                ${role ? `<span class="distance-badge">${role}</span>` : ''}
-                            </div>
-                        </div>`;
+                        <div class="task-header"><span class="task-title">${escapeHtml(task.title)}</span><span class="reward-badge">💰 ${task.reward}元</span></div>
+                        <div class="task-desc">${escapeHtml((task.description||'').substring(0,60))}</div>
+                        <div class="task-meta">
+                            <span>👤 ${escapeHtml(task.publisherName)}</span>
+                            <span>📍 ${task.locationAddress||'未知'}</span>
+                            <span class="distance-badge">${statusText}</span>
+                            ${role ? `<span class="distance-badge">${role}</span>` : ''}
+                        </div>
+                    </div>`;
                 }
                 listContainer.innerHTML = html;
             } catch (e) {
@@ -2485,13 +2207,13 @@
             const modal = document.createElement('div');
             modal.className = 'custom-modal';
             modal.innerHTML = `
-                    <div class="custom-modal-content"><h3>编辑资料</h3>
-                    <div class="form-group"><div class="form-label">头像</div><div id="avatarPreview" style="width:70px;height:70px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">${currentUser.avatar?`<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div><input type="file" id="avatarInput" accept="image/*" style="display:none;"><button class="btn-secondary" id="uploadAvatarBtn">更换头像</button></div>
-                    <div class="form-group"><label>昵称</label><input type="text" id="editNickname" class="form-input" value="${escapeHtml(currentUser.nickname||'')}"></div>
-                    <div class="form-group"><label>个性签名</label><textarea id="editSignature" class="form-textarea" rows="2">${escapeHtml(currentUser.signature||'')}</textarea></div>
-                    <div class="form-group"><label>家乡</label><input type="text" id="editHometown" class="form-input" value="${escapeHtml(currentUser.hometown||'')}"></div>
-                    <div class="double-btn-row" style="display:flex; gap:8px; margin-top:16px;"><button class="btn-primary" id="saveProfileBtn">保存</button><button class="btn-secondary" id="cancelEditBtn">取消</button></div></div>
-                `;
+                <div class="custom-modal-content"><h3>编辑资料</h3>
+                <div class="form-group"><div class="form-label">头像</div><div id="avatarPreview" style="width:70px;height:70px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">${currentUser.avatar?`<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div><input type="file" id="avatarInput" accept="image/*" style="display:none;"><button class="btn-secondary" id="uploadAvatarBtn">更换头像</button></div>
+                <div class="form-group"><label>昵称</label><input type="text" id="editNickname" class="form-input" value="${escapeHtml(currentUser.nickname||'')}"></div>
+                <div class="form-group"><label>个性签名</label><textarea id="editSignature" class="form-textarea" rows="2">${escapeHtml(currentUser.signature||'')}</textarea></div>
+                <div class="form-group"><label>家乡</label><input type="text" id="editHometown" class="form-input" value="${escapeHtml(currentUser.hometown||'')}"></div>
+                <div class="double-btn-row" style="display:flex; gap:8px; margin-top:16px;"><button class="btn-primary" id="saveProfileBtn">保存</button><button class="btn-secondary" id="cancelEditBtn">取消</button></div></div>
+            `;
             document.body.appendChild(modal);
             const avatarInput = modal.querySelector('#avatarInput');
             const avatarPreview = modal.querySelector('#avatarPreview');
@@ -2579,38 +2301,38 @@
             const balance = currentUser.balance || 0;
             const balanceEnough = balance >= reward;
             modal.innerHTML = `
-                    <div class="custom-modal-content">
-                        <h3>选择支付方式</h3>
-                        <p style="font-size:.9rem;color:#64748b;margin-bottom:16px;">任务赏金 ¥${reward}</p>
-                        <div class="payment-option ${!balanceEnough ? 'disabled' : ''}" data-pay="balance" style="${!balanceEnough ? 'opacity:0.5;pointer-events:none;' : ''}">
-                            <div class="icon">👛</div>
-                            <div class="info">
-                                <div class="name">余额支付</div>
-                                <div class="desc">当前余额 ¥${balance.toFixed(2)} ${!balanceEnough ? '<span style="color:#dc2626;">（余额不足）</span>' : ''}</div>
-                            </div>
-                            <span style="font-size:1.2rem;">›</span>
+                <div class="custom-modal-content">
+                    <h3>选择支付方式</h3>
+                    <p style="font-size:.9rem;color:#64748b;margin-bottom:16px;">任务赏金 ¥${reward}</p>
+                    <div class="payment-option ${!balanceEnough ? 'disabled' : ''}" data-pay="balance" style="${!balanceEnough ? 'opacity:0.5;pointer-events:none;' : ''}">
+                        <div class="icon">👛</div>
+                        <div class="info">
+                            <div class="name">余额支付</div>
+                            <div class="desc">当前余额 ¥${balance.toFixed(2)} ${!balanceEnough ? '<span style="color:#dc2626;">（余额不足）</span>' : ''}</div>
                         </div>
-                        <div class="payment-option" data-pay="wechat">
-                            <div class="icon">💚</div>
-                            <div class="info">
-                                <div class="name">微信支付</div>
-                                <div class="desc">推荐使用微信支付</div>
-                            </div>
-                            <span style="font-size:1.2rem;">›</span>
-                        </div>
-                        <div class="payment-option" data-pay="alipay">
-                            <div class="icon">💙</div>
-                            <div class="info">
-                                <div class="name">支付宝</div>
-                                <div class="desc">支付宝安全支付</div>
-                            </div>
-                            <span style="font-size:1.2rem;">›</span>
-                        </div>
-                        <div class="custom-modal-buttons">
-                            <button class="cancel-btn" id="payCancelBtn">取消</button>
-                        </div>
+                        <span style="font-size:1.2rem;">›</span>
                     </div>
-                `;
+                    <div class="payment-option" data-pay="wechat">
+                        <div class="icon">💚</div>
+                        <div class="info">
+                            <div class="name">微信支付</div>
+                            <div class="desc">推荐使用微信支付</div>
+                        </div>
+                        <span style="font-size:1.2rem;">›</span>
+                    </div>
+                    <div class="payment-option" data-pay="alipay">
+                        <div class="icon">💙</div>
+                        <div class="info">
+                            <div class="name">支付宝</div>
+                            <div class="desc">支付宝安全支付</div>
+                        </div>
+                        <span style="font-size:1.2rem;">›</span>
+                    </div>
+                    <div class="custom-modal-buttons">
+                        <button class="cancel-btn" id="payCancelBtn">取消</button>
+                    </div>
+                </div>
+            `;
             document.body.appendChild(modal);
             const closeModal = () => { modal.remove();
                 btn.innerText = originalText;
@@ -2635,20 +2357,20 @@
                         const payModal = document.createElement('div');
                         payModal.className = 'custom-modal';
                         payModal.innerHTML = `
-                                <div class="custom-modal-content">
-                                    <h3>${payName}支付</h3>
-                                    <p style="font-size:.9rem;color:#64748b;margin:12px 0;">订单金额：¥${reward}</p>
-                                    <p style="font-size:.9rem;color:#64748b;margin:12px 0;">订单号：${'ORD' + Date.now()}</p>
-                                    <div style="background:#f8fafc;padding:20px;border-radius:16px;margin:12px 0;">
-                                        <div style="font-size:2rem;">${method === 'wechat' ? '💚' : '💙'}</div>
-                                        <p style="font-size:.9rem;color:#1e293b;">请使用${payName}扫描二维码或打开${payName}支付</p>
-                                    </div>
-                                    <div class="custom-modal-buttons">
-                                        <button class="confirm-btn" id="paySuccessBtn">模拟支付成功</button>
-                                        <button class="cancel-btn" id="payFailBtn">取消支付</button>
-                                    </div>
+                            <div class="custom-modal-content">
+                                <h3>${payName}支付</h3>
+                                <p style="font-size:.9rem;color:#64748b;margin:12px 0;">订单金额：¥${reward}</p>
+                                <p style="font-size:.9rem;color:#64748b;margin:12px 0;">订单号：${'ORD' + Date.now()}</p>
+                                <div style="background:#f8fafc;padding:20px;border-radius:16px;margin:12px 0;">
+                                    <div style="font-size:2rem;">${method === 'wechat' ? '💚' : '💙'}</div>
+                                    <p style="font-size:.9rem;color:#1e293b;">请使用${payName}扫描二维码或打开${payName}支付</p>
                                 </div>
-                            `;
+                                <div class="custom-modal-buttons">
+                                    <button class="confirm-btn" id="paySuccessBtn">模拟支付成功</button>
+                                    <button class="cancel-btn" id="payFailBtn">取消支付</button>
+                                </div>
+                            </div>
+                        `;
                         document.body.appendChild(payModal);
                         payModal.querySelector('#paySuccessBtn').onclick = async () => {
                             payModal.remove();
@@ -2891,15 +2613,15 @@
                 const modal = document.createElement('div');
                 modal.className = 'custom-modal';
                 modal.innerHTML = `
-                        <div class="custom-modal-content">
-                            <h3>选择凭证</h3>
-                            <div style="display:flex; flex-direction:column; gap:12px;">
-                                <button class="btn-primary" id="takePhotoBtn">📷 拍照</button>
-                                <button class="btn-primary" id="chooseFromAlbumBtn" style="background:#3b82f6;">📁 从相册选择</button>
-                                <button class="btn-secondary" id="cancelChoose">取消</button>
-                            </div>
+                    <div class="custom-modal-content">
+                        <h3>选择凭证</h3>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <button class="btn-primary" id="takePhotoBtn">📷 拍照</button>
+                            <button class="btn-primary" id="chooseFromAlbumBtn" style="background:#3b82f6;">📁 从相册选择</button>
+                            <button class="btn-secondary" id="cancelChoose">取消</button>
                         </div>
-                    `;
+                    </div>
+                `;
                 document.body.appendChild(modal);
                 const takePhotoBtn = modal.querySelector('#takePhotoBtn');
                 const albumBtn = modal.querySelector('#chooseFromAlbumBtn');
@@ -3025,11 +2747,11 @@
             if (!container) return;
             if (pendingMedia.length === 0) { container.innerHTML = ''; return; }
             container.innerHTML = pendingMedia.map((m, idx) => `
-                    <div class="preview-img-wrapper">
-                        ${m.type==='image' ? `<img src="${m.dataURL}">` : `<video src="${m.dataURL}" style="width:100%;height:100%;object-fit:cover;"></video>`}
-                        <div class="remove-img-btn" data-index="${idx}">✕</div>
-                    </div>
-                `).join('');
+                <div class="preview-img-wrapper">
+                    ${m.type==='image' ? `<img src="${m.dataURL}">` : `<video src="${m.dataURL}" style="width:100%;height:100%;object-fit:cover;"></video>`}
+                    <div class="remove-img-btn" data-index="${idx}">✕</div>
+                </div>
+            `).join('');
             document.querySelectorAll('#mediaPreview .remove-img-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     const idx = parseInt(btn.getAttribute('data-index'));
