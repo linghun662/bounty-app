@@ -20,9 +20,9 @@
     <style>
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
-        body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
-        /* 修改 padding-top 为 72px，确保分类栏与状态栏不重叠 */
-        .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden;padding-top:env(safe-area-inset-top,72px);box-sizing:border-box}
+        body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px);padding-top:0}
+        /* 使用固定 padding-top 80px，确保分类栏在状态栏下方 */
+        .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden;padding-top:80px;box-sizing:border-box}
         #mainApp{display:flex;flex-direction:column;flex:1;overflow:hidden}
         .page{display:none;flex-direction:column;flex:1;overflow:hidden;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1)}
         .page.active{display:flex}
