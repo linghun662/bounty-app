@@ -67,7 +67,6 @@ mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty', 
   socketTimeoutMS: 45000,
 });
 
-// ==================== 数据模型 ====================
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
@@ -151,7 +150,6 @@ const GeocodeCacheSchema = new mongoose.Schema({
 });
 const GeocodeCache = mongoose.models.GeocodeCache || mongoose.model('GeocodeCache', GeocodeCacheSchema);
 
-// ===== 新增：评价模型 =====
 const RatingSchema = new mongoose.Schema({
   taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', required: true },
   fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -163,7 +161,6 @@ const RatingSchema = new mongoose.Schema({
 RatingSchema.index({ taskId: 1, fromUserId: 1, toUserId: 1 }, { unique: true });
 const Rating = mongoose.model('Rating', RatingSchema);
 
-// ==================== 辅助函数 ====================
 async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
   const user = await User.findById(userId);
   if (!user) throw new Error(`用户不存在: ${userId}`);
@@ -212,7 +209,6 @@ async function initDefaultData() {
       idCardVerified: true
     });
 
-    // 原有2个任务
     await Task.create({
       title: '帮忙取快递',
       description: '西门驿站取件送到3栋',
@@ -232,7 +228,6 @@ async function initDefaultData() {
       category: '调试'
     });
 
-    // ===== 新增30个测试任务，分布在上海各区 =====
     const testTaskAddresses = [
       { title: '浦东新区取文件', description: '张江高科园区', reward: 15, category: '取件', locationAddress: '上海市浦东新区张江路1号' },
       { title: '帮忙调试代码', description: '漕河泾开发区', reward: 30, category: '调试', locationAddress: '上海市徐汇区漕宝路100号' },
@@ -283,7 +278,6 @@ async function initDefaultData() {
   }
 }
 
-// ==================== API 路由 ====================
 app.post('/api/register', async (req, res) => {
   const { username, password, nickname, phone } = req.body;
   const exist = await User.findOne({ username });
@@ -582,9 +576,10 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+const AMAP_KEY = '30107d62cf0ec682643d1097a48f7da4';
+
 app.post('/api/geocode', async (req, res) => {
   const { address } = req.body;
-  const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
   if (!address) return res.status(400).json({ error: '地址不能为空' });
   try {
     let cached = await GeocodeCache.findOne({ address });
@@ -618,7 +613,6 @@ app.post('/api/geocode', async (req, res) => {
 
 app.post('/api/regeo', async (req, res) => {
   const { lat, lng } = req.body;
-  const AMAP_KEY = process.env.AMAP_KEY || '30107d62cf0ec682643d1097a48f7da4';
   if (!lat || !lng) return res.status(400).json({ error: '缺少经纬度' });
   try {
     const url = `https://restapi.amap.com/v3/geocode/regeo?output=json&location=${lng},${lat}&key=${AMAP_KEY}&radius=200&extensions=all`;
@@ -661,7 +655,6 @@ app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
   res.json(logs);
 });
 
-// ==================== 评价 API ====================
 app.get('/api/ratings/task/:taskId/user/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
@@ -731,7 +724,6 @@ app.post('/api/ratings', authMiddleware, async (req, res) => {
   res.json({ success: true, rating: newRating });
 });
 
-// 前端静态文件托管
 app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
