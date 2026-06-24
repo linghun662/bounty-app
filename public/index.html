@@ -21,8 +21,8 @@
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
-        /* 修改 app-container，增加 padding-top 以避开状态栏 */
-        .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden;padding-top:env(safe-area-inset-top,56px);box-sizing:border-box}
+        /* 修改 padding-top 为 72px，确保分类栏与状态栏不重叠 */
+        .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden;padding-top:env(safe-area-inset-top,72px);box-sizing:border-box}
         #mainApp{display:flex;flex-direction:column;flex:1;overflow:hidden}
         .page{display:none;flex-direction:column;flex:1;overflow:hidden;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1)}
         .page.active{display:flex}
@@ -299,10 +299,8 @@
         </div>
         <!-- 主应用 -->
         <div id="mainApp" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
-            <!-- 顶部导航栏已移除，状态栏穿透 -->
             <!-- 首页 -->
             <div id="homePage" class="page">
-                <!-- 分类栏 + 搜索按钮 -->
                 <div class="category-bar" id="categoryBar">
                     <span class="category-chip active" data-cat="all">全部</span>
                     <span class="category-chip" data-cat="取件">取件</span>
@@ -310,12 +308,10 @@
                     <span class="category-chip" data-cat="跑腿">跑腿</span>
                     <button class="search-btn" id="searchToggleBtn">🔍</button>
                 </div>
-                <!-- 搜索面板 -->
                 <div class="search-panel" id="searchPanel">
                     <input type="text" id="searchInput" placeholder="搜索任务标题或描述...">
                     <button class="close-search" id="searchCloseBtn">✕</button>
                 </div>
-                <!-- 排序栏 + 筛选按钮 -->
                 <div class="sort-bar" id="sortBar">
                     <span class="sort-chip" data-sort="distance">距离最近</span>
                     <span class="sort-chip" data-sort="reward">赏金最高</span>
@@ -323,7 +319,6 @@
                     <span id="filterStatus" class="filter-status"></span>
                     <button class="filter-btn" id="filterToggleBtn">🔍 筛选</button>
                 </div>
-                <!-- 筛选浮动面板 -->
                 <div class="filter-overlay" id="filterOverlay">
                     <div class="filter-panel" id="filterPanel">
                         <div class="dist-option" data-dist="1">≤ 1km</div>
