@@ -28,7 +28,7 @@
         .page{display:none;flex-direction:column;flex:1;overflow:hidden;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1)}
         .page.active{display:flex}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        /* 导航栏已删除，不再需要 .nav-header 样式 */
+        /* 顶部导航栏已移除，状态栏穿透 */
         .bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);display:flex;justify-content:space-around;padding:8px 20px max(18px,env(safe-area-inset-bottom));border-top:1px solid rgba(226,232,240,.6);z-index:20;flex-shrink:0;transition:transform .3s ease,opacity .3s ease}
         body.hide-bottom-nav .bottom-nav{transform:translateY(100%);opacity:0;pointer-events:none}
         .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;color:#94a3b8;cursor:pointer;position:relative}
@@ -53,24 +53,32 @@
         .task-desc{font-size:.95rem;color:#475569;margin-bottom:8px;line-height:1.5}
         .task-meta{display:flex;gap:14px;font-size:.75rem;color:#6c7a91;flex-wrap:wrap}
         .distance-badge{background:#e6f7e6;color:#2b6e2f;padding:2px 12px;border-radius:20px;font-weight:500}
-        /* 分类栏和排序栏样式增强 */
-        .category-bar,.sort-bar{display:flex;gap:12px;padding:14px 16px;background:#fff;border-bottom:1px solid #eef2f8;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;flex-shrink:0;align-items:center}
+        /* 分类栏和排序栏样式 */
+        .category-bar,.sort-bar{display:flex;gap:12px;padding:14px 16px;background:#fff;border-bottom:1px solid #eef2f8;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;flex-shrink:0;align-items:center;position:relative;z-index:5}
         .category-chip,.sort-chip{background:#f1f5f9;padding:8px 18px;border-radius:40px;font-size:.9rem;font-weight:500;color:#475569;cursor:pointer;display:inline-block;transition:all .25s ease;opacity:.85;flex-shrink:0}
         .category-chip.active,.sort-chip.active{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);color:#fff;font-weight:700;opacity:1;box-shadow:0 4px 12px rgba(0,0,0,.2);transform:scale(1.02);position:relative}
         .category-chip.active::after,.sort-chip.active::after{content:'';position:absolute;bottom:-6px;left:25%;width:50%;height:3px;background:#fff;border-radius:3px;box-shadow:0 0 4px rgba(255,255,255,.5)}
-        .search-box{flex:1;min-width:80px;padding:6px 12px;border-radius:40px;border:1px solid #e2e8f0;outline:none;font-size:.8rem;background:#f1f5f9;transition:border-color .2s}
-        .search-box:focus{border-color:#1e4a6b;background:#fff}
-        .filter-btn{background:#e2e8f0;border:none;border-radius:40px;padding:6px 14px;font-size:.75rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;color:#1e4a6b;font-weight:500}
-        .filter-btn:active{background:#cbd5e1}
-        .filter-dropdown{position:relative;display:inline-block}
-        .filter-dropdown-content{display:none;position:absolute;right:0;top:100%;background:#fff;min-width:140px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,.1);padding:8px 0;z-index:10;border:1px solid #eef2f8;margin-top:4px}
-        .filter-dropdown-content.show{display:block}
-        .filter-dropdown-content .dist-option{padding:6px 16px;cursor:pointer;font-size:.8rem;color:#1e293b;transition:background .1s}
-        .filter-dropdown-content .dist-option:active{background:#f1f5f9}
-        .filter-dropdown-content .dist-option.custom{padding:6px 16px;display:flex;gap:6px;align-items:center}
-        .filter-dropdown-content .dist-option.custom input{width:60px;padding:4px;border:1px solid #ddd;border-radius:10px;font-size:.75rem}
-        .filter-dropdown-content .dist-option.custom button{padding:2px 8px;border-radius:20px;border:none;background:#1e4a6b;color:#fff;font-size:.7rem;cursor:pointer}
+        .category-bar .search-btn{background:transparent;border:none;font-size:1.4rem;cursor:pointer;padding:0 6px;color:#1e4a6b;flex-shrink:0}
+        .category-bar .search-btn:active{transform:scale(.9)}
+        .sort-bar .filter-btn{background:#e2e8f0;border:none;border-radius:40px;padding:6px 14px;font-size:.75rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;color:#1e4a6b;font-weight:500}
+        .sort-bar .filter-btn:active{background:#cbd5e1}
         .filter-status{font-size:.7rem;color:#64748b;margin-left:8px;flex-shrink:0}
+        /* 搜索框展开面板 */
+        .search-panel{display:none;background:#fff;padding:8px 16px;border-bottom:1px solid #eef2f8;z-index:6;position:relative}
+        .search-panel.show{display:flex;align-items:center;gap:8px}
+        .search-panel input{flex:1;padding:8px 12px;border-radius:40px;border:1px solid #e2e8f0;outline:none;font-size:.9rem;background:#f1f5f9}
+        .search-panel input:focus{background:#fff;border-color:#1e4a6b}
+        .search-panel .close-search{background:transparent;border:none;font-size:1.2rem;cursor:pointer;color:#94a3b8}
+        /* 筛选浮动面板 */
+        .filter-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(0,0,0,.3);backdrop-filter:blur(2px)}
+        .filter-overlay.show{display:block}
+        .filter-panel{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:16px;min-width:180px;border:1px solid #eef2f8;z-index:101;max-height:70vh;overflow-y:auto}
+        .filter-panel .dist-option{padding:8px 12px;cursor:pointer;border-radius:12px;font-size:.85rem;color:#1e293b;transition:background .1s;display:block}
+        .filter-panel .dist-option:active{background:#f1f5f9}
+        .filter-panel .dist-option.custom{display:flex;gap:6px;align-items:center;padding:8px 12px}
+        .filter-panel .dist-option.custom input{width:60px;padding:4px;border:1px solid #ddd;border-radius:10px;font-size:.75rem}
+        .filter-panel .dist-option.custom button{padding:2px 8px;border-radius:20px;border:none;background:#1e4a6b;color:#fff;font-size:.7rem;cursor:pointer}
+        .filter-panel .dist-option.reset{color:#ef4444;border-top:1px solid #eef2f8;margin-top:4px;padding-top:8px}
         .detail-hero{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);border-radius:28px;margin:16px 16px 0;padding:28px 24px;color:#fff;position:relative;overflow:hidden}
         .detail-hero::before{content:"💰";position:absolute;right:-20px;bottom:-20px;font-size:80px;opacity:.15}
         .detail-reward{font-size:2rem;font-weight:800;margin-top:8px}
@@ -295,38 +303,44 @@
         </div>
         <!-- 主应用 -->
         <div id="mainApp" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
-            <!-- 导航栏已删除，不再显示“赏金集市”和余额 -->
+            <!-- 顶部导航栏已移除，状态栏穿透 -->
             <!-- 首页 -->
             <div id="homePage" class="page">
-                <!-- 分类栏 + 搜索 -->
+                <!-- 分类栏 + 搜索按钮 -->
                 <div class="category-bar" id="categoryBar">
                     <span class="category-chip active" data-cat="all">全部</span>
                     <span class="category-chip" data-cat="取件">取件</span>
                     <span class="category-chip" data-cat="调试">调试</span>
                     <span class="category-chip" data-cat="跑腿">跑腿</span>
-                    <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜索任务..." style="flex:1; min-width:80px;">
+                    <button class="search-btn" id="searchToggleBtn">🔍</button>
                 </div>
-                <!-- 排序栏 + 筛选 -->
-                <div class="sort-bar">
+                <!-- 搜索面板（展开） -->
+                <div class="search-panel" id="searchPanel">
+                    <input type="text" id="searchInput" placeholder="搜索任务标题或描述...">
+                    <button class="close-search" id="searchCloseBtn">✕</button>
+                </div>
+                <!-- 排序栏 + 筛选按钮 -->
+                <div class="sort-bar" id="sortBar">
                     <span class="sort-chip" data-sort="distance">距离最近</span>
                     <span class="sort-chip" data-sort="reward">赏金最高</span>
                     <span class="sort-chip active" data-sort="time">最新发布</span>
                     <span id="filterStatus" class="filter-status"></span>
-                    <div class="filter-dropdown">
-                        <button class="filter-btn" id="filterToggleBtn">🔍 筛选</button>
-                        <div class="filter-dropdown-content" id="filterDropdown">
-                            <div class="dist-option" data-dist="1">≤ 1km</div>
-                            <div class="dist-option" data-dist="5">≤ 5km</div>
-                            <div class="dist-option" data-dist="10">≤ 10km</div>
-                            <div class="dist-option" data-dist="15">≤ 15km</div>
-                            <div class="dist-option" data-dist="50">≤ 50km</div>
-                            <div class="dist-option custom">
-                                <span>自定义</span>
-                                <input type="number" id="customDistInput" placeholder="km" min="0" step="1">
-                                <button id="applyCustomDist">确定</button>
-                            </div>
-                            <div class="dist-option" id="resetFilterBtn" style="color:#ef4444;">重置筛选</div>
+                    <button class="filter-btn" id="filterToggleBtn">🔍 筛选</button>
+                </div>
+                <!-- 筛选浮动面板（覆盖层） -->
+                <div class="filter-overlay" id="filterOverlay">
+                    <div class="filter-panel" id="filterPanel">
+                        <div class="dist-option" data-dist="1">≤ 1km</div>
+                        <div class="dist-option" data-dist="5">≤ 5km</div>
+                        <div class="dist-option" data-dist="10">≤ 10km</div>
+                        <div class="dist-option" data-dist="15">≤ 15km</div>
+                        <div class="dist-option" data-dist="50">≤ 50km</div>
+                        <div class="dist-option custom">
+                            <span>自定义</span>
+                            <input type="number" id="customDistInput" placeholder="km" min="0" step="1">
+                            <button id="applyCustomDist">确定</button>
                         </div>
+                        <div class="dist-option reset" id="resetFilterBtn">重置筛选</div>
                     </div>
                 </div>
                 <div id="refreshIndicator" class="pull-refresh-container" style="display:none;">↓ 下拉刷新</div>
@@ -2648,25 +2662,65 @@
         });
     }
 
-    // ===== 筛选和搜索交互 =====
-    function initFilterAndSearch() {
-        const filterToggleBtn = document.getElementById('filterToggleBtn');
-        const filterDropdown = document.getElementById('filterDropdown');
-        const filterStatus = document.getElementById('filterStatus');
+    // ===== 搜索与筛选交互 =====
+    function initSearchAndFilter() {
+        // 搜索按钮展开
+        const searchToggle = document.getElementById('searchToggleBtn');
+        const searchPanel = document.getElementById('searchPanel');
+        const searchClose = document.getElementById('searchCloseBtn');
         const searchInput = document.getElementById('searchInput');
 
-        // 切换下拉菜单
-        filterToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            filterDropdown.classList.toggle('show');
-        });
-
-        // 点击外部关闭下拉
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.filter-dropdown')) {
-                filterDropdown.classList.remove('show');
+        searchToggle.addEventListener('click', () => {
+            searchPanel.classList.toggle('show');
+            if (searchPanel.classList.contains('show')) {
+                searchInput.focus();
             }
         });
+        searchClose.addEventListener('click', () => {
+            searchPanel.classList.remove('show');
+            searchInput.value = '';
+            filterKeyword = '';
+            applyFilterAndSort();
+        });
+        // 点击外部关闭搜索（点击其他地方时）
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.category-bar') && !e.target.closest('.search-panel')) {
+                searchPanel.classList.remove('show');
+            }
+        });
+
+        // 搜索输入实时过滤
+        searchInput.addEventListener('input', (e) => {
+            filterKeyword = e.target.value.trim();
+            updateFilterStatus();
+            applyFilterAndSort();
+        });
+
+        // 筛选按钮展开面板
+        const filterToggle = document.getElementById('filterToggleBtn');
+        const filterOverlay = document.getElementById('filterOverlay');
+        const filterPanel = document.getElementById('filterPanel');
+
+        filterToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // 关闭搜索面板
+            searchPanel.classList.remove('show');
+            filterOverlay.classList.toggle('show');
+            // 计算面板位置（在排序栏下方）
+            const sortBar = document.getElementById('sortBar');
+            const rect = sortBar.getBoundingClientRect();
+            const top = rect.bottom + window.scrollY;
+            const left = rect.right - 180;
+            filterPanel.style.top = top + 'px';
+            filterPanel.style.left = Math.max(10, left) + 'px';
+        });
+
+        // 点击覆盖层关闭
+        filterOverlay.addEventListener('click', () => {
+            filterOverlay.classList.remove('show');
+        });
+        // 点击面板内部不关闭
+        filterPanel.addEventListener('click', (e) => e.stopPropagation());
 
         // 距离选项
         document.querySelectorAll('.dist-option[data-dist]').forEach(el => {
@@ -2675,7 +2729,7 @@
                 filterDistance = dist;
                 updateFilterStatus();
                 applyFilterAndSort();
-                filterDropdown.classList.remove('show');
+                filterOverlay.classList.remove('show');
             });
         });
 
@@ -2687,7 +2741,7 @@
                 filterDistance = val;
                 updateFilterStatus();
                 applyFilterAndSort();
-                filterDropdown.classList.remove('show');
+                filterOverlay.classList.remove('show');
                 input.value = '';
             } else {
                 showAlert('提示', '请输入有效距离（公里）');
@@ -2701,21 +2755,15 @@
             searchInput.value = '';
             updateFilterStatus();
             applyFilterAndSort();
-            filterDropdown.classList.remove('show');
-        });
-
-        // 搜索输入
-        searchInput.addEventListener('input', (e) => {
-            filterKeyword = e.target.value.trim();
-            updateFilterStatus();
-            applyFilterAndSort();
+            filterOverlay.classList.remove('show');
         });
 
         function updateFilterStatus() {
+            const status = document.getElementById('filterStatus');
             let parts = [];
             if (filterDistance !== null) parts.push(`≤${filterDistance}km`);
             if (filterKeyword) parts.push(`搜索: ${filterKeyword}`);
-            filterStatus.innerText = parts.length ? parts.join(' | ') : '';
+            status.innerText = parts.length ? parts.join(' | ') : '';
         }
     }
 
@@ -2724,7 +2772,7 @@
         initPullToRefresh();
         initMessagePullToRefresh();
         initFiltersAndCategories();
-        initFilterAndSearch(); // 初始化筛选和搜索
+        initSearchAndFilter(); // 初始化搜索和筛选
 
         document.getElementById('walletBackBtn').addEventListener('click', () => switchPage('profile'));
         document.getElementById('creditBackBtn').addEventListener('click', () => switchPage('profile'));
