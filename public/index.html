@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=no">
     <title>赏金集市 · 双向议价</title>
     <script>
-        // 延迟加载高德地图
         window.loadAMap = function() {
             return new Promise((resolve, reject) => {
                 if (window.AMap) { resolve(); return; }
@@ -19,16 +18,16 @@
         };
     </script>
     <style>
-        /* ===== 基础样式（修改 body 增加 padding-top） ===== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
-        body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-top:env(safe-area-inset-top,28px);padding-bottom:env(safe-area-inset-bottom,70px)}
-        .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden}
+        body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
+        /* 修改 app-container，增加 padding-top 以避开状态栏 */
+        .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden;padding-top:env(safe-area-inset-top,56px);box-sizing:border-box}
         #mainApp{display:flex;flex-direction:column;flex:1;overflow:hidden}
         .page{display:none;flex-direction:column;flex:1;overflow:hidden;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1)}
         .page.active{display:flex}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        /* 导航栏已删除，不需要 .nav-header 样式 */
+        /* 导航栏已删除 */
         .bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);display:flex;justify-content:space-around;padding:8px 20px max(18px,env(safe-area-inset-bottom));border-top:1px solid rgba(226,232,240,.6);z-index:20;flex-shrink:0;transition:transform .3s ease,opacity .3s ease}
         body.hide-bottom-nav .bottom-nav{transform:translateY(100%);opacity:0;pointer-events:none}
         .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;color:#94a3b8;cursor:pointer;position:relative}
@@ -118,7 +117,7 @@
         .cancel-btn{background:#e2e8f0;color:#1e293b}
         .toast-message{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:10px 24px;border-radius:60px;font-size:.95rem;z-index:1100;pointer-events:none;animation:fadeOut 2s forwards;backdrop-filter:blur(8px)}
         @keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
-        /* ===== 聊天布局 ===== */
+        /* 聊天布局 */
         #messagePage{flex:1;overflow:hidden}
         .chat-container{display:flex;flex-direction:column;height:100%;background:#f8fafc}
         .chat-header-bar{background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #eef2f8;display:flex;align-items:center;gap:8px;flex-shrink:0}
@@ -311,7 +310,7 @@
                     <span class="category-chip" data-cat="跑腿">跑腿</span>
                     <button class="search-btn" id="searchToggleBtn">🔍</button>
                 </div>
-                <!-- 搜索面板（展开） -->
+                <!-- 搜索面板 -->
                 <div class="search-panel" id="searchPanel">
                     <input type="text" id="searchInput" placeholder="搜索任务标题或描述...">
                     <button class="close-search" id="searchCloseBtn">✕</button>
@@ -324,7 +323,7 @@
                     <span id="filterStatus" class="filter-status"></span>
                     <button class="filter-btn" id="filterToggleBtn">🔍 筛选</button>
                 </div>
-                <!-- 筛选浮动面板（覆盖层） -->
+                <!-- 筛选浮动面板 -->
                 <div class="filter-overlay" id="filterOverlay">
                     <div class="filter-panel" id="filterPanel">
                         <div class="dist-option" data-dist="1">≤ 1km</div>
@@ -438,7 +437,7 @@
 <div class="swipe-back-indicator" id="swipeBackIndicator">‹</div>
 
 <script>
-    // ==================== API 地址（硬编码） ====================
+    // ==================== API 地址 ====================
     const getApiBase = () => {
         return 'https://bounty-app-production.up.railway.app/api';
     };
@@ -463,7 +462,7 @@
     const MAX_MAP_ATTEMPTS = 3;
 
     // ===== 筛选相关 =====
-    let filterDistance = null; // null 表示不限
+    let filterDistance = null;
     let filterKeyword = '';
 
     // ===== 工具函数 =====
@@ -655,7 +654,7 @@
         } catch (e) { return `${lat.toFixed(6)}, ${lng.toFixed(6)}`; }
     }
 
-    // ===== 地图功能（高精度定位） =====
+    // ===== 地图功能 =====
     function initMap() {
         if (mapReady) return;
         if (typeof AMap === 'undefined') {
@@ -790,7 +789,6 @@
         document.body.style.overflow = '';
     }
 
-    // ===== 修改后的 confirmLocation（地图精确定位） =====
     async function confirmLocation() {
         const addressInput = document.getElementById('pubAddress');
         if (!map) {
@@ -820,7 +818,7 @@
         closeMapModal();
     }
 
-    // ===== 返回按钮处理（由 Capacitor App 监听器调用） =====
+    // ===== 返回按钮处理 =====
     function handleBackButton() {
         const activePage = document.querySelector('.page.active');
         if (!activePage) {
@@ -911,12 +909,9 @@
         } catch(e) { /* 静默更新失败 */ }
     }
 
-    // 修改 applyFilterAndSort 加入距离和关键词筛选
     function applyFilterAndSort() {
         let filtered = [...allTasks];
-        // 分类过滤
         if (currentCategory !== 'all') filtered = filtered.filter(t => t.category === currentCategory);
-        // 距离过滤
         if (filterDistance !== null && userLocation) {
             filtered = filtered.filter(t => {
                 const dist = t.distance !== undefined ? parseFloat(t.distance) : null;
@@ -924,22 +919,18 @@
                 return dist <= filterDistance;
             });
         }
-        // 关键词搜索
         if (filterKeyword.trim()) {
             const kw = filterKeyword.toLowerCase().trim();
             filtered = filtered.filter(t => t.title.toLowerCase().includes(kw) || (t.description && t.description.toLowerCase().includes(kw)));
         }
-        // 排序
         if (currentSort === 'distance') filtered.sort((a,b) => (parseFloat(a.distance)||999) - (parseFloat(b.distance)||999));
         else if (currentSort === 'reward') filtered.sort((a,b) => b.reward - a.reward);
         else filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-        // 渲染
         const container = document.getElementById('homeContent');
         if (filtered.length === 0) {
             container.innerHTML = '<div class="empty-state">✨ 无匹配任务</div>';
             return;
         }
-        // 更新筛选状态显示
         updateFilterStatus();
         container.innerHTML = filtered.map(t => `
             <div class="card" data-taskid="${t._id}">
@@ -1387,7 +1378,7 @@
         } catch(err) { showAlert('删除失败', err.message); }
     }
 
-    // ===== 刷新聊天消息（包含日期分组） =====
+    // ===== 刷新聊天消息 =====
     async function refreshMessagesOnly() {
         if(!chatState.messagesArea || !chatState.taskId) return;
         try {
@@ -1454,7 +1445,6 @@
             chatState.messagesArea.innerHTML = html || '<div class="empty-state">暂无消息</div>';
             if(hasNew) chatState.messagesArea.scrollTop = chatState.messagesArea.scrollHeight;
 
-            // 长按删除消息（仅自己发送的）
             document.querySelectorAll('.chat-bubble[data-is-mine="true"]').forEach(bubble => {
                 const messageId = bubble.getAttribute('data-message-id');
                 if(!messageId) return;
@@ -1576,12 +1566,10 @@
             input.click();
         };
 
-        // 语音按钮
         const voiceBtn = document.getElementById('voiceBtn');
         const chatInput = document.getElementById('chatInput');
         let isPressed = false;
 
-        // 麦克风权限请求函数
         async function requestMicrophonePermission() {
             if (window.Capacitor && window.Capacitor.isNativePlatform()) {
                 try {
@@ -1777,7 +1765,7 @@
         }
     }
 
-    // ===== 消息列表：左滑出现删除，右滑关闭删除 =====
+    // ===== 消息列表 =====
     function renderMessageList() {
         if(!currentUser || !currentUser.id) {
             const container = document.getElementById('messageContainer');
@@ -1909,7 +1897,6 @@
     }
 
     // ===== 个人主页 =====
-    // 移除余额更新
     async function loadProfile() {
         const container = document.getElementById('profileContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -1963,7 +1950,7 @@
         } catch(err) { container.innerHTML = '<div class="empty-state">加载失败</div>'; }
     }
 
-    // ===== 钱包全屏页（含账单修改） =====
+    // ===== 钱包全屏页 =====
     async function renderWalletPage() {
         const container = document.getElementById('walletContent');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -2231,7 +2218,7 @@
         localStorage.setItem('lastPage', page);
     }
 
-    // ===== 发布任务（含支付选择） =====
+    // ===== 发布任务 =====
     async function publishTask() {
         if(!currentUser.idCardVerified){ showAlert('提示','请先实名认证'); return; }
         const title = document.getElementById('pubTitle').value.trim();
@@ -2379,7 +2366,7 @@
         document.getElementById('locationHint').innerHTML = '点击"选择位置"打开地图选点';
     }
 
-    // ===== 发布、登录等（原有） =====
+    // ===== 取消任务 =====
     async function cancelTask(taskId) {
         showConfirm('确认取消', '确定取消该任务吗？取消后赏金将退还到您的账户。', async () => {
             try {
@@ -2437,7 +2424,7 @@
         }
     }
 
-    // ===== 语音相关（已添加权限检查） =====
+    // ===== 语音 =====
     async function startRecording() {
         const hasPerm = await requestMicrophonePermission();
         if (!hasPerm) {
@@ -2661,7 +2648,6 @@
 
     // ===== 搜索与筛选交互 =====
     function initSearchAndFilter() {
-        // 搜索按钮展开
         const searchToggle = document.getElementById('searchToggleBtn');
         const searchPanel = document.getElementById('searchPanel');
         const searchClose = document.getElementById('searchCloseBtn');
@@ -2679,31 +2665,26 @@
             filterKeyword = '';
             applyFilterAndSort();
         });
-        // 点击外部关闭搜索（点击其他地方时）
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.category-bar') && !e.target.closest('.search-panel')) {
                 searchPanel.classList.remove('show');
             }
         });
 
-        // 搜索输入实时过滤
         searchInput.addEventListener('input', (e) => {
             filterKeyword = e.target.value.trim();
             updateFilterStatus();
             applyFilterAndSort();
         });
 
-        // 筛选按钮展开面板
         const filterToggle = document.getElementById('filterToggleBtn');
         const filterOverlay = document.getElementById('filterOverlay');
         const filterPanel = document.getElementById('filterPanel');
 
         filterToggle.addEventListener('click', (e) => {
             e.stopPropagation();
-            // 关闭搜索面板
             searchPanel.classList.remove('show');
             filterOverlay.classList.toggle('show');
-            // 计算面板位置（在排序栏下方）
             const sortBar = document.getElementById('sortBar');
             const rect = sortBar.getBoundingClientRect();
             const top = rect.bottom + window.scrollY;
@@ -2712,14 +2693,11 @@
             filterPanel.style.left = Math.max(10, left) + 'px';
         });
 
-        // 点击覆盖层关闭
         filterOverlay.addEventListener('click', () => {
             filterOverlay.classList.remove('show');
         });
-        // 点击面板内部不关闭
         filterPanel.addEventListener('click', (e) => e.stopPropagation());
 
-        // 距离选项
         document.querySelectorAll('.dist-option[data-dist]').forEach(el => {
             el.addEventListener('click', () => {
                 const dist = parseFloat(el.getAttribute('data-dist'));
@@ -2730,7 +2708,6 @@
             });
         });
 
-        // 自定义距离
         document.getElementById('applyCustomDist').addEventListener('click', () => {
             const input = document.getElementById('customDistInput');
             const val = parseFloat(input.value);
@@ -2745,7 +2722,6 @@
             }
         });
 
-        // 重置筛选
         document.getElementById('resetFilterBtn').addEventListener('click', () => {
             filterDistance = null;
             filterKeyword = '';
@@ -2768,8 +2744,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         // 状态栏透明设置（使用 Capacitor Status Bar 插件）
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            // 如果安装了 @capacitor/status-bar 插件，可取消注释以下代码
-            // 注意：需要先安装插件：npm install @capacitor/status-bar
+            // 如果安装了 @capacitor/status-bar 插件，取消注释以下代码
+            // 否则使用原生配置（styles.xml）
             /*
             import('@capacitor/status-bar').then(({ StatusBar }) => {
                 StatusBar.setOverlaysWebView({ overlay: true });
@@ -2777,7 +2753,6 @@
                 StatusBar.setBackgroundColor({ color: '#00000000' });
             }).catch(() => {});
             */
-            // 如果未安装插件，可以使用原生配置（styles.xml 已设置透明）
             console.log('Capacitor 原生环境，状态栏已配置透明');
         }
 
