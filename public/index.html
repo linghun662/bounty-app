@@ -21,7 +21,8 @@
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
         body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px);padding-top:0}
-        .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden;padding-top:56px;box-sizing:border-box}
+        /* 调整 padding-top 为 40px，减小顶部空白 */
+        .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden;padding-top:40px;box-sizing:border-box}
         #mainApp{display:flex;flex-direction:column;flex:1;overflow:hidden}
         .page{display:none;flex-direction:column;flex:1;overflow:hidden;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1)}
         .page.active{display:flex}
@@ -256,6 +257,9 @@
         .payment-option .info .name{font-weight:600;font-size:1rem}
         .payment-option .info .desc{font-size:.8rem;color:#64748b}
         .payment-option.disabled{opacity:0.5;pointer-events:none}
+        /* 消息页下拉刷新指示器 */
+        .msg-pull-indicator{text-align:center;padding:10px 0;font-size:.85rem;color:#64748b;background:transparent;width:100%;transition:transform .2s}
+        #messageContainer{flex:1;display:flex;flex-direction:column;overflow-y:auto;position:relative}
     </style>
 </head>
 <body>
@@ -361,8 +365,12 @@
                     </div>
                 </div>
             </div>
+            <!-- 消息页，添加下拉刷新指示器 -->
             <div id="messagePage" class="page">
-                <div id="messageContainer" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">加载中...</div>
+                <div id="messageContainer" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;">
+                    <div id="msgPullIndicator" class="msg-pull-indicator" style="display:none;">↓ 下拉刷新</div>
+                    <div id="messageListWrapper" style="flex:1;padding-bottom:20px;">加载中...</div>
+                </div>
             </div>
             <div id="profilePage" class="page">
                 <div id="profileContainer" style="flex:1;overflow-y:auto;padding-bottom:20px;">加载中...</div>
@@ -954,34 +962,53 @@
         });
     }
 
+    // ===== 消息页下拉刷新（新实现）=====
     function initMessagePullToRefresh() {
-        const messagePage = document.getElementById('messagePage');
-        const indicator = document.getElementById('refreshMessageIndicator');
-        if (!messagePage || !indicator) return;
-        let startY = 0, isRefreshing = false;
-        messagePage.addEventListener('touchstart', (e) => {
-            if (messagePage.scrollTop === 0) startY = e.touches[0].clientY;
-        });
-        messagePage.addEventListener('touchmove', (e) => {
-            if (isRefreshing || messagePage.scrollTop > 0) return;
+        const container = document.getElementById('messageContainer');
+        const wrapper = document.getElementById('messageListWrapper');
+        const indicator = document.getElementById('msgPullIndicator');
+        if (!container || !wrapper || !indicator) return;
+        let startY = 0, isRefreshing = false, isPulling = false;
+
+        container.addEventListener('touchstart', (e) => {
+            if (container.scrollTop <= 0 && !isRefreshing) {
+                startY = e.touches[0].clientY;
+                isPulling = true;
+            }
+        }, { passive: true });
+
+        container.addEventListener('touchmove', (e) => {
+            if (!isPulling || isRefreshing) return;
             const diff = e.touches[0].clientY - startY;
             if (diff > 30) {
                 e.preventDefault();
                 indicator.style.display = 'block';
                 indicator.style.transform = `translateY(${Math.min(diff - 30, 60)}px)`;
+                indicator.innerText = '松开刷新';
+            } else {
+                indicator.style.transform = '';
+                indicator.innerText = '↓ 下拉刷新';
             }
-        });
-        messagePage.addEventListener('touchend', async () => {
-            if (indicator.style.display === 'block') {
-                indicator.style.transform = ''; indicator.style.display = 'none';
+        }, { passive: false });
+
+        container.addEventListener('touchend', async () => {
+            isPulling = false;
+            if (indicator.style.display === 'block' && indicator.style.transform !== '') {
+                // 触发刷新
                 isRefreshing = true;
-                indicator.innerText = '刷新中...'; indicator.style.display = 'block';
+                indicator.innerText = '刷新中...';
+                indicator.style.transform = '';
                 await renderMessageList();
                 isRefreshing = false;
                 indicator.style.display = 'none';
                 indicator.innerText = '↓ 下拉刷新';
+                showToast('消息已刷新');
+            } else {
+                indicator.style.display = 'none';
+                indicator.style.transform = '';
+                indicator.innerText = '↓ 下拉刷新';
             }
-        });
+        }, { passive: true });
     }
 
     function initFiltersAndCategories() {
@@ -1747,16 +1774,16 @@
 
     // ===== 消息列表 =====
     function renderMessageList() {
+        const wrapper = document.getElementById('messageListWrapper');
+        if(!wrapper) return;
         if(!currentUser || !currentUser.id) {
-            const container = document.getElementById('messageContainer');
-            if(container) container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">请先登录</div></div>';
+            wrapper.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">请先登录</div></div>';
             updateUnreadBadge();
             return;
         }
         callApi(`/user/${currentUser.id}/conversations`).then(convs => {
-            const container = document.getElementById('messageContainer');
             if(!convs || convs.length === 0) {
-                container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
+                wrapper.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
                 updateUnreadBadge();
                 return;
             }
@@ -1768,7 +1795,7 @@
             });
 
             if(filtered.length === 0) {
-                container.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
+                wrapper.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';
                 updateUnreadBadge();
                 return;
             }
@@ -1787,7 +1814,7 @@
                     </div>
                 `;
             }
-            container.innerHTML = html;
+            wrapper.innerHTML = html;
 
             document.querySelectorAll('.task-card-wrapper').forEach(wrapper => {
                 let startX = 0, isDragging = false;
@@ -1862,6 +1889,7 @@
             updateUnreadBadge();
         }).catch(e => {
             console.error('加载消息列表失败', e);
+            wrapper.innerHTML = '<div class="card"><strong>📬 消息记录</strong><div class="empty-state">加载失败，请重试</div></div>';
         });
     }
 
@@ -2192,7 +2220,13 @@
         backPressedOnce = false;
         if (page === 'home') refreshTaskList();
         else if (page === 'profile') loadProfile();
-        else if (page === 'message') renderMessageList();
+        else if (page === 'message') {
+            // 切换消息页时刷新列表
+            renderMessageList();
+            // 隐藏可能残留的刷新指示器
+            const indicator = document.getElementById('msgPullIndicator');
+            if(indicator) { indicator.style.display='none'; indicator.style.transform=''; }
+        }
         else if (page === 'wallet') renderWalletPage();
         else if (page === 'credit') renderCreditPage();
         localStorage.setItem('lastPage', page);
@@ -2725,7 +2759,6 @@
         // 状态栏透明设置（使用 Capacitor Status Bar 插件）
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             // 如果安装了 @capacitor/status-bar 插件，取消注释以下代码
-            // 否则使用原生配置（styles.xml）
             /*
             import('@capacitor/status-bar').then(({ StatusBar }) => {
                 StatusBar.setOverlaysWebView({ overlay: true });
@@ -2737,9 +2770,9 @@
         }
 
         initPullToRefresh();
-        initMessagePullToRefresh();
         initFiltersAndCategories();
         initSearchAndFilter();
+        initMessagePullToRefresh(); // 初始化消息页下拉刷新
 
         document.getElementById('walletBackBtn').addEventListener('click', () => switchPage('profile'));
         document.getElementById('creditBackBtn').addEventListener('click', () => switchPage('profile'));
