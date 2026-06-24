@@ -19,16 +19,16 @@
         };
     </script>
     <style>
-        /* ===== 基础样式 ===== */
+        /* ===== 基础样式（修改 body 增加 padding-top） ===== */
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;font-size:calc(16px + 0.2vw)}
-        body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-bottom:env(safe-area-inset-bottom,70px)}
+        body{background:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;padding-top:env(safe-area-inset-top,28px);padding-bottom:env(safe-area-inset-bottom,70px)}
         .app-container{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#f8fafc;position:relative;box-shadow:0 0 20px rgba(0,0,0,.05);overflow:hidden}
         #mainApp{display:flex;flex-direction:column;flex:1;overflow:hidden}
         .page{display:none;flex-direction:column;flex:1;overflow:hidden;animation:fadeInUp .25s cubic-bezier(.2,.9,.4,1.1)}
         .page.active{display:flex}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        /* 顶部导航栏已移除，状态栏穿透 */
+        /* 导航栏已删除，不需要 .nav-header 样式 */
         .bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);display:flex;justify-content:space-around;padding:8px 20px max(18px,env(safe-area-inset-bottom));border-top:1px solid rgba(226,232,240,.6);z-index:20;flex-shrink:0;transition:transform .3s ease,opacity .3s ease}
         body.hide-bottom-nav .bottom-nav{transform:translateY(100%);opacity:0;pointer-events:none}
         .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;color:#94a3b8;cursor:pointer;position:relative}
@@ -53,7 +53,6 @@
         .task-desc{font-size:.95rem;color:#475569;margin-bottom:8px;line-height:1.5}
         .task-meta{display:flex;gap:14px;font-size:.75rem;color:#6c7a91;flex-wrap:wrap}
         .distance-badge{background:#e6f7e6;color:#2b6e2f;padding:2px 12px;border-radius:20px;font-weight:500}
-        /* 分类栏和排序栏样式 */
         .category-bar,.sort-bar{display:flex;gap:12px;padding:14px 16px;background:#fff;border-bottom:1px solid #eef2f8;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;flex-shrink:0;align-items:center;position:relative;z-index:5}
         .category-chip,.sort-chip{background:#f1f5f9;padding:8px 18px;border-radius:40px;font-size:.9rem;font-weight:500;color:#475569;cursor:pointer;display:inline-block;transition:all .25s ease;opacity:.85;flex-shrink:0}
         .category-chip.active,.sort-chip.active{background:linear-gradient(135deg,#1e4a6b,#0f2b3d);color:#fff;font-weight:700;opacity:1;box-shadow:0 4px 12px rgba(0,0,0,.2);transform:scale(1.02);position:relative}
@@ -63,13 +62,11 @@
         .sort-bar .filter-btn{background:#e2e8f0;border:none;border-radius:40px;padding:6px 14px;font-size:.75rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;color:#1e4a6b;font-weight:500}
         .sort-bar .filter-btn:active{background:#cbd5e1}
         .filter-status{font-size:.7rem;color:#64748b;margin-left:8px;flex-shrink:0}
-        /* 搜索框展开面板 */
         .search-panel{display:none;background:#fff;padding:8px 16px;border-bottom:1px solid #eef2f8;z-index:6;position:relative}
         .search-panel.show{display:flex;align-items:center;gap:8px}
         .search-panel input{flex:1;padding:8px 12px;border-radius:40px;border:1px solid #e2e8f0;outline:none;font-size:.9rem;background:#f1f5f9}
         .search-panel input:focus{background:#fff;border-color:#1e4a6b}
         .search-panel .close-search{background:transparent;border:none;font-size:1.2rem;cursor:pointer;color:#94a3b8}
-        /* 筛选浮动面板 */
         .filter-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(0,0,0,.3);backdrop-filter:blur(2px)}
         .filter-overlay.show{display:block}
         .filter-panel{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:16px;min-width:180px;border:1px solid #eef2f8;z-index:101;max-height:70vh;overflow-y:auto}
@@ -2769,10 +2766,25 @@
 
     // ===== 启动 =====
     document.addEventListener('DOMContentLoaded', () => {
+        // 状态栏透明设置（使用 Capacitor Status Bar 插件）
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            // 如果安装了 @capacitor/status-bar 插件，可取消注释以下代码
+            // 注意：需要先安装插件：npm install @capacitor/status-bar
+            /*
+            import('@capacitor/status-bar').then(({ StatusBar }) => {
+                StatusBar.setOverlaysWebView({ overlay: true });
+                StatusBar.setStyle({ style: 'DARK' });
+                StatusBar.setBackgroundColor({ color: '#00000000' });
+            }).catch(() => {});
+            */
+            // 如果未安装插件，可以使用原生配置（styles.xml 已设置透明）
+            console.log('Capacitor 原生环境，状态栏已配置透明');
+        }
+
         initPullToRefresh();
         initMessagePullToRefresh();
         initFiltersAndCategories();
-        initSearchAndFilter(); // 初始化搜索和筛选
+        initSearchAndFilter();
 
         document.getElementById('walletBackBtn').addEventListener('click', () => switchPage('profile'));
         document.getElementById('creditBackBtn').addEventListener('click', () => switchPage('profile'));
