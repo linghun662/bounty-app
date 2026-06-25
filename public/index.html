@@ -236,7 +236,8 @@ body.hide-bottom-nav .bottom-nav{transform:translateY(100%);opacity:0;pointer-ev
 .map-modal-footer .search-box:focus{background:#fff;box-shadow:0 0 0 1px #1e4a6b}
 .map-modal-footer .toggle-btn{text-align:center;padding:4px 0;cursor:pointer;color:#94a3b8;font-size:1.4rem;flex-shrink:0;border-bottom:1px solid #eef2f8;margin-bottom:4px}
 .map-modal-footer .toggle-btn:active{opacity:.6}
-.map-modal-footer .nearby-list{flex:1;overflow-y:auto;padding:4px 0}
+.map-modal-footer .nearby-list{flex:1;overflow-y:auto;padding:4px 0;display:none} /* 默认隐藏，展开后显示 */
+.map-modal-footer.expanded .nearby-list{display:block}
 .map-modal-footer .nearby-item{padding:10px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
 .map-modal-footer .nearby-item:active{background:#f5f5f5}
 .map-modal-footer .nearby-item .info{flex:1;min-width:0}
@@ -310,7 +311,7 @@ let map=null,geocoder=null,placeSearch=null,selectedLocation={lng:0,lat:0,addres
 let mapReady=false,mapInitAttempts=0,MAX_MAP_ATTEMPTS=3,isMapOpen=false;
 let filterDistance=null,filterKeyword='';
 let isExpanded=false;
-let positionMarker=null; // 用于存储当前位置标记
+let positionMarker=null;
 
 function showNetworkSlow(){if(networkToast)return;networkToast=document.createElement('div');networkToast.className='network-toast';networkToast.innerText='⚠️ 网络较慢，请稍候...';document.body.appendChild(networkToast);setTimeout(()=>{if(networkToast)networkToast.remove();networkToast=null;},3000);}
 async function fetchWithTimeout(url,options={},timeout=8000,retries=1){let lastError;for(let i=0;i<=retries;i++){try{const controller=new AbortController();const id=setTimeout(()=>controller.abort(),timeout);const response=await fetch(url,{...options,signal:controller.signal});clearTimeout(id);if(!response.ok)throw new Error(`HTTP ${response.status}`);return response;}catch(err){lastError=err;if(err.name==='AbortError'){console.warn(`请求超时 (${timeout}ms)，第 ${i+1} 次重试`);if(i<retries)await new Promise(r=>setTimeout(r,800));continue;}if(i<retries){await new Promise(r=>setTimeout(r,800));showNetworkSlow();}}}throw lastError;}
@@ -329,163 +330,271 @@ window.alert=function(msg){showAlert('提示',msg);};window.confirm=function(msg
 async function getDetailedAddress(lat,lng){try{const res=await callApi('/regeo',{method:'POST',body:JSON.stringify({lat,lng})});return res.address;}catch(e){return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;}}
 
 // ==================== 地图功能 ====================
-function initMap(){if(mapReady){if(map){map.destroy();map=null;mapReady=false;}}if(typeof AMap==='undefined'){if(mapInitAttempts>=MAX_MAP_ATTEMPTS){showAlert('地图加载失败','请检查网络或高德地图 Key。');closeMapModal();return;}mapInitAttempts++;const script=document.createElement('script');const key=window.AMAP_KEY||'f9b32373eb484fc1f0e5b04f2c746a41';window._AMapSecurityConfig={securityJsCode:'77f6c7a3b6e20b72297435ba1bc481af'};script.src=`https://webapi.amap.com/maps?v=2.0&key=${key}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onMapScriptLoaded`;script.async=true;document.head.appendChild(script);window.onMapScriptLoaded=function(){mapReady=false;initMap();};setTimeout(()=>{if(!mapReady){mapInitAttempts=MAX_MAP_ATTEMPTS;showAlert('地图加载超时','请检查网络后重试。');closeMapModal();}},8000);return;}const container=document.getElementById('mapContainer');if(!container)return;map=new AMap.Map('mapContainer',{zoom:16,center:[116.397428,39.90923],resizeEnable:true,touchZoom:true,dragEnable:true,zoomEnable:true,mapStyle:'amap://styles/whitesmoke'});geocoder=new AMap.Geocoder({city:'全国',radius:1000,extensions:'all'});
-placeSearch=new AMap.PlaceSearch({type:'',pageSize:30,pageIndex:1,city:'',citylimit:false,extensions:'all'});
-mapReady=true;
-map.on('moveend',function(){var center=map.getCenter();var lng=center.getLng();var lat=center.getLat();searchNearby(lng,lat,'');});
-locateUserOnMap();}
+function initMap(){
+  if(mapReady){if(map){map.destroy();map=null;mapReady=false;}}
+  if(typeof AMap==='undefined'){
+    if(mapInitAttempts>=MAX_MAP_ATTEMPTS){showAlert('地图加载失败','请检查网络或高德地图 Key。');closeMapModal();return;}
+    mapInitAttempts++;
+    const script=document.createElement('script');
+    const key=window.AMAP_KEY||'f9b32373eb484fc1f0e5b04f2c746a41';
+    window._AMapSecurityConfig={securityJsCode:'77f6c7a3b6e20b72297435ba1bc481af'};
+    script.src=`https://webapi.amap.com/maps?v=2.0&key=${key}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onMapScriptLoaded`;
+    script.async=true;
+    document.head.appendChild(script);
+    window.onMapScriptLoaded=function(){mapReady=false;initMap();};
+    setTimeout(()=>{if(!mapReady){mapInitAttempts=MAX_MAP_ATTEMPTS;showAlert('地图加载超时','请检查网络后重试。');closeMapModal();}},8000);
+    return;
+  }
+  const container=document.getElementById('mapContainer');
+  if(!container)return;
+  map=new AMap.Map('mapContainer',{
+    zoom:18,
+    center:[116.397428,39.90923],
+    resizeEnable:true,
+    touchZoom:true,
+    dragEnable:true,
+    zoomEnable:true,
+    mapStyle:'amap://styles/fresh'
+  });
+  geocoder=new AMap.Geocoder({city:'全国',radius:1000,extensions:'all'});
+  placeSearch=new AMap.PlaceSearch({
+    type:'餐饮|购物|生活服务|公司企业|政府机构|汽车服务|医疗保健|住宿服务|教育|金融|房地产|文化传媒|体育休闲|公共设施',
+    pageSize:50,
+    pageIndex:1,
+    city:'',
+    citylimit:false,
+    extensions:'all'
+  });
+  mapReady=true;
+  map.on('complete',function(){
+    locateUserOnMap();
+  });
+  map.on('moveend',function(){
+    var center=map.getCenter();
+    var lng=center.getLng();
+    var lat=center.getLat();
+    searchNearby(lng,lat,'');
+  });
+  const cachedLoc=localStorage.getItem('userLocation');
+  if(cachedLoc){
+    try{
+      const loc=JSON.parse(cachedLoc);
+      map.setCenter([loc.lng,loc.lat]);
+    }catch(e){}
+  }
+  // 初始时底部面板收起，附近列表隐藏
+  document.getElementById('mapFooter').classList.remove('expanded');
+  document.getElementById('nearbyList').style.display = 'none';
+}
 
 function locateUserOnMap(){
-    if(!mapReady)return;
-    if(typeof AMap!=='undefined'&&AMap.Geolocation){
-        const geolocation=new AMap.Geolocation(map,{
-            enableHighAccuracy:true,
-            timeout:15000,
-            zoomToAccuracy:true,
-            maximumAge:0,
-            panToLocation:true,
-            noMove:false,
-            showMarker:true,   // 显示定位标记
-            markerOptions:{
-                // 自定义标记样式（可选）
-            }
-        });
-        geolocation.getCurrentPosition((status,result)=>{
-            if(status==='complete'&&result&&result.position){
-                const lng=result.position.getLng();
-                const lat=result.position.getLat();
-                map.setCenter([lng,lat]);
-                // 如果高德自带的标记未显示，手动添加一个（但通常 showMarker 已够）
-                // 为了保险，我们手动添加一个标记
-                if(positionMarker){
-                    map.remove(positionMarker);
-                }
-                positionMarker = new AMap.Marker({
-                    position: [lng, lat],
-                    title: '我的位置',
-                    icon: new AMap.Icon({
-                        size: new AMap.Size(24, 32),
-                        image: '//webapi.amap.com/theme/v1.3/markers/b/mark_bs.png',
-                        imageSize: new AMap.Size(24, 32)
-                    }),
-                    offset: new AMap.Pixel(-12, -32)
-                });
-                map.add(positionMarker);
-                setTimeout(()=>{searchNearby(lng,lat,'');},600);
-                showToast('定位成功',1500);
-            }else{
-                console.warn('高德定位失败，回退浏览器定位',result);
-                fallbackLocate();
-            }
-        });
-    }else{
+  if(!mapReady)return;
+  if(positionMarker){map.remove(positionMarker);positionMarker=null;}
+  const cachedLoc=localStorage.getItem('userLocation');
+  if(cachedLoc){
+    try{
+      const loc=JSON.parse(cachedLoc);
+      addPositionMarker(loc.lng,loc.lat);
+      map.setCenter([loc.lng,loc.lat]);
+      setTimeout(()=>{searchNearby(loc.lng,loc.lat,'');},600);
+      showToast('使用上次位置',1000);
+      return;
+    }catch(e){}
+  }
+  if(typeof AMap!=='undefined'&&AMap.Geolocation){
+    const geolocation=new AMap.Geolocation(map,{
+      enableHighAccuracy:true,
+      timeout:15000,
+      zoomToAccuracy:true,
+      maximumAge:0,
+      panToLocation:true,
+      noMove:false,
+      showMarker:true,
+    });
+    geolocation.getCurrentPosition((status,result)=>{
+      if(status==='complete'&&result&&result.position){
+        const lng=result.position.getLng();
+        const lat=result.position.getLat();
+        addPositionMarker(lng,lat);
+        map.setCenter([lng,lat]);
+        localStorage.setItem('userLocation',JSON.stringify({lng,lat}));
+        setTimeout(()=>{searchNearby(lng,lat,'');},600);
+        showToast('定位成功',1500);
+      }else{
         fallbackLocate();
-    }
+      }
+    });
+  }else{
+    fallbackLocate();
+  }
+}
+
+function addPositionMarker(lng,lat){
+  if(positionMarker){map.remove(positionMarker);}
+  positionMarker=new AMap.Marker({
+    position:[lng,lat],
+    title:'我的位置',
+    icon:new AMap.Icon({
+      size:new AMap.Size(24,32),
+      image:'//webapi.amap.com/theme/v1.3/markers/b/mark_bs.png',
+      imageSize:new AMap.Size(24,32)
+    }),
+    offset:new AMap.Pixel(-12,-32)
+  });
+  map.add(positionMarker);
 }
 
 function fallbackLocate(){
-    if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition((pos)=>{
-            const lng=pos.coords.longitude;
-            const lat=pos.coords.latitude;
-            if(map)map.setCenter([lng,lat]);
-            if(positionMarker){
-                map.remove(positionMarker);
-            }
-            positionMarker = new AMap.Marker({
-                position: [lng, lat],
-                title: '我的位置',
-                icon: new AMap.Icon({
-                    size: new AMap.Size(24, 32),
-                    image: '//webapi.amap.com/theme/v1.3/markers/b/mark_bs.png',
-                    imageSize: new AMap.Size(24, 32)
-                }),
-                offset: new AMap.Pixel(-12, -32)
-            });
-            map.add(positionMarker);
-            showToast('定位成功（浏览器）',1500);
-            setTimeout(()=>{searchNearby(lng,lat,'');},600);
-        },(err)=>{
-            console.warn('浏览器定位失败',err);
-            const defaultLng=116.397428,defaultLat=39.90923;
-            if(map)map.setCenter([defaultLng,defaultLat]);
-            showAlert('定位失败','使用默认位置，请手动拖动地图。');
-            setTimeout(()=>{searchNearby(defaultLng,defaultLat,'');},600);
-        },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
-    }else{
-        const defaultLng=116.397428,defaultLat=39.90923;
-        if(map)map.setCenter([defaultLng,defaultLat]);
-        showAlert('定位失败','浏览器不支持定位，使用默认位置。');
-        setTimeout(()=>{searchNearby(defaultLng,defaultLat,'');},600);
-    }
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition((pos)=>{
+      const lng=pos.coords.longitude;
+      const lat=pos.coords.latitude;
+      if(map)map.setCenter([lng,lat]);
+      addPositionMarker(lng,lat);
+      localStorage.setItem('userLocation',JSON.stringify({lng,lat}));
+      setTimeout(()=>{searchNearby(lng,lat,'');},600);
+      showToast('定位成功（浏览器）',1500);
+    },(err)=>{
+      const defaultLng=116.397428,defaultLat=39.90923;
+      if(map)map.setCenter([defaultLng,defaultLat]);
+      addPositionMarker(defaultLng,defaultLat);
+      showAlert('定位失败','使用默认位置，请手动拖动地图。');
+      setTimeout(()=>{searchNearby(defaultLng,defaultLat,'');},600);
+    },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+  }else{
+    const defaultLng=116.397428,defaultLat=39.90923;
+    if(map)map.setCenter([defaultLng,defaultLat]);
+    addPositionMarker(defaultLng,defaultLat);
+    showAlert('定位失败','浏览器不支持定位，使用默认位置。');
+    setTimeout(()=>{searchNearby(defaultLng,defaultLat,'');},600);
+  }
 }
 
-// 搜索功能：模仿高德地图 App 的搜索方式
 function searchNearby(lng,lat,keyword){
-    if(!placeSearch){console.warn('placeSearch未初始化');return;}
-    const listEl=document.getElementById('nearbyList');
-    listEl.innerHTML='<div class="loading-tip">搜索中...</div>';
-    
-    if(!keyword||keyword.trim()===''){
-        // 无关键词：周边搜索
-        placeSearch.searchNearBy('',[lng,lat],5000,function(status,result){
-            if(status==='complete'&&result.poiList&&result.poiList.pois.length>0){
-                var pois=result.poiList.pois;
-                pois.sort(function(a,b){return (a.distance||0)-(b.distance||0);});
-                renderNearbyList(pois);
-            }else{
-                let msg='未找到附近地点，请拖动地图重试';
-                if(result&&result.message)msg+=' ('+result.message+')';
-                if(result&&result.info)msg+=' '+result.info;
-                listEl.innerHTML='<div class="loading-tip">'+msg+'</div>';
-                console.warn('搜索失败:',status,result);
-            }
-        });
-        return;
-    }
-    
-    // 有关键词：全国搜索
-    placeSearch.search(keyword,function(status,result){
-        if(status==='complete'&&result.poiList&&result.poiList.pois.length>0){
-            var pois=result.poiList.pois;
-            // 计算距离并排序
-            if(lng&&lat){
-                pois.forEach(function(poi){
-                    var pLng=poi.location.getLng();
-                    var pLat=poi.location.getLat();
-                    poi._distance=calculateDistance(lat,lng,pLat,pLng);
-                });
-                pois.sort(function(a,b){return (a._distance||999999)-(b._distance||999999);});
-            }
-            renderNearbyList(pois);
-        }else{
-            let msg='未找到相关地点';
-            if(result&&result.message)msg+=' ('+result.message+')';
-            if(result&&result.info)msg+=' '+result.info;
-            listEl.innerHTML='<div class="loading-tip">'+msg+'</div>';
-            console.warn('搜索失败:',status,result);
-        }
+  if(!placeSearch){console.warn('placeSearch未初始化');return;}
+  const listEl=document.getElementById('nearbyList');
+  listEl.innerHTML='<div class="loading-tip">搜索中...</div>';
+  // 确保列表可见（展开）
+  if(!document.getElementById('mapFooter').classList.contains('expanded')){
+    document.getElementById('mapFooter').classList.add('expanded');
+    document.getElementById('nearbyList').style.display = 'block';
+    document.getElementById('toggleBtn').textContent = '▲';
+  }
+  if(window._searchMarkers){
+    map.remove(window._searchMarkers);
+    window._searchMarkers=null;
+  }
+  const searchRadius=10000;
+  if(!keyword||keyword.trim()===''){
+    placeSearch.searchNearBy('',[lng,lat],searchRadius,function(status,result){
+      if(status==='complete'&&result.poiList&&result.poiList.pois.length>0){
+        var pois=result.poiList.pois;
+        pois.sort(function(a,b){return (a.distance||0)-(b.distance||0);});
+        renderNearbyList(pois);
+        addPoiMarkers(pois);
+      }else{
+        let msg='未找到附近地点，请拖动地图重试';
+        if(result&&result.message)msg+=' ('+result.message+')';
+        if(result&&result.info)msg+=' '+result.info;
+        listEl.innerHTML='<div class="loading-tip">'+msg+'</div>';
+        console.warn('搜索失败:',status,result);
+      }
     });
+    return;
+  }
+  placeSearch.search(keyword,function(status,result){
+    if(status==='complete'&&result.poiList&&result.poiList.pois.length>0){
+      var pois=result.poiList.pois;
+      if(lng&&lat){
+        pois.forEach(function(poi){
+          var pLng=poi.location.getLng();
+          var pLat=poi.location.getLat();
+          poi._distance=calculateDistance(lat,lng,pLat,pLng);
+        });
+        pois.sort(function(a,b){return (a._distance||999999)-(b._distance||999999);});
+      }
+      renderNearbyList(pois);
+      addPoiMarkers(pois);
+    }else{
+      let msg='未找到相关地点';
+      if(result&&result.message)msg+=' ('+result.message+')';
+      if(result&&result.info)msg+=' '+result.info;
+      listEl.innerHTML='<div class="loading-tip">'+msg+'</div>';
+      console.warn('搜索失败:',status,result);
+    }
+  });
+}
+
+function addPoiMarkers(pois){
+  if(!map)return;
+  const markers=[];
+  pois.slice(0,30).forEach(function(poi){
+    const marker=new AMap.Marker({
+      position:poi.location,
+      title:poi.name,
+      label:{
+        content:`<div style="background:white;padding:2px 6px;border-radius:4px;font-size:10px;color:#333;border:1px solid #ccc;">${poi.name}</div>`,
+        offset:new AMap.Pixel(0,-10)
+      },
+      icon:new AMap.Icon({
+        size:new AMap.Size(16,16),
+        image:'//webapi.amap.com/theme/v1.3/markers/b/mark_bs.png',
+        imageSize:new AMap.Size(16,16)
+      })
+    });
+    markers.push(marker);
+    marker.on('click',function(){
+      const lng=poi.location.getLng();
+      const lat=poi.location.getLat();
+      const address=poi.name+(poi.address?' '+poi.address:'');
+      selectedLocation={lng,lat,address};
+      document.getElementById('pubAddress').value=address;
+      closeMapModal();
+      showToast('已选择位置：'+address);
+    });
+  });
+  window._searchMarkers=markers;
+  map.add(markers);
 }
 
 function renderNearbyList(pois){var listEl=document.getElementById('nearbyList');if(!listEl)return;if(!pois||pois.length===0){listEl.innerHTML='<div class="loading-tip">无附近地点</div>';return;}var html='';pois.forEach(function(poi){var distance=poi.distance?(poi.distance<1000?poi.distance+'m':(poi.distance/1000).toFixed(1)+'km'):'未知';var name=poi.name||'未命名';var address=poi.address||'';var fullAddress=name+(address?' '+address:'');var lng=poi.location.getLng();var lat=poi.location.getLat();html+=`<div class="nearby-item" data-lng="${lng}" data-lat="${lat}" data-address="${escapeHtml(fullAddress)}"><div class="info"><div class="name">${escapeHtml(name)}</div><div class="address">${escapeHtml(address)}</div></div><div class="dist">${distance}</div></div>`;});listEl.innerHTML=html;listEl.querySelectorAll('.nearby-item').forEach(function(item){item.addEventListener('click',function(){var lng=parseFloat(this.dataset.lng);var lat=parseFloat(this.dataset.lat);var address=this.dataset.address;selectedLocation={lng,lat,address};document.getElementById('pubAddress').value=address;closeMapModal();showToast('已选择位置：'+address);});});}
-function openMapModal(){if(map){map.destroy();map=null;mapReady=false;}mapInitAttempts=0;isMapOpen=true;document.getElementById('mapModal').classList.add('active');document.body.style.overflow='hidden';document.getElementById('nearbyList').innerHTML='<div class="loading-tip">加载地图...</div>';document.getElementById('mapFooter').classList.remove('expanded');isExpanded=false;document.getElementById('toggleBtn').textContent='▼';setTimeout(()=>{initMap();},300);}
+function openMapModal(){if(map){map.destroy();map=null;mapReady=false;}mapInitAttempts=0;isMapOpen=true;document.getElementById('mapModal').classList.add('active');document.body.style.overflow='hidden';document.getElementById('nearbyList').innerHTML=''; // 清空
+document.getElementById('mapFooter').classList.remove('expanded');
+document.getElementById('nearbyList').style.display = 'none';
+document.getElementById('toggleBtn').textContent = '▼';
+setTimeout(()=>{initMap();},300);}
 function closeMapModal(){document.getElementById('mapModal').classList.remove('active');document.body.style.overflow='';isMapOpen=false;if(map){map.destroy();map=null;mapReady=false;}}
 function confirmLocation(){const addressInput=document.getElementById('pubAddress');if(selectedLocation&&selectedLocation.address){addressInput.value=selectedLocation.address;document.getElementById('locationHint').innerHTML='✅ 已选择位置：'+selectedLocation.address;setTimeout(()=>{document.getElementById('locationHint').innerHTML='点击"选择位置"打开地图选点';},3000);closeMapModal();return;}if(!map){showAlert('地图未就绪','请稍候再试或手动输入地址');closeMapModal();return;}const center=map.getCenter();const lng=center.getLng(),lat=center.getLat();getDetailedAddress(lat,lng).then(address=>{selectedLocation={lng,lat,address};addressInput.value=address;document.getElementById('locationHint').innerHTML='✅ 已选择位置：'+address;setTimeout(()=>{document.getElementById('locationHint').innerHTML='点击"选择位置"打开地图选点';},3000);closeMapModal();}).catch(()=>{const coordStr=`${lat.toFixed(6)}, ${lng.toFixed(6)}`;addressInput.value=coordStr;selectedLocation={lng,lat,address:coordStr};closeMapModal();});}
-document.getElementById('mapSearchInput').addEventListener('focus',function(){const footer=document.getElementById('mapFooter');if(!footer.classList.contains('expanded')){footer.classList.add('expanded');isExpanded=true;}});
+document.getElementById('mapSearchInput').addEventListener('focus',function(){const footer=document.getElementById('mapFooter');if(!footer.classList.contains('expanded')){footer.classList.add('expanded');document.getElementById('nearbyList').style.display = 'block';document.getElementById('toggleBtn').textContent = '▲';}});
 document.getElementById('mapSearchInput').addEventListener('input',function(e){var keyword=this.value.trim();if(!mapReady){if(!mapReady)showToast('地图尚未加载');return;}var center=map.getCenter();searchNearby(center.getLng(),center.getLat(),keyword);});
 document.getElementById('mapSearchInput').addEventListener('keydown',function(e){if(e.key==='Enter'){var keyword=this.value.trim();if(!keyword||!mapReady){if(!mapReady)showToast('地图尚未加载');return;}var center=map.getCenter();searchNearby(center.getLng(),center.getLat(),keyword);}});
-document.getElementById('toggleBtn').addEventListener('click',function(){var footer=document.getElementById('mapFooter');if(footer.classList.contains('expanded')){footer.classList.remove('expanded');isExpanded=false;}this.textContent='▼';});
+document.getElementById('toggleBtn').addEventListener('click',function(){var footer=document.getElementById('mapFooter');if(footer.classList.contains('expanded')){footer.classList.remove('expanded');document.getElementById('nearbyList').style.display = 'none';this.textContent='▼';}else{footer.classList.add('expanded');document.getElementById('nearbyList').style.display = 'block';this.textContent='▲';// 若列表为空，触发搜索
+var center=map.getCenter();var lng=center.getLng();var lat=center.getLat();searchNearby(lng,lat,'');}});
 
 // ===== 页面切换 =====
-function switchPage(page){if(chatState.active&&page!=='message'){closeChat();}document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const target=document.getElementById(`${page}Page`);if(target)target.classList.add('active');if(page==='myTasks'||page==='wallet'||page==='credit'){document.body.classList.add('hide-bottom-nav');}else{document.body.classList.remove('hide-bottom-nav');}backPressedOnce=false;if(page==='home')refreshTaskList();else if(page==='profile')loadProfile();else if(page==='message'){renderMessageList();}else if(page==='wallet')renderWalletPage();else if(page==='credit')renderCreditPage();localStorage.setItem('lastPage',page);}
+function switchPage(page){if(chatState.active&&page!=='message'){closeChat();}document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const target=document.getElementById(`${page}Page`);if(target)target.classList.add('active');if(page==='myTasks'||page==='wallet'||page==='credit'){document.body.classList.add('hide-bottom-nav');}else{document.body.classList.remove('hide-bottom-nav');}backPressedOnce=false;if(page==='home')refreshTaskList();else if(page==='profile')loadProfile();else if(page==='message'){renderMessageList();}else if(page==='wallet')renderWalletPage();else if(page==='credit')renderCreditPage();localStorage.setItem('lastPage',page);if(page==='detail'){
+  // 保存当前任务ID，会在viewTask中设置
+} else if(page==='message'&&chatState.active){
+  localStorage.setItem('chatTaskId',chatState.taskId);
+  localStorage.setItem('chatOtherId',chatState.otherId);
+  localStorage.setItem('chatOtherName',chatState.otherName);
+  localStorage.setItem('chatReward',chatState.reward);
+  localStorage.setItem('chatTitle',chatState.title);
+} else if(page!=='message'){
+  localStorage.removeItem('chatTaskId');
+  localStorage.removeItem('chatOtherId');
+  localStorage.removeItem('chatOtherName');
+  localStorage.removeItem('chatReward');
+  localStorage.removeItem('chatTitle');
+}
+localStorage.setItem('lastPage',page);}
 async function refreshTaskList(force=false){if(refreshThrottle)return;refreshThrottle=true;setTimeout(()=>{refreshThrottle=false;},1000);const container=document.getElementById('homeContent');if(!force&&tasksCache.data&&(Date.now()-tasksCache.timestamp)<tasksCache.ttl){allTasks=tasksCache.data;applyFilterAndSort();refreshTaskListInBackground();return;}container.innerHTML='<div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div><div class="skeleton-card"><div class="skeleton-title"></div><div class="skeleton-desc"></div><div class="skeleton-meta"></div></div>';try{const tasks=await callApi('/tasks');if(!tasks||tasks.length===0){container.innerHTML='<div class="empty-state">✨ 暂无悬赏任务</div>';tasksCache.data=[];tasksCache.timestamp=Date.now();allTasks=[];applyFilterAndSort();return;}let tasksWithCat=tasks.map(t=>({...t,category:getTaskCategory(t.title)}));if(userLocation)tasksWithCat=await enrichTasksWithDistance(tasksWithCat);allTasks=tasksWithCat;tasksCache.data=tasksWithCat;tasksCache.timestamp=Date.now();try{localStorage.setItem('tasksCache',JSON.stringify(tasksCache));}catch(e){}applyFilterAndSort();}catch(err){container.innerHTML='<div class="empty-state">加载失败，请下拉刷新</div>';}}
 async function refreshTaskListInBackground(){try{const tasks=await callApi('/tasks');if(!tasks||tasks.length===0)return;let tasksWithCat=tasks.map(t=>({...t,category:getTaskCategory(t.title)}));if(userLocation)tasksWithCat=await enrichTasksWithDistance(tasksWithCat);allTasks=tasksWithCat;tasksCache.data=tasksWithCat;tasksCache.timestamp=Date.now();try{localStorage.setItem('tasksCache',JSON.stringify(tasksCache));}catch(e){}const homePage=document.getElementById('homePage');if(homePage.classList.contains('active')){applyFilterAndSort();}}catch(e){}}
 function applyFilterAndSort(){let filtered=[...allTasks];if(currentCategory!=='all')filtered=filtered.filter(t=>t.category===currentCategory);if(filterDistance!==null&&userLocation){filtered=filtered.filter(t=>{const dist=t.distance!==undefined?parseFloat(t.distance):null;if(dist===null)return false;return dist<=filterDistance;});}if(filterKeyword.trim()){const kw=filterKeyword.toLowerCase().trim();filtered=filtered.filter(t=>t.title.toLowerCase().includes(kw)||(t.description&&t.description.toLowerCase().includes(kw)));}if(currentSort==='distance')filtered.sort((a,b)=>(parseFloat(a.distance)||999)-(parseFloat(b.distance)||999));else if(currentSort==='reward')filtered.sort((a,b)=>b.reward-a.reward);else filtered.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));const container=document.getElementById('homeContent');if(filtered.length===0){container.innerHTML='<div class="empty-state">✨ 无匹配任务</div>';return;}updateFilterStatus();container.innerHTML=filtered.map(t=>`<div class="card" data-taskid="${t._id}"><div class="task-header"><span class="task-title">${escapeHtml(t.title)}</span><span class="reward-badge">💰 ${t.reward}元</span></div><div class="task-desc">${escapeHtml((t.description||'').substring(0,60))}</div><div class="task-meta"><span>👤 ${escapeHtml(t.publisherName)}</span><span>📍 ${t.locationAddress||'未知'}</span>${t.distance?`<span class="distance-badge">📏 距您 ${t.distance}km</span>`:''}<span class="distance-badge">🏷️ ${t.category}</span></div></div>`).join('');container.querySelectorAll('.card').forEach(card=>{card.removeEventListener('click',card._taskClick);const handler=()=>viewTask(card.getAttribute('data-taskid'),'home');card.addEventListener('click',handler);card._taskClick=handler;});}
 function updateFilterStatus(){const status=document.getElementById('filterStatus');let parts=[];if(filterDistance!==null)parts.push(`≤${filterDistance}km`);if(filterKeyword)parts.push(`搜索: ${filterKeyword}`);status.innerText=parts.length?parts.join(' | '):'';}
 const categoryMap={'取件':['取件','快递','包裹','取货'],'调试':['调试','bug','修复','代码','前端','后端','程序'],'跑腿':['跑腿','送','买','代购','排队']};
 function getTaskCategory(title){const lower=title.toLowerCase();for(let [cat,keywords] of Object.entries(categoryMap))if(keywords.some(kw=>lower.includes(kw)))return cat;return '其他';}
-window.viewTask=async function(taskId,fromPage='home'){lastPage=fromPage;if(countdownTimer)clearInterval(countdownTimer);document.getElementById('detailContainer').innerHTML='<div class="card loading">加载任务详情...</div>';try{const task=await callApi(`/tasks/${taskId}`);if(!task||task.error){showAlert('错误','任务不存在');return;}const isMine=task.publisherId===currentUser.id;const isTaker=task.takerId===currentUser.id;const publisherInfo=await callApi(`/user/${task.publisherId}`);let detailHtml=`<div class="detail-hero"><span class="detail-status">● ${task.status==='available'?'可接取':(task.status==='ongoing'?'进行中':'已完成')}</span><div class="detail-reward" id="detailReward">¥${task.reward}</div></div><div class="card" style="margin-top:12px;"><h2>${escapeHtml(task.title)}</h2><div class="info-row"><div class="info-icon">📌</div><div class="info-content"><div class="info-label">发布者</div><div class="info-value" id="publisherName">${escapeHtml(task.publisherName)}</div></div></div><div class="info-row"><div class="info-icon">📍</div><div class="info-content"><div class="info-label">任务地点</div><div class="info-value">${escapeHtml(task.locationAddress||'未标注')}</div></div></div><div class="info-row"><div class="info-icon">⏰</div><div class="info-content"><div class="info-label">发布时间</div><div class="info-value">${task.createdAt?new Date(task.createdAt).toLocaleDateString():'未知'}</div></div></div>`;if(task.takerId){detailHtml+=`<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${task.takenAt?new Date(task.takenAt).toLocaleString():'时间未知'}</div></div>`;}detailHtml+=`<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description||'')}</p></div>`;if(task.mediaList&&task.mediaList.length>0){let mediaHtml=`<div class="desc-section"><div class="info-label">📎 附件（${task.mediaList.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;for(let media of task.mediaList){if(media.type==='image')mediaHtml+=`<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="showImagePreview('${media.url}')"></div>`;else if(media.type==='video')mediaHtml+=`<div class="preview-img-wrapper"><video src="${media.url}" controls style="width:100%;height:100%;object-fit:cover;"></video></div>`;}mediaHtml+=`</div></div>`;detailHtml+=mediaHtml;}if(task.proofMedia&&task.proofMedia.length>0&&(isMine||isTaker)){let proofHtml=`<div class="desc-section"><div class="info-label">📎 接取者提交的凭证（${task.proofMedia.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;for(let media of task.proofMedia){if(media.type==='image')proofHtml+=`<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="showImagePreview('${media.url}')"></div>`;else if(media.type==='video')proofHtml+=`<div class="preview-img-wrapper"><video src="${media.url}" controls style="width:100%;height:100%;object-fit:cover;"></video></div>`;}proofHtml+=`</div></div>`;detailHtml+=proofHtml;}detailHtml+=`</div>`;if(task.status==='available'&&!isMine){detailHtml+=`<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;}if(task.status==='ongoing'&&isTaker){detailHtml+=`<div class="contact-row"><button class="btn-primary btn" id="contactPublisherBtn" style="background:#3b82f6;">💬 联系发布者</button>${task.publisherPhone?`<button class="btn-phone btn" id="callPublisherPhoneBtn">📞 电话</button>`:`<button class="btn-phone btn" disabled style="opacity:0.6;">📞 无电话</button>`}</div>`;}if(task.status==='ongoing'&&isMine&&task.takerId){detailHtml+=`<div class="contact-row"><button class="btn-primary btn" id="contactTakerBtn" style="background:#3b82f6;">💬 联系接取者</button><button class="btn-phone btn" id="callTakerBtn">📞 电话</button></div>`;}if(task.status==='available'&&!isMine){detailHtml+=`<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;}if(task.status==='ongoing'&&isTaker){if(task.locationAddress){const coords=await geocodeAddress(task.locationAddress)||{lat:31.2304,lng:121.4737};detailHtml+=`<div style="margin:8px 16px;"><button class="btn-nav" id="navigateBtn" data-task-lat="${coords.lat}" data-task-lng="${coords.lng}" data-task-addr="${escapeHtml(task.locationAddress)}">🧭 高德导航</button></div>`;}if(task.travelStatus==='idle')detailHtml+=`<div class="slide-action" id="slideStartWrapper" style="margin:8px 16px;"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;else if(task.travelStatus==='traveling'){detailHtml+=`<div id="countdownDisplay" class="countdown-timer" style="margin:8px 16px;">计算中...</div><div class="slide-action" id="slideArriveWrapper" style="margin:8px 16px;"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📍 滑动到达 📍</div></div></div>`;}else if(task.travelStatus==='arrived'&&!task.takerCompleted){detailHtml+=`<div class="slide-action" id="slideCompleteWrapper" style="margin:8px 16px;"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📎 滑动并上传凭证完成 ✅</div></div></div>`;}detailHtml+=`<div style="margin:8px 16px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;}if(task.status==='ongoing'&&task.takerCompleted&&isMine){detailHtml+=`<div style="margin:8px 16px;"><div class="slide-confirm" id="slidePayWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动确认支付赏金 👈</div></div></div></div>`;}document.getElementById('detailContainer').innerHTML=detailHtml;const taskIdStr=task._id.toString();document.getElementById('publisherName')?.addEventListener('click',()=>{const modal=document.createElement('div');modal.className='custom-modal';modal.innerHTML=`<div class="custom-modal-content"><h3>发布者资料</h3><div>昵称: ${escapeHtml(publisherInfo.nickname)}</div><div>信用: ${publisherInfo.credit}</div><div>家乡: ${publisherInfo.hometown||'未填写'}</div><div>签名: ${publisherInfo.signature||'无'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;document.body.appendChild(modal);modal.querySelector('.confirm-btn').onclick=()=>modal.remove();});document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click',()=>openChat(taskIdStr,task.publisherId,task.publisherName,task.reward,task.title));document.getElementById('contactTakerBtn')?.addEventListener('click',()=>openChat(taskIdStr,task.takerId,task.takerName,task.reward,task.title));document.getElementById('contactPublisherBtn')?.addEventListener('click',()=>openChat(taskIdStr,task.publisherId,task.publisherName,task.reward,task.title));const callPublisherPhoneBtn=document.getElementById('callPublisherPhoneBtn');if(callPublisherPhoneBtn&&callPublisherPhoneBtn.getAttribute('disabled')!=='disabled'){callPublisherPhoneBtn.onclick=()=>{window.location.href=`tel:${task.publisherPhone}`;};}const callTakerBtn=document.getElementById('callTakerBtn');if(callTakerBtn){callTakerBtn.onclick=async()=>{const takerInfo=await callApi(`/user/${task.takerId}`);if(takerInfo.phone)window.location.href=`tel:${takerInfo.phone}`;else showAlert('提示','接取者未绑定手机号');};}const navBtn=document.getElementById('navigateBtn');if(navBtn){navBtn.onclick=async()=>{const destLat=parseFloat(navBtn.getAttribute('data-task-lat'));const destLng=parseFloat(navBtn.getAttribute('data-task-lng'));const destAddr=navBtn.getAttribute('data-task-addr');await navigateTo(destLat,destLng,destAddr);};}const slideAccept=document.getElementById('slideAcceptWrapper');if(slideAccept)initSlide(slideAccept,async()=>{const res=await callApi(`/tasks/${taskId}/accept`,{method:'PUT',body:JSON.stringify({takerName:currentUser.nickname})});if(res.success){showToast('接取成功');refreshTaskList(true);loadProfile();viewTask(taskId,lastPage);}else showAlert('接取失败',res.error);});const slideStart=document.getElementById('slideStartWrapper');if(slideStart){initSlide(slideStart,async()=>{let minutes=15;if(userLocation&&task.locationAddress){const coords=await geocodeAddress(task.locationAddress);if(coords){const dist=parseFloat(calculateDistance(userLocation.lat,userLocation.lng,coords.lat,coords.lng));if(!isNaN(dist))minutes=Math.min(60,Math.max(5,Math.round(dist*2)));}}const result=await callApi(`/tasks/${taskId}/status`,{method:'PUT',body:JSON.stringify({travelStatus:'traveling',estimatedMinutes:minutes,travelStartTime:Date.now()})});if(result.success){showToast('出发！');viewTask(taskId,lastPage);}else showAlert('操作失败',result.error);});}const slideArrive=document.getElementById('slideArriveWrapper');if(slideArrive){if(task.travelStartTime&&task.estimatedMinutes){if(countdownTimer)clearInterval(countdownTimer);const countdownDiv=document.getElementById('countdownDisplay');if(countdownDiv){const update=()=>{const elapsed=(Date.now()-task.travelStartTime)/1000;const remaining=Math.max(0,task.estimatedMinutes*60-elapsed);const mins=Math.floor(remaining/60);const secs=Math.floor(remaining%60);if(remaining<=0){countdownDiv.innerHTML='⏰ 预计已到达！请滑动确认到达';countdownDiv.classList.add('warning');clearInterval(countdownTimer);countdownTimer=null;}else{countdownDiv.innerHTML=`🚗 预计剩余时间: ${mins}分${secs.toString().padStart(2,'0')}秒`;if(remaining<60)countdownDiv.classList.add('warning');else countdownDiv.classList.remove('warning');}};update();countdownTimer=setInterval(update,1000);}}initSlide(slideArrive,async()=>{const result=await callApi(`/tasks/${taskId}/status`,{method:'PUT',body:JSON.stringify({travelStatus:'arrived'})});if(result.success){if(countdownTimer)clearInterval(countdownTimer);showToast('已到达目的地！');viewTask(taskId,lastPage);}else showAlert('操作失败',result.error);});}const slideComplete=document.getElementById('slideCompleteWrapper');if(slideComplete){initSlide(slideComplete,async()=>{const files=await chooseProofFiles();if(files.length===0){const track=slideComplete.querySelector('.slide-track');const thumb=slideComplete.querySelector('.slide-thumb');thumb.style.transform='translateX(0)';slideComplete.classList.remove('completed');return;}const result=await submitProof(taskIdStr,files);if(result.success){showToast('凭证已提交，等待发布者确认');refreshTaskList(true);loadProfile();viewTask(taskId,lastPage);}else{showAlert('提交失败',result.error||'未知错误');}});}const cancelAcceptBtn=document.getElementById('cancelAcceptBtn');if(cancelAcceptBtn)cancelAcceptBtn.onclick=async()=>{showConfirm('确认取消','取消接取将扣除5信用分，确定吗？',async()=>{const res=await callApi(`/tasks/${taskId}/cancel-accept`,{method:'PUT',body:JSON.stringify({})});if(res.success){showToast('已取消接取');loadProfile();refreshTaskList(true);switchPage('home');}else showAlert('操作失败',res.error);});};const slidePay=document.getElementById('slidePayWrapper');if(slidePay){initSlide(slidePay,async()=>{showConfirm('确认支付','确认任务已完成？赏金将支付给接取者。',async()=>{const res=await callApi(`/tasks/${taskId}/confirm-payment`,{method:'POST',body:JSON.stringify({})});if(res.success){showToast('结算成功');viewTask(taskId,lastPage);refreshTaskList(true);loadProfile();}else showAlert('结算失败',res.error);});});}if(task.status==='completed'&&(isMine||isTaker)){const myRating=await getRating(taskIdStr);const otherUserId=isMine?task.takerId:task.publisherId;const otherUserName=isMine?task.takerName:task.publisherName;let ratingHtml='';if(myRating){const scoreText=myRating.rating>=4?'好评':(myRating.rating<=2?'差评':'中评');ratingHtml=`<div class="rating-section"><div class="already-rated">✅ 您已评价 (${scoreText} ${myRating.rating}分) ${myRating.comment?'：'+escapeHtml(myRating.comment):''}</div></div>`;}else{ratingHtml=`<div class="rating-section" id="ratingSection"><div style="font-weight:600; margin-bottom:8px;">评价 ${escapeHtml(otherUserName)}</div><div class="rating-buttons"><button class="btn-good" data-value="5">👍 好评</button><button class="btn-bad" data-value="1">👎 差评</button></div><textarea class="rating-comment" id="ratingComment" placeholder="可选评语..."></textarea><button class="rating-submit" id="submitRatingBtn">提交评价</button></div>`;}document.getElementById('detailContainer').innerHTML+=ratingHtml;if(!myRating){let selectedRating=3;const goodBtn=document.querySelector('.btn-good');const badBtn=document.querySelector('.btn-bad');const submitBtn=document.getElementById('submitRatingBtn');const commentInput=document.getElementById('ratingComment');goodBtn.addEventListener('click',()=>{goodBtn.classList.toggle('selected');badBtn.classList.remove('selected');selectedRating=goodBtn.classList.contains('selected')?5:3;});badBtn.addEventListener('click',()=>{badBtn.classList.toggle('selected');goodBtn.classList.remove('selected');selectedRating=badBtn.classList.contains('selected')?1:3;});submitBtn.addEventListener('click',async()=>{if(selectedRating===3){showAlert('提示','请选择好评或差评');return;}const comment=commentInput.value.trim();submitBtn.disabled=true;const result=await submitRating(taskIdStr,otherUserId,selectedRating,comment);submitBtn.disabled=false;if(result&&result.success){showToast('评价成功');loadProfile();viewTask(taskId,lastPage);}else showAlert('评价失败',result?.error||'未知错误');});}}switchPage('detail');}catch(e){let errMsg=e.message||'未知错误';if(e.name==='AbortError'||errMsg.includes('aborted')||errMsg.includes('超时'))errMsg='请求超时，请检查网络后重试';showAlert('加载失败',errMsg);}};
+window.viewTask=async function(taskId,fromPage='home'){lastPage=fromPage;if(countdownTimer)clearInterval(countdownTimer);document.getElementById('detailContainer').innerHTML='<div class="card loading">加载任务详情...</div>';try{const task=await callApi(`/tasks/${taskId}`);if(!task||task.error){showAlert('错误','任务不存在');return;}const isMine=task.publisherId===currentUser.id;const isTaker=task.takerId===currentUser.id;const publisherInfo=await callApi(`/user/${task.publisherId}`);let detailHtml=`<div class="detail-hero"><span class="detail-status">● ${task.status==='available'?'可接取':(task.status==='ongoing'?'进行中':'已完成')}</span><div class="detail-reward" id="detailReward">¥${task.reward}</div></div><div class="card" style="margin-top:12px;"><h2>${escapeHtml(task.title)}</h2><div class="info-row"><div class="info-icon">📌</div><div class="info-content"><div class="info-label">发布者</div><div class="info-value" id="publisherName">${escapeHtml(task.publisherName)}</div></div></div><div class="info-row"><div class="info-icon">📍</div><div class="info-content"><div class="info-label">任务地点</div><div class="info-value">${escapeHtml(task.locationAddress||'未标注')}</div></div></div><div class="info-row"><div class="info-icon">⏰</div><div class="info-content"><div class="info-label">发布时间</div><div class="info-value">${task.createdAt?new Date(task.createdAt).toLocaleDateString():'未知'}</div></div></div>`;if(task.takerId){detailHtml+=`<div class="info-row"><div class="info-icon">🙋</div><div class="info-content"><div class="info-label">接取者</div><div class="info-value">${escapeHtml(task.takerName)}</div></div><div>接取时间: ${task.takenAt?new Date(task.takenAt).toLocaleString():'时间未知'}</div></div>`;}detailHtml+=`<div class="desc-section"><div class="info-label">📝 任务详情</div><p>${escapeHtml(task.description||'')}</p></div>`;if(task.mediaList&&task.mediaList.length>0){let mediaHtml=`<div class="desc-section"><div class="info-label">📎 附件（${task.mediaList.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;for(let media of task.mediaList){if(media.type==='image')mediaHtml+=`<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="showImagePreview('${media.url}')"></div>`;else if(media.type==='video')mediaHtml+=`<div class="preview-img-wrapper"><video src="${media.url}" controls style="width:100%;height:100%;object-fit:cover;"></video></div>`;}mediaHtml+=`</div></div>`;detailHtml+=mediaHtml;}if(task.proofMedia&&task.proofMedia.length>0&&(isMine||isTaker)){let proofHtml=`<div class="desc-section"><div class="info-label">📎 接取者提交的凭证（${task.proofMedia.length}个）</div><div class="image-preview-grid" style="margin-top:6px;">`;for(let media of task.proofMedia){if(media.type==='image')proofHtml+=`<div class="preview-img-wrapper"><img src="${media.url}" style="width:100%;height:100%;object-fit:cover;" onclick="showImagePreview('${media.url}')"></div>`;else if(media.type==='video')proofHtml+=`<div class="preview-img-wrapper"><video src="${media.url}" controls style="width:100%;height:100%;object-fit:cover;"></video></div>`;}proofHtml+=`</div></div>`;detailHtml+=proofHtml;}detailHtml+=`</div>`;if(task.status==='available'&&!isMine){detailHtml+=`<div style="margin:8px 16px;"><button class="btn-primary" id="contactPublisherBeforeAcceptBtn" style="background:#3b82f6;">💬 联系发布者 / 议价</button></div>`;}if(task.status==='ongoing'&&isTaker){detailHtml+=`<div class="contact-row"><button class="btn-primary btn" id="contactPublisherBtn" style="background:#3b82f6;">💬 联系发布者</button>${task.publisherPhone?`<button class="btn-phone btn" id="callPublisherPhoneBtn">📞 电话</button>`:`<button class="btn-phone btn" disabled style="opacity:0.6;">📞 无电话</button>`}</div>`;}if(task.status==='ongoing'&&isMine&&task.takerId){detailHtml+=`<div class="contact-row"><button class="btn-primary btn" id="contactTakerBtn" style="background:#3b82f6;">💬 联系接取者</button><button class="btn-phone btn" id="callTakerBtn">📞 电话</button></div>`;}if(task.status==='available'&&!isMine){detailHtml+=`<div style="margin:8px 16px 20px;"><div class="slide-confirm" id="slideAcceptWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动接取任务 👈</div></div></div></div>`;}if(task.status==='ongoing'&&isTaker){if(task.locationAddress){const coords=await geocodeAddress(task.locationAddress)||{lat:31.2304,lng:121.4737};detailHtml+=`<div style="margin:8px 16px;"><button class="btn-nav" id="navigateBtn" data-task-lat="${coords.lat}" data-task-lng="${coords.lng}" data-task-addr="${escapeHtml(task.locationAddress)}">🧭 高德导航</button></div>`;}if(task.travelStatus==='idle')detailHtml+=`<div class="slide-action" id="slideStartWrapper" style="margin:8px 16px;"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">🚗 滑动出发 🚗</div></div></div>`;else if(task.travelStatus==='traveling'){detailHtml+=`<div id="countdownDisplay" class="countdown-timer" style="margin:8px 16px;">计算中...</div><div class="slide-action" id="slideArriveWrapper" style="margin:8px 16px;"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📍 滑动到达 📍</div></div></div>`;}else if(task.travelStatus==='arrived'&&!task.takerCompleted){detailHtml+=`<div class="slide-action" id="slideCompleteWrapper" style="margin:8px 16px;"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">📎 滑动并上传凭证完成 ✅</div></div></div>`;}detailHtml+=`<div style="margin:8px 16px;"><button class="btn-danger" id="cancelAcceptBtn">❌ 取消接取</button></div>`;}if(task.status==='ongoing'&&task.takerCompleted&&isMine){detailHtml+=`<div style="margin:8px 16px;"><div class="slide-confirm" id="slidePayWrapper"><div class="slide-track"><div class="slide-thumb">→</div><div class="slide-text">👉 滑动确认支付赏金 👈</div></div></div></div>`;}document.getElementById('detailContainer').innerHTML=detailHtml;const taskIdStr=task._id.toString();document.getElementById('publisherName')?.addEventListener('click',()=>{const modal=document.createElement('div');modal.className='custom-modal';modal.innerHTML=`<div class="custom-modal-content"><h3>发布者资料</h3><div>昵称: ${escapeHtml(publisherInfo.nickname)}</div><div>信用: ${publisherInfo.credit}</div><div>家乡: ${publisherInfo.hometown||'未填写'}</div><div>签名: ${publisherInfo.signature||'无'}</div><div class="custom-modal-buttons"><button class="confirm-btn">关闭</button></div></div>`;document.body.appendChild(modal);modal.querySelector('.confirm-btn').onclick=()=>modal.remove();});document.getElementById('contactPublisherBeforeAcceptBtn')?.addEventListener('click',()=>openChat(taskIdStr,task.publisherId,task.publisherName,task.reward,task.title));document.getElementById('contactTakerBtn')?.addEventListener('click',()=>openChat(taskIdStr,task.takerId,task.takerName,task.reward,task.title));document.getElementById('contactPublisherBtn')?.addEventListener('click',()=>openChat(taskIdStr,task.publisherId,task.publisherName,task.reward,task.title));const callPublisherPhoneBtn=document.getElementById('callPublisherPhoneBtn');if(callPublisherPhoneBtn&&callPublisherPhoneBtn.getAttribute('disabled')!=='disabled'){callPublisherPhoneBtn.onclick=()=>{window.location.href=`tel:${task.publisherPhone}`;};}const callTakerBtn=document.getElementById('callTakerBtn');if(callTakerBtn){callTakerBtn.onclick=async()=>{const takerInfo=await callApi(`/user/${task.takerId}`);if(takerInfo.phone)window.location.href=`tel:${takerInfo.phone}`;else showAlert('提示','接取者未绑定手机号');};}const navBtn=document.getElementById('navigateBtn');if(navBtn){navBtn.onclick=async()=>{const destLat=parseFloat(navBtn.getAttribute('data-task-lat'));const destLng=parseFloat(navBtn.getAttribute('data-task-lng'));const destAddr=navBtn.getAttribute('data-task-addr');await navigateTo(destLat,destLng,destAddr);};}const slideAccept=document.getElementById('slideAcceptWrapper');if(slideAccept)initSlide(slideAccept,async()=>{const res=await callApi(`/tasks/${taskId}/accept`,{method:'PUT',body:JSON.stringify({takerName:currentUser.nickname})});if(res.success){showToast('接取成功');refreshTaskList(true);loadProfile();viewTask(taskId,lastPage);}else showAlert('接取失败',res.error);});const slideStart=document.getElementById('slideStartWrapper');if(slideStart){initSlide(slideStart,async()=>{let minutes=15;if(userLocation&&task.locationAddress){const coords=await geocodeAddress(task.locationAddress);if(coords){const dist=parseFloat(calculateDistance(userLocation.lat,userLocation.lng,coords.lat,coords.lng));if(!isNaN(dist))minutes=Math.min(60,Math.max(5,Math.round(dist*2)));}}const result=await callApi(`/tasks/${taskId}/status`,{method:'PUT',body:JSON.stringify({travelStatus:'traveling',estimatedMinutes:minutes,travelStartTime:Date.now()})});if(result.success){showToast('出发！');viewTask(taskId,lastPage);}else showAlert('操作失败',result.error);});}const slideArrive=document.getElementById('slideArriveWrapper');if(slideArrive){if(task.travelStartTime&&task.estimatedMinutes){if(countdownTimer)clearInterval(countdownTimer);const countdownDiv=document.getElementById('countdownDisplay');if(countdownDiv){const update=()=>{const elapsed=(Date.now()-task.travelStartTime)/1000;const remaining=Math.max(0,task.estimatedMinutes*60-elapsed);const mins=Math.floor(remaining/60);const secs=Math.floor(remaining%60);if(remaining<=0){countdownDiv.innerHTML='⏰ 预计已到达！请滑动确认到达';countdownDiv.classList.add('warning');clearInterval(countdownTimer);countdownTimer=null;}else{countdownDiv.innerHTML=`🚗 预计剩余时间: ${mins}分${secs.toString().padStart(2,'0')}秒`;if(remaining<60)countdownDiv.classList.add('warning');else countdownDiv.classList.remove('warning');}};update();countdownTimer=setInterval(update,1000);}}initSlide(slideArrive,async()=>{const result=await callApi(`/tasks/${taskId}/status`,{method:'PUT',body:JSON.stringify({travelStatus:'arrived'})});if(result.success){if(countdownTimer)clearInterval(countdownTimer);showToast('已到达目的地！');viewTask(taskId,lastPage);}else showAlert('操作失败',result.error);});}const slideComplete=document.getElementById('slideCompleteWrapper');if(slideComplete){initSlide(slideComplete,async()=>{const files=await chooseProofFiles();if(files.length===0){const track=slideComplete.querySelector('.slide-track');const thumb=slideComplete.querySelector('.slide-thumb');thumb.style.transform='translateX(0)';slideComplete.classList.remove('completed');return;}const result=await submitProof(taskIdStr,files);if(result.success){showToast('凭证已提交，等待发布者确认');refreshTaskList(true);loadProfile();viewTask(taskId,lastPage);}else{showAlert('提交失败',result.error||'未知错误');}});}const cancelAcceptBtn=document.getElementById('cancelAcceptBtn');if(cancelAcceptBtn)cancelAcceptBtn.onclick=async()=>{showConfirm('确认取消','取消接取将扣除5信用分，确定吗？',async()=>{const res=await callApi(`/tasks/${taskId}/cancel-accept`,{method:'PUT',body:JSON.stringify({})});if(res.success){showToast('已取消接取');loadProfile();refreshTaskList(true);switchPage('home');}else showAlert('操作失败',res.error);});};const slidePay=document.getElementById('slidePayWrapper');if(slidePay){initSlide(slidePay,async()=>{showConfirm('确认支付','确认任务已完成？赏金将支付给接取者。',async()=>{const res=await callApi(`/tasks/${taskId}/confirm-payment`,{method:'POST',body:JSON.stringify({})});if(res.success){showToast('结算成功');viewTask(taskId,lastPage);refreshTaskList(true);loadProfile();}else showAlert('结算失败',res.error);});});}if(task.status==='completed'&&(isMine||isTaker)){const myRating=await getRating(taskIdStr);const otherUserId=isMine?task.takerId:task.publisherId;const otherUserName=isMine?task.takerName:task.publisherName;let ratingHtml='';if(myRating){const scoreText=myRating.rating>=4?'好评':(myRating.rating<=2?'差评':'中评');ratingHtml=`<div class="rating-section"><div class="already-rated">✅ 您已评价 (${scoreText} ${myRating.rating}分) ${myRating.comment?'：'+escapeHtml(myRating.comment):''}</div></div>`;}else{ratingHtml=`<div class="rating-section" id="ratingSection"><div style="font-weight:600; margin-bottom:8px;">评价 ${escapeHtml(otherUserName)}</div><div class="rating-buttons"><button class="btn-good" data-value="5">👍 好评</button><button class="btn-bad" data-value="1">👎 差评</button></div><textarea class="rating-comment" id="ratingComment" placeholder="可选评语..."></textarea><button class="rating-submit" id="submitRatingBtn">提交评价</button></div>`;}document.getElementById('detailContainer').innerHTML+=ratingHtml;if(!myRating){let selectedRating=3;const goodBtn=document.querySelector('.btn-good');const badBtn=document.querySelector('.btn-bad');const submitBtn=document.getElementById('submitRatingBtn');const commentInput=document.getElementById('ratingComment');goodBtn.addEventListener('click',()=>{goodBtn.classList.toggle('selected');badBtn.classList.remove('selected');selectedRating=goodBtn.classList.contains('selected')?5:3;});badBtn.addEventListener('click',()=>{badBtn.classList.toggle('selected');goodBtn.classList.remove('selected');selectedRating=badBtn.classList.contains('selected')?1:3;});submitBtn.addEventListener('click',async()=>{if(selectedRating===3){showAlert('提示','请选择好评或差评');return;}const comment=commentInput.value.trim();submitBtn.disabled=true;const result=await submitRating(taskIdStr,otherUserId,selectedRating,comment);submitBtn.disabled=false;if(result&&result.success){showToast('评价成功');loadProfile();viewTask(taskId,lastPage);}else showAlert('评价失败',result?.error||'未知错误');});}}switchPage('detail');localStorage.setItem('lastTaskId',taskId);}catch(e){let errMsg=e.message||'未知错误';if(e.name==='AbortError'||errMsg.includes('aborted')||errMsg.includes('超时'))errMsg='请求超时，请检查网络后重试';showAlert('加载失败',errMsg);}};
 function initSlide(container,onComplete){const track=container.querySelector('.slide-track');const thumb=container.querySelector('.slide-thumb');if(!track||!thumb)return;if(track.clientWidth===0||thumb.clientWidth===0){setTimeout(()=>initSlide(container,onComplete),100);return;}let startX=0,isDragging=false;const maxLeft=track.clientWidth-thumb.clientWidth;function setTransform(x){thumb.style.transform=`translateX(${x}px)`;}function onMove(clientX){if(!isDragging)return;let delta=clientX-startX;let newLeft=Math.min(maxLeft,Math.max(0,delta));setTransform(newLeft);if(newLeft>=maxLeft-5){isDragging=false;container.classList.add('completed');setTransform(maxLeft);document.removeEventListener('mousemove',onMouseMove);document.removeEventListener('mouseup',onMouseUp);document.removeEventListener('touchmove',onTouchMove);document.removeEventListener('touchend',onTouchEnd);if(onComplete)onComplete();}}function onMouseMove(e){onMove(e.clientX);}function onMouseUp(){isDragging=false;setTransform(0);document.removeEventListener('mousemove',onMouseMove);document.removeEventListener('mouseup',onMouseUp);container.classList.remove('completed');}function onTouchMove(e){onMove(e.touches[0].clientX);e.preventDefault();}function onTouchEnd(){isDragging=false;setTransform(0);document.removeEventListener('touchmove',onTouchMove);document.removeEventListener('touchend',onTouchEnd);container.classList.remove('completed');}function onStart(clientX){startX=clientX;isDragging=true;document.addEventListener('mousemove',onMouseMove);document.addEventListener('mouseup',onMouseUp);document.addEventListener('touchmove',onTouchMove);document.addEventListener('touchend',onTouchEnd);}thumb.addEventListener('mousedown',(e)=>{e.preventDefault();onStart(e.clientX);});thumb.addEventListener('touchstart',(e)=>{e.preventDefault();onStart(e.touches[0].clientX);});container.classList.remove('completed');setTransform(0);}
 const CHAT_POLL_INTERVAL=3000;
 function updateConversationTimestamp(taskId){if(!taskId)return;const key=`conv_time_${taskId}`;localStorage.setItem(key,Date.now().toString());}
@@ -496,9 +605,9 @@ async function refreshMessagesOnly(){if(!chatState.messagesArea||!chatState.task
 function showChatView(){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('messagePage').classList.add('active');document.body.classList.add('hide-bottom-nav');const container=document.getElementById('messageContainer');container.innerHTML=`<div class="chat-container" style="display:flex; flex-direction:column; height:100%;"><div class="chat-header-bar"><button class="chat-back-btn" id="chatBackBtn">←</button><span class="chat-header-name">${escapeHtml(chatState.otherName)}</span></div><div class="task-card-in-chat" onclick="viewTask('${chatState.taskId}','message')"><div><strong>${escapeHtml(chatState.title)}</strong><br><span class="reward-badge">💰 ${chatState.reward}元</span></div><span>👉 详情</span></div><div class="chat-messages-area" id="chatMsgsArea">加载中...</div><div class="chat-input-wrapper"><div class="chat-action-row"><button class="chat-icon-btn" id="chatPlusBtn">➕</button><button class="chat-icon-btn" id="voiceBtn" title="按住说话">🎤</button><input type="text" id="chatInput" class="chat-message-input" placeholder="输入消息..."><button class="send-btn" id="sendChatBtn">发送</button></div><div class="chat-plus-panel" id="chatPlusPanel"><button class="chat-icon-btn plus-item" id="imageBtn">🖼️ 图片</button><button class="chat-icon-btn plus-item" id="sendNegoBtn">💰 议价</button></div></div></div>`;chatState.messagesArea=document.getElementById('chatMsgsArea');chatState.lastMessageCount=0;
 document.getElementById('chatBackBtn').onclick=function(){closeChat();const msgContainer=document.getElementById('messageContainer');msgContainer.innerHTML=`<div id="msgPullIndicator" class="msg-pull-indicator" style="display:none;">↓ 下拉刷新</div><div id="messageListWrapper" style="flex:1;padding-bottom:20px;">加载中...</div>`;renderMessageList();switchPage('message');};
 document.getElementById('sendChatBtn').onclick=async()=>{const txt=document.getElementById('chatInput').value.trim();if(!txt)return;await sendMessage(chatState.taskId,txt,false);document.getElementById('chatInput').value='';await refreshMessagesOnly();updateUnreadBadge();};document.getElementById('imageBtn').onclick=()=>{const input=document.createElement('input');input.type='file';input.accept='image/*,video/*';input.multiple=false;input.onchange=async(e)=>{const file=e.target.files[0];if(!file)return;try{showToast('上传中...',1500);const url=await uploadFile(file);await sendMessage(chatState.taskId,`[img]${url}[/img]`,false);await refreshMessagesOnly();updateUnreadBadge();}catch(err){showAlert('发送失败',err.message);}input.remove();};input.click();};const voiceBtn=document.getElementById('voiceBtn');const chatInput=document.getElementById('chatInput');let isPressed=false;async function requestMicrophonePermission(){if(window.Capacitor&&window.Capacitor.isNativePlatform()){try{const{Permissions}=Capacitor.Plugins;let status=await Permissions.check({permissions:['microphone']});if(status.microphone!=='granted'){const result=await Permissions.request({permissions:['microphone']});return result.microphone==='granted';}return true;}catch(e){console.warn('权限请求失败',e);try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});stream.getTracks().forEach(track=>track.stop());return true;}catch(err){return false;}}}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});stream.getTracks().forEach(track=>track.stop());return true;}catch(err){return false;}}const startPress=async(e)=>{e.preventDefault();if(isPressed)return;const hasPerm=await requestMicrophonePermission();if(!hasPerm){showAlert('麦克风权限被拒绝','请前往手机设置 -> 应用管理 -> 赏金集市 -> 权限，开启麦克风权限');return;}let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true});stream.getTracks().forEach(track=>track.stop());}catch(err){if(err.name==='NotAllowedError'||err.name==='PermissionDeniedError'){showAlert('麦克风权限被拒绝','请在浏览器设置中允许访问麦克风后重试。');}else{showAlert('录音失败',err.message||'无法访问麦克风');}return;}isPressed=true;chatInput.placeholder='录音中...松开发送';chatInput.classList.add('recording');startRecording();if(navigator.vibrate)navigator.vibrate(10);};const endPress=(e)=>{e.preventDefault();if(!isPressed)return;isPressed=false;chatInput.placeholder='输入消息...';chatInput.classList.remove('recording');if(isRecording){stopRecordingAndSend();}};voiceBtn.addEventListener('mousedown',startPress);voiceBtn.addEventListener('mouseup',endPress);voiceBtn.addEventListener('mouseleave',endPress);voiceBtn.addEventListener('touchstart',startPress);voiceBtn.addEventListener('touchend',endPress);voiceBtn.addEventListener('touchcancel',endPress);document.getElementById('sendNegoBtn').onclick=()=>{showPrompt('请输入议价金额','金额（元）',async(price)=>{await sendMessage(chatState.taskId,`💰议价请求:¥${price}`,true);showToast('议价请求已发送');await refreshMessagesOnly();updateUnreadBadge();});};if(window.__plusOutsideHandler){document.removeEventListener('click',window.__plusOutsideHandler);window.__plusOutsideHandler=null;}const plusBtn=document.getElementById('chatPlusBtn');const plusPanel=document.getElementById('chatPlusPanel');let plusOpen=false;plusBtn.addEventListener('click',()=>{plusOpen=!plusOpen;plusPanel.classList.toggle('show',plusOpen);plusBtn.textContent=plusOpen?'✖️':'➕';});const outsideClickHandler=function(e){if(plusOpen&&!e.target.closest('.chat-input-wrapper')){plusOpen=false;plusPanel.classList.remove('show');plusBtn.textContent='➕';}};window.__plusOutsideHandler=outsideClickHandler;document.addEventListener('click',outsideClickHandler);refreshMessagesOnly();if(chatState.pollInterval)clearInterval(chatState.pollInterval);chatState.pollInterval=setInterval(async()=>{if(chatState.active&&chatState.taskId){await refreshMessagesOnly();}},CHAT_POLL_INTERVAL);}
-async function openChat(taskId,otherId,otherName,reward,title){if(chatState.pollInterval)clearInterval(chatState.pollInterval);await callApi(`/messages/read/${taskId}/${currentUser.id}`,{method:'PUT'});chatState.active=true;chatState.taskId=taskId;chatState.otherId=otherId;chatState.otherName=otherName;chatState.reward=reward;chatState.title=title;showChatView();updateUnreadBadge();}
+async function openChat(taskId,otherId,otherName,reward,title){if(chatState.pollInterval)clearInterval(chatState.pollInterval);await callApi(`/messages/read/${taskId}/${currentUser.id}`,{method:'PUT'});chatState.active=true;chatState.taskId=taskId;chatState.otherId=otherId;chatState.otherName=otherName;chatState.reward=reward;chatState.title=title;showChatView();updateUnreadBadge();localStorage.setItem('chatTaskId',taskId);localStorage.setItem('chatOtherId',otherId);localStorage.setItem('chatOtherName',otherName);localStorage.setItem('chatReward',reward);localStorage.setItem('chatTitle',title);}
 window.respondToNego=async function(taskId,price,isAccept){const task=await callApi(`/tasks/${taskId}`);if(task.status==='completed'||task.status==='cancelled'){showAlert('提示','任务已结束，无法议价');return;}if(isAccept){try{const result=await callApi(`/tasks/${taskId}/reward`,{method:'PUT',body:JSON.stringify({reward:price})});if(result.success){await sendMessage(taskId,`✅ 同意议价，价格调整为 ¥${price}`,false);showToast(`已同意议价，新价格 ¥${price}`);if(chatState.active&&chatState.taskId===taskId){chatState.reward=price;await refreshMessagesOnly();}else{renderMessageList();if(document.getElementById('detailPage').classList.contains('active'))viewTask(taskId,lastPage);}refreshTaskList(true);updateUnreadBadge();}else{showAlert('修改价格失败',result.error||'可能任务已被接取且后端不允许修改');await sendMessage(taskId,`✅ 同意议价（但价格修改失败）`,false);if(chatState.active&&chatState.taskId===taskId)await refreshMessagesOnly();}}catch(err){showAlert('修改价格失败',err.message);await sendMessage(taskId,`✅ 同意议价（但价格修改失败）`,false);if(chatState.active&&chatState.taskId===taskId)await refreshMessagesOnly();}}else{await sendMessage(taskId,`❌ 拒绝了议价`,false);showToast('已拒绝议价');if(chatState.active&&chatState.taskId===taskId)await refreshMessagesOnly();else renderMessageList();updateUnreadBadge();}};
-function closeChat(){if(chatState.pollInterval)clearInterval(chatState.pollInterval);chatState.active=false;chatState.taskId=null;chatState.messagesArea=null;document.body.classList.remove('hide-bottom-nav');if(mediaRecorder&&isRecording){mediaRecorder.stop();isRecording=false;}if(window.__plusOutsideHandler){document.removeEventListener('click',window.__plusOutsideHandler);window.__plusOutsideHandler=null;}const chatInput=document.getElementById('chatInput');if(chatInput){chatInput.classList.remove('recording');chatInput.placeholder='输入消息...';}}
+function closeChat(){if(chatState.pollInterval)clearInterval(chatState.pollInterval);chatState.active=false;chatState.taskId=null;chatState.messagesArea=null;document.body.classList.remove('hide-bottom-nav');if(mediaRecorder&&isRecording){mediaRecorder.stop();isRecording=false;}if(window.__plusOutsideHandler){document.removeEventListener('click',window.__plusOutsideHandler);window.__plusOutsideHandler=null;}const chatInput=document.getElementById('chatInput');if(chatInput){chatInput.classList.remove('recording');chatInput.placeholder='输入消息...';}localStorage.removeItem('chatTaskId');localStorage.removeItem('chatOtherId');localStorage.removeItem('chatOtherName');localStorage.removeItem('chatReward');localStorage.removeItem('chatTitle');}
 function renderMessageList(){const wrapper=document.getElementById('messageListWrapper');if(!wrapper)return;if(!currentUser||!currentUser.id){wrapper.innerHTML='<div class="card"><strong>📬 消息记录</strong><div class="empty-state">请先登录</div></div>';updateUnreadBadge();return;}callApi(`/user/${currentUser.id}/conversations`).then(convs=>{if(!convs||convs.length===0){wrapper.innerHTML='<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';updateUnreadBadge();return;}let filtered=convs.filter(c=>!deletedConversations.has(c.taskId)&&c.lastMsg);filtered.sort((a,b)=>{const t1=parseInt(localStorage.getItem(`conv_time_${a.taskId}`))||0;const t2=parseInt(localStorage.getItem(`conv_time_${b.taskId}`))||0;return t2-t1;});if(filtered.length===0){wrapper.innerHTML='<div class="card"><strong>📬 消息记录</strong><div class="empty-state">暂无对话</div></div>';updateUnreadBadge();return;}let html='<div class="card"><strong>📬 消息记录</strong></div>';for(let c of filtered){let unreadHtml='';if(c.unread>0)unreadHtml=`<span style="background:#ef4444; color:white; border-radius:20px; padding:2px 6px; font-size:0.65rem; margin-left:6px;">${c.unread}</span>`;html+=`<div class="task-card-wrapper" data-taskid="${c.taskId}" data-otherid="${c.otherId}" data-othername="${escapeHtml(c.otherName)}" data-reward="${c.reward}" data-title="${escapeHtml(c.taskTitle)}"><div class="card" style="cursor:pointer;"><div class="flex-between"><span>💬 ${escapeHtml(c.otherName)}${unreadHtml}</span><span class="reward-badge">¥${c.reward}</span></div><div class="task-desc">${escapeHtml((c.lastMsg||'暂无消息').substring(0,50))}</div></div><div class="delete-btn" onclick="deleteConversation('${c.taskId}')">删除</div></div>`;}wrapper.innerHTML=html;document.querySelectorAll('.task-card-wrapper').forEach(wrapper=>{let startX=0,isDragging=false;const card=wrapper.querySelector('.card');const deleteBtn=wrapper.querySelector('.delete-btn');const threshold=60;const reset=()=>{wrapper.classList.remove('swiped');card.style.transform='';};const onTouchStart=(e)=>{startX=e.touches[0].clientX;isDragging=true;};const onTouchMove=(e)=>{if(!isDragging)return;const deltaX=e.touches[0].clientX-startX;if(deltaX<-10){e.preventDefault();const offset=Math.max(-80,Math.min(0,deltaX));card.style.transform=`translateX(${offset}px)`;deleteBtn.style.opacity=Math.min(1,Math.abs(offset)/threshold);if(offset<-threshold){wrapper.classList.add('swiped');}else{wrapper.classList.remove('swiped');}}else if(deltaX>10&&wrapper.classList.contains('swiped')){e.preventDefault();reset();}};const onTouchEnd=()=>{isDragging=false;if(!wrapper.classList.contains('swiped')){reset();}else{card.style.transform='translateX(-80px)';deleteBtn.style.opacity='1';}};card.addEventListener('click',(e)=>{if(wrapper.classList.contains('swiped')){reset();return;}const taskId=wrapper.getAttribute('data-taskid');const otherId=wrapper.getAttribute('data-otherid');const otherName=wrapper.getAttribute('data-othername');const reward=parseInt(wrapper.getAttribute('data-reward'));const title=wrapper.getAttribute('data-title');openChat(taskId,otherId,otherName,reward,title);});wrapper.addEventListener('touchstart',onTouchStart,{passive:true});wrapper.addEventListener('touchmove',onTouchMove,{passive:false});wrapper.addEventListener('touchend',onTouchEnd,{passive:true});wrapper.addEventListener('touchcancel',onTouchEnd,{passive:true});deleteBtn.onclick=(e)=>{e.stopPropagation();const taskId=wrapper.getAttribute('data-taskid');deleteConversation(taskId);};});updateUnreadBadge();}).catch(e=>{console.error('加载消息列表失败',e);wrapper.innerHTML='<div class="card"><strong>📬 消息记录</strong><div class="empty-state">加载失败，请重试</div></div>';});}
 let prevUnreadCount=parseInt(localStorage.getItem('prevUnread')||'0');
 async function updateUnreadBadge(){if(!currentUser)return;try{const convs=await callApi(`/user/${currentUser.id}/conversations`);const filtered=convs.filter(c=>!deletedConversations.has(c.taskId)&&c.lastMsg);const totalUnread=filtered.reduce((sum,c)=>sum+(c.unread||0),0);const badge=document.getElementById('msgBadge');if(badge){if(totalUnread>0){badge.innerText=totalUnread>99?'99+':totalUnread;badge.style.display='inline-block';}else badge.style.display='none';}if(totalUnread>prevUnreadCount&&totalUnread>0&&typeof window.showLocalNotification==='function'){if(document.hidden||document.visibilityState==='hidden'){const unreadConv=filtered.find(c=>c.unread>0);if(unreadConv){const title=`💬 ${unreadConv.otherName}`;const body=unreadConv.lastMsg||'您有新消息';window.showLocalNotification(title,body);}else{window.showLocalNotification('新消息',`您有 ${totalUnread} 条未读消息`);}}}prevUnreadCount=totalUnread;localStorage.setItem('prevUnread',totalUnread.toString());}catch(e){}}
@@ -511,13 +620,15 @@ async function navigateToMyTasks(type){currentMyTasksType=type;const titles={pub
 async function loadMyTasks(type){const listContainer=document.getElementById('myTasksList');try{const allTasks=await callApi('/tasks/all');let filtered=[];if(type==='pub'){filtered=allTasks.filter(t=>t.publisherId===currentUser.id&&t.status!=='cancelled');filtered.sort((a,b)=>(a.status==='ongoing'?0:1)-(b.status==='ongoing'?0:1));}else if(type==='acc'){filtered=allTasks.filter(t=>t.takerId===currentUser.id&&t.status!=='cancelled');filtered.sort((a,b)=>(a.status==='ongoing'?0:1)-(b.status==='ongoing'?0:1));}else if(type==='completed'){filtered=allTasks.filter(t=>(t.publisherId===currentUser.id||t.takerId===currentUser.id)&&t.status==='completed');filtered.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));}if(filtered.length===0){listContainer.innerHTML='<div class="empty-state">暂无任务</div>';return;}let html='';for(let task of filtered){let statusText='';let statusClass='';if(task.status==='available'){statusText='悬赏中';statusClass='available';}else if(task.status==='ongoing'){if(task.travelStatus==='idle')statusText='待出发';else if(task.travelStatus==='traveling')statusText='行程中';else if(task.travelStatus==='arrived')statusText='已到达，待凭证';else statusText='进行中';statusClass='ongoing';}else if(task.status==='completed'){statusText='已完成';statusClass='completed';}else statusText='已取消';let role='';if(task.publisherId===currentUser.id&&task.takerId)role='发布者';else if(task.takerId===currentUser.id)role='接取者';html+=`<div class="card" data-taskid="${task._id}" onclick="viewTask('${task._id}','myTasks')"><div class="task-header"><span class="task-title">${escapeHtml(task.title)}</span><span class="reward-badge">💰 ${task.reward}元</span></div><div class="task-desc">${escapeHtml((task.description||'').substring(0,60))}</div><div class="task-meta"><span>👤 ${escapeHtml(task.publisherName)}</span><span>📍 ${task.locationAddress||'未知'}</span><span class="distance-badge">${statusText}</span>${role?`<span class="distance-badge">${role}</span>`:''}</div></div>`;}listContainer.innerHTML=html;}catch(e){listContainer.innerHTML='<div class="empty-state">加载失败，请稍后重试</div>';}}
 window.cancelAcceptedTask=async function(taskId){showConfirm('确认取消','取消接取将扣除5信用分，确定吗？',async()=>{const result=await callApi(`/tasks/${taskId}/cancel-accept`,{method:'PUT',body:JSON.stringify({})});if(result.success){showToast('已取消接取');loadProfile();refreshTaskList(true);}else showAlert('操作失败',result.error||'取消失败');});};
 function showEditProfileModal(){if(!currentUser)return;const modal=document.createElement('div');modal.className='custom-modal';modal.innerHTML=`<div class="custom-modal-content"><h3>编辑资料</h3><div class="form-group"><div class="form-label">头像</div><div id="avatarPreview" style="width:70px;height:70px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">${currentUser.avatar?`<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">`:`<span>${(currentUser.nickname||currentUser.username).charAt(0)}</span>`}</div><input type="file" id="avatarInput" accept="image/*" style="display:none;"><button class="btn-secondary" id="uploadAvatarBtn">更换头像</button></div><div class="form-group"><label>昵称</label><input type="text" id="editNickname" class="form-input" value="${escapeHtml(currentUser.nickname||'')}"></div><div class="form-group"><label>个性签名</label><textarea id="editSignature" class="form-textarea" rows="2">${escapeHtml(currentUser.signature||'')}</textarea></div><div class="form-group"><label>家乡</label><input type="text" id="editHometown" class="form-input" value="${escapeHtml(currentUser.hometown||'')}"></div><div class="double-btn-row" style="display:flex; gap:8px; margin-top:16px;"><button class="btn-primary" id="saveProfileBtn">保存</button><button class="btn-secondary" id="cancelEditBtn">取消</button></div></div>`;document.body.appendChild(modal);const avatarInput=modal.querySelector('#avatarInput');const avatarPreview=modal.querySelector('#avatarPreview');modal.querySelector('#uploadAvatarBtn').onclick=()=>avatarInput.click();avatarInput.onchange=(e)=>{const file=e.target.files[0];if(file){const reader=new FileReader();reader.onload=(ev)=>{avatarPreview.innerHTML=`<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`;currentUser.avatar=ev.target.result;};reader.readAsDataURL(file);}};modal.querySelector('#saveProfileBtn').onclick=async()=>{const updates={nickname:modal.querySelector('#editNickname').value.trim()||currentUser.username,signature:modal.querySelector('#editSignature').value,hometown:modal.querySelector('#editHometown').value,avatar:currentUser.avatar||''};const result=await callApi(`/user/${currentUser.id}`,{method:'PUT',body:JSON.stringify(updates)});if(result.success!==false){currentUser={...currentUser,...updates};localStorage.setItem('user',JSON.stringify(currentUser));loadProfile();showToast('保存成功');modal.remove();}else showAlert('保存失败','请重试');};modal.querySelector('#cancelEditBtn').onclick=()=>modal.remove();}
-async function showRealNameAuth(){if(currentUser.idCardVerified){showAlert('提示','您已经实名认证过了');return;}const modal=document.createElement('div');modal.className='custom-modal';modal.innerHTML=`<div class="custom-modal-content"><h3>🆔 实名认证</h3><div class="form-group"><label>真实姓名</label><input id="realNameInput" class="form-input" placeholder="请输入真实姓名"></div><div class="form-group"><label>身份证号</label><input id="idCardInput" class="form-input" placeholder="请输入身份证号"></div><div class="double-btn-row" style="display:flex; gap:8px; margin-top:16px;"><button class="btn-primary" id="submitAuthBtn">提交认证</button><button class="btn-secondary" id="cancelAuthBtn">取消</button></div></div>`;document.body.appendChild(modal);modal.querySelector('#submitAuthBtn').onclick=async()=>{const realName=modal.querySelector('#realNameInput').value.trim();const idCard=modal.querySelector('#idCardInput').value.trim();if(!realName||idCard.length<15){showAlert('提示','请填写正确的姓名和身份证号');return;}const result=await callApi('/verify-id',{method:'POST',body:JSON.stringify({realName,idCard})});if(result.success){showToast('实名认证成功');currentUser.idCardVerified=true;localStorage.setItem('user',JSON.stringify(currentUser));modal.remove();loadProfile();}else showAlert('认证失败',result.error||'信息无效');};modal.querySelector('#cancelAuthBtn').onclick=()=>modal.remove();}
+async function showRealNameAuth(){if(currentUser.idCardVerified){showAlert('提示','您已经实名认证过了');return;}const modal=document.createElement('div');modal.className='custom-modal';modal.innerHTML=`<div class="custom-modal-content"><h3>🆔 实名认证</h3><div class="form-group"><label>真实姓名</label><input id="realNameInput" class="form-input" placeholder="请输入真实姓名"></div><div class="form-group"><label>身份证号</label><input id="idCardInput" class="form-input" placeholder="请输入身份证号"></div><div class="double-btn-row" style="display:flex; gap:8px; margin-top:16px;"><button class="btn-primary" id="submitAuthBtn">提交认证</button><button class="btn-secondary" id="cancelAuthBtn">取消</button></div></div>`;document.body.appendChild(modal);modal.querySelector('#submitAuthBtn').onclick=async()=>{const realName=modal.querySelector('#realNameInput').value.trim();const idCard=modal.querySelector('#idCardInput').value.trim();// 格式校验
+const idReg=/^[1-9]\d{5}(18|19|20)?\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$/;
+if(!realName||!idReg.test(idCard)){showAlert('提示','请填写正确的真实姓名和身份证号');return;}try{const result=await callApi('/verify-id',{method:'POST',body:JSON.stringify({realName,idCard})});if(result.success){showToast('实名认证成功');currentUser.idCardVerified=true;localStorage.setItem('user',JSON.stringify(currentUser));modal.remove();loadProfile();}else showAlert('认证失败',result.error||'信息无效');}catch(err){showAlert('认证失败',err.message);}};modal.querySelector('#cancelAuthBtn').onclick=()=>modal.remove();}
 function logout(){showConfirm('确认退出','确定退出登录吗？',()=>{localStorage.removeItem('user');localStorage.removeItem('token');currentUser=null;document.getElementById('mainApp').style.display='none';document.getElementById('loginPage').classList.add('active');if(countdownTimer)clearInterval(countdownTimer);if(chatState.pollInterval)clearInterval(chatState.pollInterval);if(mediaRecorder&&isRecording){mediaRecorder.stop();isRecording=false;}if(window.__plusOutsideHandler){document.removeEventListener('click',window.__plusOutsideHandler);window.__plusOutsideHandler=null;}document.body.classList.remove('hide-bottom-nav');});}
 async function publishTask(){if(!currentUser.idCardVerified){showAlert('提示','请先实名认证');return;}const title=document.getElementById('pubTitle').value.trim();if(!title){showAlert('提示','请输入标题');return;}const reward=parseFloat(document.getElementById('pubReward').value);if(isNaN(reward)||reward<=0){showAlert('提示','请输入有效金额');return;}const locationAddress=document.getElementById('pubAddress').value.trim()||'未知';const mediaList=pendingMedia.map(m=>({type:m.type,url:m.dataURL}));const btn=document.getElementById('doPublishBtn');const originalText=btn.innerText;btn.innerText='处理中...';btn.disabled=true;const modal=document.createElement('div');modal.className='custom-modal';const balance=currentUser.balance||0;const balanceEnough=balance>=reward;modal.innerHTML=`<div class="custom-modal-content"><h3>选择支付方式</h3><p style="font-size:.9rem;color:#64748b;margin-bottom:16px;">任务赏金 ¥${reward}</p><div class="payment-option ${!balanceEnough?'disabled':''}" data-pay="balance" style="${!balanceEnough?'opacity:0.5;pointer-events:none;':''}"><div class="icon">👛</div><div class="info"><div class="name">余额支付</div><div class="desc">当前余额 ¥${balance.toFixed(2)} ${!balanceEnough?'<span style="color:#dc2626;">（余额不足）</span>':''}</div></div><span style="font-size:1.2rem;">›</span></div><div class="payment-option" data-pay="wechat"><div class="icon">💚</div><div class="info"><div class="name">微信支付</div><div class="desc">推荐使用微信支付</div></div><span style="font-size:1.2rem;">›</span></div><div class="payment-option" data-pay="alipay"><div class="icon">💙</div><div class="info"><div class="name">支付宝</div><div class="desc">支付宝安全支付</div></div><span style="font-size:1.2rem;">›</span></div><div class="custom-modal-buttons"><button class="cancel-btn" id="payCancelBtn">取消</button></div></div>`;document.body.appendChild(modal);const closeModal=()=>{modal.remove();btn.innerText=originalText;btn.disabled=false;};modal.querySelector('#payCancelBtn').onclick=closeModal;const options=modal.querySelectorAll('.payment-option');options.forEach(opt=>{opt.addEventListener('click',async()=>{const method=opt.getAttribute('data-pay');if(method==='balance'){if(!balanceEnough){showAlert('余额不足','您的余额不足以支付此任务，请选择其他支付方式。');return;}showToast('余额支付成功');currentUser.balance-=reward;localStorage.setItem('user',JSON.stringify(currentUser));await doPublish(title,reward,locationAddress,mediaList);closeModal();}else if(method==='wechat'||method==='alipay'){const payName=method==='wechat'?'微信':'支付宝';const payModal=document.createElement('div');payModal.className='custom-modal';payModal.innerHTML=`<div class="custom-modal-content"><h3>${payName}支付</h3><p style="font-size:.9rem;color:#64748b;margin:12px 0;">订单金额：¥${reward}</p><p style="font-size:.9rem;color:#64748b;margin:12px 0;">订单号：${'ORD'+Date.now()}</p><div style="background:#f8fafc;padding:20px;border-radius:16px;margin:12px 0;"><div style="font-size:2rem;">${method==='wechat'?'💚':'💙'}</div><p style="font-size:.9rem;color:#1e293b;">请使用${payName}扫描二维码或打开${payName}支付</p></div><div class="custom-modal-buttons"><button class="confirm-btn" id="paySuccessBtn">模拟支付成功</button><button class="cancel-btn" id="payFailBtn">取消支付</button></div></div>`;document.body.appendChild(payModal);payModal.querySelector('#paySuccessBtn').onclick=async()=>{payModal.remove();showToast(payName+'支付成功');await doPublish(title,reward,locationAddress,mediaList);closeModal();};payModal.querySelector('#payFailBtn').onclick=()=>{payModal.remove();showToast('已取消支付');closeModal();};}});});}
 async function doPublish(title,reward,locationAddress,mediaList){const btn=document.getElementById('doPublishBtn');btn.innerText='发布中...';btn.disabled=true;try{const result=await callApi('/tasks',{method:'POST',body:JSON.stringify({title,description:document.getElementById('pubDesc').value,reward,publisherName:currentUser.nickname,publisherPhone:currentUser.phone,locationAddress,mediaList,category:document.getElementById('pubCategory').value})});if(result._id){showToast('发布成功');resetPublishForm();await loadProfile();refreshTaskList(true);switchPage('home');}else{showAlert('发布失败',result.error||'未知错误');}}catch(err){showAlert('发布出错',err.message);}finally{btn.innerText='🚀 发布任务';btn.disabled=false;}}
 function resetPublishForm(){document.getElementById('pubTitle').value='';document.getElementById('pubDesc').value='';document.getElementById('pubReward').value='';document.getElementById('pubAddress').value='';document.getElementById('pubCategory').value='取件';pendingMedia=[];updateMediaPreview();document.getElementById('locationHint').innerHTML='点击"选择位置"打开地图选点';}
 async function cancelTask(taskId){showConfirm('确认取消','确定取消该任务吗？取消后赏金将退还到您的账户。',async()=>{try{const result=await callApi(`/tasks/${taskId}/cancel`,{method:'PUT',body:JSON.stringify({})});if(result.success){showToast('任务已取消，赏金已退还');await refreshTaskList(true);await loadProfile();if(document.getElementById('detailPage').classList.contains('active'))switchPage(lastPage||'home');}else showAlert('取消失败',result.error||'未知错误');}catch(err){showAlert('取消失败',err.message);}});}
-async function doLogin(){const username=document.getElementById('loginUsername').value.trim();const password=document.getElementById('loginPassword').value;const errorDiv=document.getElementById('loginError');errorDiv.innerText='登录中...';try{const result=await callApi('/login',{method:'POST',body:JSON.stringify({username,password})});if(result.success){localStorage.setItem('token',result.token);currentUser=result.user;localStorage.setItem('user',JSON.stringify(currentUser));document.getElementById('mainApp').style.display='flex';document.getElementById('loginPage').classList.remove('active');const loc=await getNativeUserLocation();if(loc)userLocation=loc;await refreshTaskList(true);loadProfile();renderMessageList();updateUnreadBadge();const lastPage=localStorage.getItem('lastPage');if(lastPage&&['home','publish','message','profile','detail','myTasks','wallet','credit'].includes(lastPage)){switchPage(lastPage);}else{switchPage('home');}initBackButtonHandler();}else errorDiv.innerText=result.error||'登录失败';}catch(err){errorDiv.innerText=err.message;console.error('登录错误:',err);}}
+async function doLogin(){const username=document.getElementById('loginUsername').value.trim();const password=document.getElementById('loginPassword').value;const errorDiv=document.getElementById('loginError');errorDiv.innerText='登录中...';try{const result=await callApi('/login',{method:'POST',body:JSON.stringify({username,password})});if(result.success){localStorage.setItem('token',result.token);currentUser=result.user;localStorage.setItem('user',JSON.stringify(currentUser));document.getElementById('mainApp').style.display='flex';document.getElementById('loginPage').classList.remove('active');const loc=await getNativeUserLocation();if(loc)userLocation=loc;await refreshTaskList(true);loadProfile();renderMessageList();updateUnreadBadge();const lastPage=localStorage.getItem('lastPage');if(lastPage){if(lastPage==='detail'){const taskId=localStorage.getItem('lastTaskId');if(taskId){viewTask(taskId,'home');}else{switchPage('home');}}else if(lastPage==='message'){const chatTaskId=localStorage.getItem('chatTaskId');if(chatTaskId){const otherId=localStorage.getItem('chatOtherId');const otherName=localStorage.getItem('chatOtherName');const reward=parseInt(localStorage.getItem('chatReward'))||0;const title=localStorage.getItem('chatTitle')||'';if(otherId&&otherName){openChat(chatTaskId,otherId,otherName,reward,title);}else{switchPage('message');}}else{switchPage('message');}}else if(['home','publish','profile','wallet','credit'].includes(lastPage)){switchPage(lastPage);}else{switchPage('home');}}else{switchPage('home');}initBackButtonHandler();}else errorDiv.innerText=result.error||'登录失败';}catch(err){errorDiv.innerText=err.message;console.error('登录错误:',err);}}
 function initBackButtonHandler(){if(window.Capacitor&&window.Capacitor.isNativePlatform()){const{App}=Capacitor.Plugins;App.addListener('backButton',()=>{handleBackButton();});}else{window.addEventListener('popstate',handleBackButton);}}
 function handleBackButton(){const activePage=document.querySelector('.page.active');if(!activePage){if(window.Capacitor&&window.Capacitor.isNativePlatform()){Capacitor.Plugins.App.exitApp();}return;}const pageId=activePage.id;const pageStack=['home','publish','message','profile','detail','myTasks','wallet','credit'];const currentIndex=pageStack.indexOf(pageId);if(pageId==='home'||currentIndex===-1){if(backPressedOnce){if(window.Capacitor&&window.Capacitor.isNativePlatform()){Capacitor.Plugins.App.exitApp();}else{window.close();}}else{backPressedOnce=true;showToast('再按一次退出应用');setTimeout(()=>{backPressedOnce=false;},2000);}return;}if(pageId==='detail'){document.getElementById('detailBackBtn')?.click();}else if(pageId==='myTasks'){document.getElementById('myTasksBackBtn')?.click();}else if(pageId==='wallet'){document.getElementById('walletBackBtn')?.click();}else if(pageId==='credit'){document.getElementById('creditBackBtn')?.click();}else{switchPage('home');}backPressedOnce=false;}
 async function startRecording(){const hasPerm=await requestMicrophonePermission();if(!hasPerm){showAlert('麦克风权限被拒绝','请前往手机设置 -> 应用管理 -> 赏金集市 -> 权限，开启麦克风权限');return;}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(stream);audioChunks=[];mediaRecorder.ondataavailable=event=>{audioChunks.push(event.data);};mediaRecorder.onstop=async()=>{const audioBlob=new Blob(audioChunks,{type:'audio/webm'});const file=new File([audioBlob],`audio_${Date.now()}.webm`,{type:'audio/webm'});try{showToast('上传语音中...',1500);const url=await uploadFile(file);await sendMessage(chatState.taskId,`[audio]${url}[/audio]`,false);await refreshMessagesOnly();updateUnreadBadge();}catch(err){showAlert('发送语音失败',err.message);}stream.getTracks().forEach(track=>track.stop());};mediaRecorder.start();isRecording=true;}catch(err){let msg='无法访问麦克风，请检查浏览器权限或在 HTTPS 环境下使用';if(err.name==='NotAllowedError'||err.name==='PermissionDeniedError'){msg='麦克风权限被拒绝，请在浏览器设置中允许访问麦克风后重试';}else if(err.name==='NotFoundError'||err.name==='DevicesNotFoundError'){msg='未检测到麦克风设备';}showAlert('录音失败',msg);isRecording=false;}}
@@ -528,30 +639,29 @@ async function submitProof(taskId,proofFiles){const proofMedia=[];for(let file o
 async function chooseProofFiles(){return new Promise((resolve)=>{const modal=document.createElement('div');modal.className='custom-modal';modal.innerHTML=`<div class="custom-modal-content"><h3>选择凭证</h3><div style="display:flex; flex-direction:column; gap:12px;"><button class="btn-primary" id="takePhotoBtn">📷 拍照</button><button class="btn-primary" id="chooseFromAlbumBtn" style="background:#3b82f6;">📁 从相册选择</button><button class="btn-secondary" id="cancelChoose">取消</button></div></div>`;document.body.appendChild(modal);const takePhotoBtn=modal.querySelector('#takePhotoBtn');const albumBtn=modal.querySelector('#chooseFromAlbumBtn');const cancelBtn=modal.querySelector('#cancelChoose');const cleanup=()=>modal.remove();takePhotoBtn.onclick=()=>{cleanup();const input=document.createElement('input');input.type='file';input.accept='image/*,video/*';input.setAttribute('capture','environment');input.onchange=(e)=>{const files=Array.from(e.target.files);resolve(files);};input.click();};albumBtn.onclick=()=>{cleanup();const input=document.createElement('input');input.type='file';input.accept='image/*,video/*';input.onchange=(e)=>{const files=Array.from(e.target.files);resolve(files);};input.click();};cancelBtn.onclick=()=>{cleanup();resolve([]);};});}
 function showImagePreview(url){const modal=document.createElement('div');modal.className='image-preview-modal';modal.innerHTML=`<div class="close-preview">✕</div><img src="${url}">`;document.body.appendChild(modal);modal.querySelector('.close-preview').onclick=()=>modal.remove();modal.onclick=(e)=>{if(e.target===modal)modal.remove();};}
 
-/* ===== 修改后的 navigateTo 函数：使用路线规划（route）而不是导航（navi） ===== */
-async function navigateTo(lat, lng, address) {
-    const destName = encodeURIComponent(address || '目的地');
-    let url = '';
-    // 高德地图路线规划 URI
-    // 格式：https://uri.amap.com/route?to=经度,纬度,名称&mode=car&callnative=1
-    // 不传 from 则默认使用当前位置
-    if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
-        // iOS 使用 scheme
-        url = `iosamap://route?sourceApplication=赏金集市&to=${lng},${lat},${destName}&mode=car&callnative=1`;
-    } else if (/android/i.test(navigator.userAgent)) {
-        // Android 使用 scheme
-        url = `androidamap://route?sourceApplication=赏金集市&to=${lng},${lat},${destName}&mode=car&callnative=1`;
-    } else {
-        // 其他设备使用 Web 版
-        url = `https://uri.amap.com/route?to=${lng},${lat},${destName}&mode=car&callnative=1`;
+/* ===== 优化后的 navigateTo 函数：使用路线规划（route）并传递起点 ===== */
+async function navigateTo(destLat, destLng, destAddr) {
+    const destName = encodeURIComponent(destAddr || '目的地');
+    let fromParam = '';
+    if (userLocation) {
+        fromParam = `&from=${userLocation.lng},${userLocation.lat},我的位置`;
     }
-    // 尝试打开高德地图
+    let url = '';
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+        // iOS 路线规划 scheme，t=0 表示路线规划，不直接导航
+        url = `iosamap://route?sourceApplication=赏金集市&to=${destLng},${destLat},${destName}&mode=car&t=0${fromParam}`;
+    } else if (/android/i.test(navigator.userAgent)) {
+        // Android 路线规划 scheme
+        url = `androidamap://route?sourceApplication=赏金集市&to=${destLng},${destLat},${destName}&mode=car&t=0${fromParam}`;
+    } else {
+        // Web 版路线规划
+        url = `https://uri.amap.com/route?to=${destLng},${destLat},${destName}&mode=car&t=0${fromParam}`;
+    }
     window.location.href = url;
-    // 降级：如果浏览器未跳转（可能未安装 App），则打开 Web 版
+    // 降级：如果未唤起 App，打开 Web 版
     setTimeout(() => {
         if (document.hasFocus()) {
-            // 如果页面仍然有焦点，说明未成功唤起 App，使用 Web 版
-            window.location.href = `https://uri.amap.com/route?to=${lng},${lat},${destName}&mode=car&callnative=1`;
+            window.location.href = `https://uri.amap.com/route?to=${destLng},${destLat},${destName}&mode=car&t=0${fromParam}`;
         }
     }, 2500);
 }
@@ -564,7 +674,7 @@ function initPullToRefresh(){const homePage=document.getElementById('homePage');
 function initMessagePullToRefresh(){const container=document.getElementById('messageContainer');const wrapper=document.getElementById('messageListWrapper');const indicator=document.getElementById('msgPullIndicator');if(!container||!wrapper||!indicator)return;let startY=0,isRefreshing=false,isPulling=false;container.addEventListener('touchstart',(e)=>{if(container.scrollTop<=0&&!isRefreshing){startY=e.touches[0].clientY;isPulling=true;}},{passive:true});container.addEventListener('touchmove',(e)=>{if(!isPulling||isRefreshing)return;const diff=e.touches[0].clientY-startY;if(diff>30){e.preventDefault();indicator.style.display='block';indicator.style.transform=`translateY(${Math.min(diff-30,60)}px)`;indicator.innerText='松开刷新';}else{indicator.style.transform='';indicator.innerText='↓ 下拉刷新';}},{passive:false});container.addEventListener('touchend',async()=>{isPulling=false;if(indicator.style.display==='block'&&indicator.style.transform!==''){isRefreshing=true;indicator.innerText='刷新中...';indicator.style.transform='';await renderMessageList();isRefreshing=false;indicator.style.display='none';indicator.innerText='↓ 下拉刷新';showToast('消息已刷新');}else{indicator.style.display='none';indicator.style.transform='';indicator.innerText='↓ 下拉刷新';}},{passive:true});}
 function initFiltersAndCategories(){document.querySelectorAll('.category-chip').forEach(chip=>{chip.addEventListener('click',()=>{document.querySelectorAll('.category-chip').forEach(c=>c.classList.remove('active'));chip.classList.add('active');currentCategory=chip.getAttribute('data-cat');applyFilterAndSort();});});document.querySelectorAll('.sort-chip').forEach(chip=>{chip.addEventListener('click',()=>{document.querySelectorAll('.sort-chip').forEach(c=>c.classList.remove('active'));chip.classList.add('active');currentSort=chip.getAttribute('data-sort');applyFilterAndSort();});});}
 document.addEventListener('DOMContentLoaded',()=>{initPullToRefresh();initFiltersAndCategories();initSearchAndFilter();initMessagePullToRefresh();document.getElementById('walletBackBtn').addEventListener('click',()=>switchPage('profile'));document.getElementById('creditBackBtn').addEventListener('click',()=>switchPage('profile'));document.getElementById('openMapBtn').addEventListener('click',openMapModal);document.getElementById('mapCancelBtn').addEventListener('click',closeMapModal);document.getElementById('mapConfirmBtn').addEventListener('click',confirmLocation);document.getElementById('myTasksBackBtn').addEventListener('click',()=>{switchPage('profile');loadProfile();});document.getElementById('doLoginBtn').onclick=doLogin;document.getElementById('doRegisterBtn').onclick=async()=>{const username=document.getElementById('regUsername').value.trim();const password=document.getElementById('regPassword').value;const confirm=document.getElementById('regConfirmPwd').value;const nickname=document.getElementById('regNickname').value.trim();const phone=document.getElementById('regPhone').value.trim();if(!username||!password){showAlert('提示','请填写用户名和密码');return;}if(password!==confirm){showAlert('提示','两次密码不一致');return;}try{const result=await callApi('/register',{method:'POST',body:JSON.stringify({username,password,nickname,phone})});if(result.success){showToast('注册成功，请登录');document.getElementById('registerPage').classList.remove('active');document.getElementById('loginPage').classList.add('active');}else showAlert('注册失败',result.error);}catch(err){showAlert('注册失败',err.message);}};document.getElementById('doPublishBtn').onclick=publishTask;document.getElementById('showRegisterBtn').onclick=(e)=>{e.preventDefault();document.getElementById('loginPage').classList.remove('active');document.getElementById('registerPage').classList.add('active');};document.getElementById('showLoginBtn').onclick=(e)=>{e.preventDefault();document.getElementById('registerPage').classList.remove('active');document.getElementById('loginPage').classList.add('active');};document.getElementById('mediaInput')?.addEventListener('change',(e)=>{if(e.target.files.length)handleMediaFiles(e.target.files);});if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(err=>console.warn('SW registration failed:',err));}if(window.Capacitor&&window.Capacitor.isNativePlatform()){setTimeout(()=>{initBackButtonHandler();},500);}else{initBackButtonHandler();}});
-(async()=>{const savedUser=localStorage.getItem('user');if(savedUser&&localStorage.getItem('token')){currentUser=JSON.parse(savedUser);document.getElementById('mainApp').style.display='flex';document.getElementById('loginPage').classList.remove('active');const loc=await getNativeUserLocation();if(loc)userLocation=loc;const cached=localStorage.getItem('tasksCache');if(cached){try{const parsed=JSON.parse(cached);if(parsed.data&&(Date.now()-parsed.timestamp)<parsed.ttl){tasksCache=parsed;allTasks=parsed.data;applyFilterAndSort();}}catch(e){}}refreshTaskList(false);loadProfile();renderMessageList();updateUnreadBadge();const lastPage=localStorage.getItem('lastPage');if(lastPage&&['home','publish','message','profile','detail','myTasks','wallet','credit'].includes(lastPage)){switchPage(lastPage);}else{switchPage('home');}if(window.Capacitor&&window.Capacitor.isNativePlatform()){setTimeout(()=>{initBackButtonHandler();},300);}}})();
+(async()=>{const savedUser=localStorage.getItem('user');if(savedUser&&localStorage.getItem('token')){currentUser=JSON.parse(savedUser);document.getElementById('mainApp').style.display='flex';document.getElementById('loginPage').classList.remove('active');const loc=await getNativeUserLocation();if(loc)userLocation=loc;const cached=localStorage.getItem('tasksCache');if(cached){try{const parsed=JSON.parse(cached);if(parsed.data&&(Date.now()-parsed.timestamp)<parsed.ttl){tasksCache=parsed;allTasks=parsed.data;applyFilterAndSort();}}catch(e){}}refreshTaskList(false);loadProfile();renderMessageList();updateUnreadBadge();const lastPage=localStorage.getItem('lastPage');if(lastPage){if(lastPage==='detail'){const taskId=localStorage.getItem('lastTaskId');if(taskId){viewTask(taskId,'home');}else{switchPage('home');}}else if(lastPage==='message'){const chatTaskId=localStorage.getItem('chatTaskId');if(chatTaskId){const otherId=localStorage.getItem('chatOtherId');const otherName=localStorage.getItem('chatOtherName');const reward=parseInt(localStorage.getItem('chatReward'))||0;const title=localStorage.getItem('chatTitle')||'';if(otherId&&otherName){openChat(chatTaskId,otherId,otherName,reward,title);}else{switchPage('message');}}else{switchPage('message');}}else if(['home','publish','profile','wallet','credit'].includes(lastPage)){switchPage(lastPage);}else{switchPage('home');}}else{switchPage('home');}if(window.Capacitor&&window.Capacitor.isNativePlatform()){setTimeout(()=>{initBackButtonHandler();},300);}}})();
 </script>
 </body>
 </html>
