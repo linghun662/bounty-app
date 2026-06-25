@@ -79,9 +79,7 @@ const UserSchema = new mongoose.Schema({
   signature: String,
   hometown: String,
   avatar: String,
-  deletedConversations: [{ type: String }],
-  realName: String,      // 真实姓名（认证后存储）
-  idCard: String         // 身份证号（认证后存储，仅作记录）
+  deletedConversations: [{ type: String }]
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -211,7 +209,6 @@ async function initDefaultData() {
       idCardVerified: true
     });
 
-    // 只保留两个示例任务，移除大量测试任务
     await Task.create({
       title: '帮忙取快递',
       description: '西门驿站取件送到3栋',
@@ -231,7 +228,7 @@ async function initDefaultData() {
       category: '调试'
     });
 
-    console.log('默认测试数据（仅2个任务）创建完成');
+    console.log('默认测试数据创建完成（2个任务）');
   }
 }
 
@@ -598,33 +595,12 @@ app.post('/api/regeo', async (req, res) => {
 app.post('/api/verify-id', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { realName, idCard } = req.body;
-  // 格式校验（18位身份证）
-  const idReg = /^[1-9]\d{5}(18|19|20)?\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$/;
-  if (!realName || !idReg.test(idCard)) {
-    return res.status(400).json({ error: '身份证号格式不正确' });
+  if (realName && idCard.length >= 15) {
+    await User.updateOne({ _id: userId }, { $set: { idCardVerified: true } });
+    res.json({ success: true });
+  } else {
+    res.status(400).json({ error: '认证信息无效' });
   }
-  // 此处可接入第三方实名认证接口，例如阿里云身份证二要素验证
-  // 若需真实认证，请取消注释以下代码并配置环境变量
-  /*
-  try {
-    const result = await fetch('https://idcard.market.alicloudapi.com/...', {
-      method: 'POST',
-      headers: { 'Authorization': 'APPCODE ' + process.env.ALI_APPCODE },
-      body: JSON.stringify({ name: realName, idcard: idCard })
-    });
-    const data = await result.json();
-    if (data.code === 0 && data.data.verify === true) {
-      // 认证通过
-    } else {
-      return res.status(400).json({ error: '实名认证失败，请检查姓名与身份证号是否一致' });
-    }
-  } catch (err) {
-    return res.status(500).json({ error: '实名认证服务异常' });
-  }
-  */
-  // 当前为本地校验通过即标记为已认证（可根据需要修改）
-  await User.updateOne({ _id: userId }, { $set: { idCardVerified: true, realName, idCard } });
-  res.json({ success: true });
 });
 
 app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
