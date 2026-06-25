@@ -209,6 +209,7 @@ async function initDefaultData() {
       idCardVerified: true
     });
 
+    // 只保留两个示例任务，移除大量测试任务
     await Task.create({
       title: '帮忙取快递',
       description: '西门驿站取件送到3栋',
@@ -228,53 +229,7 @@ async function initDefaultData() {
       category: '调试'
     });
 
-    const testTaskAddresses = [
-      { title: '浦东新区取文件', description: '张江高科园区', reward: 15, category: '取件', locationAddress: '上海市浦东新区张江路1号' },
-      { title: '帮忙调试代码', description: '漕河泾开发区', reward: 30, category: '调试', locationAddress: '上海市徐汇区漕宝路100号' },
-      { title: '送文件到陆家嘴', description: '陆家嘴金融中心', reward: 20, category: '跑腿', locationAddress: '上海市浦东新区陆家嘴环路1000号' },
-      { title: '修理电脑', description: '五角场', reward: 50, category: '调试', locationAddress: '上海市杨浦区邯郸路220号' },
-      { title: '帮忙取快递', description: '闵行区莘庄', reward: 10, category: '取件', locationAddress: '上海市闵行区莘建路100号' },
-      { title: '代购咖啡', description: '静安寺', reward: 8, category: '跑腿', locationAddress: '上海市静安区南京西路1600号' },
-      { title: '拍照修图', description: '黄浦区外滩', reward: 25, category: '调试', locationAddress: '上海市黄浦区中山东一路1号' },
-      { title: '送钥匙', description: '长宁区中山公园', reward: 12, category: '跑腿', locationAddress: '上海市长宁区长宁路800号' },
-      { title: '搬家帮忙', description: '虹口区', reward: 60, category: '跑腿', locationAddress: '上海市虹口区四川北路2000号' },
-      { title: '网络设置', description: '普陀区', reward: 22, category: '调试', locationAddress: '上海市普陀区武宁路300号' },
-      { title: '取文件', description: '宝山区', reward: 18, category: '取件', locationAddress: '上海市宝山区牡丹江路1000号' },
-      { title: '陪去医院', description: '徐汇区', reward: 40, category: '跑腿', locationAddress: '上海市徐汇区枫林路200号' },
-      { title: '遛狗', description: '浦东新区', reward: 15, category: '跑腿', locationAddress: '上海市浦东新区花木路1000号' },
-      { title: '安装软件', description: '闵行区', reward: 20, category: '调试', locationAddress: '上海市闵行区都市路200号' },
-      { title: '送花', description: '静安区', reward: 10, category: '跑腿', locationAddress: '上海市静安区北京西路1000号' },
-      { title: '取快递', description: '徐汇区', reward: 8, category: '取件', locationAddress: '上海市徐汇区龙华路300号' },
-      { title: '教老人用手机', description: '杨浦区', reward: 25, category: '调试', locationAddress: '上海市杨浦区控江路500号' },
-      { title: '帮忙做饭', description: '虹口区', reward: 30, category: '跑腿', locationAddress: '上海市虹口区大连路200号' },
-      { title: '维修灯具', description: '普陀区', reward: 35, category: '调试', locationAddress: '上海市普陀区金沙江路1000号' },
-      { title: '取药', description: '黄浦区', reward: 12, category: '取件', locationAddress: '上海市黄浦区瑞金二路100号' },
-      { title: '买衣服', description: '长宁区', reward: 10, category: '跑腿', locationAddress: '上海市长宁区虹桥路1000号' },
-      { title: '手机维修', description: '浦东新区', reward: 40, category: '调试', locationAddress: '上海市浦东新区世纪大道1000号' },
-      { title: '翻译文件', description: '徐汇区', reward: 20, category: '调试', locationAddress: '上海市徐汇区衡山路200号' },
-      { title: '送文件', description: '静安区', reward: 10, category: '跑腿', locationAddress: '上海市静安区石门一路100号' },
-      { title: '取快递', description: '闵行区', reward: 8, category: '取件', locationAddress: '上海市闵行区沪闵路1000号' },
-      { title: '帮忙搬家', description: '杨浦区', reward: 50, category: '跑腿', locationAddress: '上海市杨浦区政立路500号' },
-      { title: '清灰电脑', description: '虹口区', reward: 20, category: '调试', locationAddress: '上海市虹口区东江湾路100号' },
-      { title: '送餐', description: '普陀区', reward: 10, category: '跑腿', locationAddress: '上海市普陀区长寿路200号' },
-      { title: '取文件', description: '黄浦区', reward: 12, category: '取件', locationAddress: '上海市黄浦区人民大道100号' },
-      { title: '帮忙修车', description: '宝山区', reward: 45, category: '调试', locationAddress: '上海市宝山区蕴川路1000号' }
-    ];
-
-    for (const taskData of testTaskAddresses) {
-      await Task.create({
-        title: taskData.title,
-        description: taskData.description,
-        reward: taskData.reward,
-        publisherId: user1._id,
-        publisherName: '小明',
-        locationAddress: taskData.locationAddress,
-        category: taskData.category,
-        status: 'available'
-      });
-    }
-
-    console.log('默认测试数据（含30个任务）创建完成');
+    console.log('默认测试数据（仅2个任务）创建完成');
   }
 }
 
