@@ -13,7 +13,7 @@ window.AMAP_KEY=AMAP_KEY;
 
 // ==================== 冷启动检测 ====================
 if (!sessionStorage.getItem('_appColdStart')) {
-  localStorage.removeItem('lastPage');   // 冷启动时清除上次页面记录
+  localStorage.removeItem('lastPage');
   sessionStorage.setItem('_appColdStart', 'true');
 }
 // ==================================================
@@ -235,7 +235,7 @@ body.hide-bottom-nav .bottom-nav{transform:translateY(100%);opacity:0;pointer-ev
 .map-modal-header .send-btn{background:#1e4a6b;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-weight:500;font-size:1rem;cursor:pointer}
 .map-modal-header .send-btn:active{opacity:.7}
 #mapContainer{flex:1;width:100%;position:relative}
-.map-center-marker{position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);font-size:2.8rem;color:#ef4444;pointer-events:none;z-index:10;text-shadow:0 2px 6px rgba(0,0,0,.3)}
+.map-center-marker{position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);font-size:2.8rem;color:#ef4444;pointer-events:none;z-index:100;text-shadow:0 2px 6px rgba(0,0,0,.3)}
 .map-modal-footer{flex-shrink:0;background:rgba(255,255,255,0.96);backdrop-filter:blur(10px);padding:8px 16px max(8px,env(safe-area-inset-bottom));border-top:1px solid #e5e5e5;height:40%;min-height:160px;display:flex;flex-direction:column;transition:height .3s ease}
 .map-modal-footer.expanded{height:60%}
 .map-modal-footer .search-box{width:100%;height:36px;border-radius:8px;border:none;background:#f0f0f0;padding:0 12px;font-size:1rem;outline:none;color:#333;flex-shrink:0}
@@ -339,6 +339,9 @@ async function getDetailedAddress(lat,lng){try{const res=await callApi('/regeo',
 function initMap(){if(mapReady){if(map){map.destroy();map=null;mapReady=false;}}if(typeof AMap==='undefined'){if(mapInitAttempts>=MAX_MAP_ATTEMPTS){showAlert('地图加载失败','请检查网络或高德地图 Key。');closeMapModal();return;}mapInitAttempts++;const script=document.createElement('script');const key=window.AMAP_KEY||'f9b32373eb484fc1f0e5b04f2c746a41';window._AMapSecurityConfig={securityJsCode:'77f6c7a3b6e20b72297435ba1bc481af'};script.src=`https://webapi.amap.com/maps?v=2.0&key=${key}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation&callback=onMapScriptLoaded`;script.async=true;document.head.appendChild(script);window.onMapScriptLoaded=function(){mapReady=false;initMap();};setTimeout(()=>{if(!mapReady){mapInitAttempts=MAX_MAP_ATTEMPTS;showAlert('地图加载超时','请检查网络后重试。');closeMapModal();}},8000);return;}const container=document.getElementById('mapContainer');if(!container)return;map=new AMap.Map('mapContainer',{zoom:16,center:[116.397428,39.90923],resizeEnable:true,touchZoom:true,dragEnable:true,zoomEnable:true,mapStyle:'amap://styles/whitesmoke'});geocoder=new AMap.Geocoder({city:'全国',radius:1000,extensions:'all'});
 placeSearch=new AMap.PlaceSearch({type:'',pageSize:30,pageIndex:1,city:'',citylimit:false,extensions:'all'});
 mapReady=true;
+// 确保中心标记可见
+const marker = document.querySelector('.map-center-marker');
+if (marker) marker.style.display = 'block';
 map.on('moveend',function(){var center=map.getCenter();var lng=center.getLng();var lat=center.getLat();searchNearby(lng,lat,'');});
 locateUserOnMap();}
 
@@ -352,18 +355,14 @@ function locateUserOnMap(){
             maximumAge:0,
             panToLocation:true,
             noMove:false,
-            showMarker:true,   // 显示定位标记
-            markerOptions:{
-                // 自定义标记样式（可选）
-            }
+            showMarker:true,
+            markerOptions:{}
         });
         geolocation.getCurrentPosition((status,result)=>{
             if(status==='complete'&&result&&result.position){
                 const lng=result.position.getLng();
                 const lat=result.position.getLat();
                 map.setCenter([lng,lat]);
-                // 如果高德自带的标记未显示，手动添加一个（但通常 showMarker 已够）
-                // 为了保险，我们手动添加一个标记
                 if(positionMarker){
                     map.remove(positionMarker);
                 }
@@ -476,7 +475,11 @@ function searchNearby(lng,lat,keyword){
 }
 
 function renderNearbyList(pois){var listEl=document.getElementById('nearbyList');if(!listEl)return;if(!pois||pois.length===0){listEl.innerHTML='<div class="loading-tip">无附近地点</div>';return;}var html='';pois.forEach(function(poi){var distance=poi.distance?(poi.distance<1000?poi.distance+'m':(poi.distance/1000).toFixed(1)+'km'):'未知';var name=poi.name||'未命名';var address=poi.address||'';var fullAddress=name+(address?' '+address:'');var lng=poi.location.getLng();var lat=poi.location.getLat();html+=`<div class="nearby-item" data-lng="${lng}" data-lat="${lat}" data-address="${escapeHtml(fullAddress)}"><div class="info"><div class="name">${escapeHtml(name)}</div><div class="address">${escapeHtml(address)}</div></div><div class="dist">${distance}</div></div>`;});listEl.innerHTML=html;listEl.querySelectorAll('.nearby-item').forEach(function(item){item.addEventListener('click',function(){var lng=parseFloat(this.dataset.lng);var lat=parseFloat(this.dataset.lat);var address=this.dataset.address;selectedLocation={lng,lat,address};document.getElementById('pubAddress').value=address;closeMapModal();showToast('已选择位置：'+address);});});}
-function openMapModal(){if(map){map.destroy();map=null;mapReady=false;}mapInitAttempts=0;isMapOpen=true;document.getElementById('mapModal').classList.add('active');document.body.style.overflow='hidden';document.getElementById('nearbyList').innerHTML='<div class="loading-tip">加载地图...</div>';document.getElementById('mapFooter').classList.remove('expanded');isExpanded=false;document.getElementById('toggleBtn').textContent='▼';setTimeout(()=>{initMap();},300);}
+function openMapModal(){if(map){map.destroy();map=null;mapReady=false;}mapInitAttempts=0;isMapOpen=true;document.getElementById('mapModal').classList.add('active');document.body.style.overflow='hidden';document.getElementById('nearbyList').innerHTML='<div class="loading-tip">加载地图...</div>';document.getElementById('mapFooter').classList.remove('expanded');isExpanded=false;document.getElementById('toggleBtn').textContent='▼';
+// 确保中心标记显示
+const marker = document.querySelector('.map-center-marker');
+if (marker) marker.style.display = 'block';
+setTimeout(()=>{initMap();},300);}
 function closeMapModal(){document.getElementById('mapModal').classList.remove('active');document.body.style.overflow='';isMapOpen=false;if(map){map.destroy();map=null;mapReady=false;}}
 function confirmLocation(){const addressInput=document.getElementById('pubAddress');if(selectedLocation&&selectedLocation.address){addressInput.value=selectedLocation.address;document.getElementById('locationHint').innerHTML='✅ 已选择位置：'+selectedLocation.address;setTimeout(()=>{document.getElementById('locationHint').innerHTML='点击"选择位置"打开地图选点';},3000);closeMapModal();return;}if(!map){showAlert('地图未就绪','请稍候再试或手动输入地址');closeMapModal();return;}const center=map.getCenter();const lng=center.getLng(),lat=center.getLat();getDetailedAddress(lat,lng).then(address=>{selectedLocation={lng,lat,address};addressInput.value=address;document.getElementById('locationHint').innerHTML='✅ 已选择位置：'+address;setTimeout(()=>{document.getElementById('locationHint').innerHTML='点击"选择位置"打开地图选点';},3000);closeMapModal();}).catch(()=>{const coordStr=`${lat.toFixed(6)}, ${lng.toFixed(6)}`;addressInput.value=coordStr;selectedLocation={lng,lat,address:coordStr};closeMapModal();});}
 document.getElementById('mapSearchInput').addEventListener('focus',function(){const footer=document.getElementById('mapFooter');if(!footer.classList.contains('expanded')){footer.classList.add('expanded');isExpanded=true;}});
