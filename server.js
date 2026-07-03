@@ -286,7 +286,11 @@ app.post('/api/login', async (req, res) => {
   });
 });
 
-// ========== 获取 available 任务（限制 100 条，排除大字段） ==========
+// ============================================================
+// 关键修改：所有任务接口不再使用聚合查询，直接从 Task 文档读取 publisherName
+// ============================================================
+
+// 获取 available 任务（限制 100 条）
 app.get('/api/tasks', async (req, res) => {
   try {
     const tasks = await Task.find({ status: 'available' })
@@ -301,7 +305,7 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
-// ========== 获取所有任务（限制 100 条，排除大字段） ==========
+// 获取所有任务（限制 100 条）
 app.get('/api/tasks/all', async (req, res) => {
   try {
     const tasks = await Task.find()
@@ -316,70 +320,17 @@ app.get('/api/tasks/all', async (req, res) => {
   }
 });
 
-// ========== 获取单个任务详情（使用简单 $lookup，保证兼容性） ==========
+// 获取单个任务详情（直接从 Task 文档读取，不关联用户）
 app.get('/api/tasks/:id', async (req, res) => {
   try {
-    const task = await Task.aggregate([
-      { $match: { _id: new mongoose.Types.ObjectId(req.params.id) } },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'publisherId',
-          foreignField: '_id',
-          as: 'publisher'
-        }
-      },
-      { $unwind: { path: '$publisher', preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          description: 1,
-          reward: 1,
-          status: 1,
-          publisherId: 1,
-          publisherName: { $ifNull: ['$publisher.nickname', '$publisher.username'] },
-          publisherPhone: 1,
-          locationAddress: 1,
-          latitude: 1,
-          longitude: 1,
-          takerId: 1,
-          takerName: 1,
-          takenAt: 1,
-          travelStatus: 1,
-          travelStartTime: 1,
-          estimatedMinutes: 1,
-          takerCompleted: 1,
-          proofMedia: 1,
-          mediaList: 1,
-          category: 1,
-          createdAt: 1,
-          updatedAt: 1
-        }
-      }
-    ]);
-    if (!task || task.length === 0) {
+    const task = await Task.findById(req.params.id)
+      .lean();
+    if (!task) {
       return res.status(404).json({ error: '任务不存在' });
     }
-    // 如果关联查询失败，回退到任务文档中的 publisherName
-    if (!task[0].publisherName) {
-      const fallbackTask = await Task.findById(req.params.id).lean();
-      if (fallbackTask) {
-        task[0].publisherName = fallbackTask.publisherName || '未知用户';
-      }
-    }
-    res.json(task[0]);
+    res.json(task);
   } catch (err) {
     console.error('获取任务详情失败:', err);
-    // 出错时回退到直接 findById
-    try {
-      const fallbackTask = await Task.findById(req.params.id).lean();
-      if (fallbackTask) {
-        return res.json(fallbackTask);
-      }
-    } catch (e) {
-      console.error('回退查询也失败:', e);
-    }
     res.status(500).json({ error: '获取任务详情失败' });
   }
 });
@@ -756,16 +707,17 @@ app.post('/api/ratings', authMiddleware, async (req, res) => {
   res.json({ success: true, rating: newRating });
 });
 
-// ========== 统计接口 ==========
+// ============================================================
+// 统计接口（直接从 Task 集合计数）
+// ============================================================
 app.get('/api/stats/:userId', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
 
   try {
-    const allTasks = await Task.find({}).lean();
-    const published = allTasks.filter(t => t.publisherId?.toString() === userId).length;
-    const accepted = allTasks.filter(t => t.takerId?.toString() === userId).length;
-    const completed = allTasks.filter(t => t.takerId?.toString() === userId && t.status === 'completed').length;
+    const published = await Task.countDocuments({ publisherId: userId });
+    const accepted = await Task.countDocuments({ takerId: userId });
+    const completed = await Task.countDocuments({ takerId: userId, status: 'completed' });
     res.json({ published, accepted, completed });
   } catch (err) {
     console.error('获取统计数据失败:', err);
