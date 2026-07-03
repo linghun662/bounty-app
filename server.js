@@ -678,6 +678,19 @@ app.post('/api/ratings', authMiddleware, async (req, res) => {
   res.json({ success: true, rating: newRating });
 });
 
+// ========== 新增：统计接口 ==========
+app.get('/api/stats/:userId', authMiddleware, async (req, res) => {
+  const userId = req.params.userId;
+  if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
+
+  const allTasks = await Task.find({}).lean();
+  const published = allTasks.filter(t => t.publisherId.toString() === userId).length;
+  const accepted = allTasks.filter(t => t.takerId && t.takerId.toString() === userId && (t.status === 'ongoing' || t.status === 'completed')).length;
+  const completed = allTasks.filter(t => t.takerId && t.takerId.toString() === userId && t.status === 'completed').length;
+
+  res.json({ published, accepted, completed });
+});
+
 app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
