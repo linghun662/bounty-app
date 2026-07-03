@@ -246,7 +246,7 @@ app.post('/api/register', async (req, res) => {
   res.json({ success: true });
 });
 
-// ========== 登录（关键路由） ==========
+// ========== 登录 ==========
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   const user = await User.findOne({ username });
@@ -289,6 +289,8 @@ app.post('/api/login', async (req, res) => {
 });
 
 // ========== 任务接口 ==========
+
+// 获取 available 任务
 app.get('/api/tasks', async (req, res) => {
   try {
     const tasks = await Task.aggregate([
@@ -350,66 +352,34 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
+// ========== 获取所有任务（分页） ==========
 app.get('/api/tasks/all', async (req, res) => {
   try {
-    const tasks = await Task.aggregate([
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'publisherId',
-          foreignField: '_id',
-          as: 'publisher'
-        }
-      },
-      { $unwind: { path: '$publisher', preserveNullAndEmptyArrays: true } },
-      {
-        $addFields: {
-          publisherName: {
-            $ifNull: [
-              '$publisherName',
-              { $ifNull: ['$publisher.nickname', '$publisher.username'] }
-            ]
-          }
-        }
-      },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          description: 1,
-          reward: 1,
-          status: 1,
-          publisherId: 1,
-          publisherName: 1,
-          publisherPhone: 1,
-          locationAddress: 1,
-          latitude: 1,
-          longitude: 1,
-          takerId: 1,
-          takerName: 1,
-          takenAt: 1,
-          travelStatus: 1,
-          travelStartTime: 1,
-          estimatedMinutes: 1,
-          takerCompleted: 1,
-          proofMedia: 1,
-          mediaList: 1,
-          category: 1,
-          createdAt: 1,
-          updatedAt: 1
-        }
-      },
-      { $sort: { createdAt: -1 } },
-      { $limit: 100 }
-    ]);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const total = await Task.countDocuments();
+    const tasks = await Task.find()
+      .select('-mediaList -proofMedia')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
     tasks.forEach(t => { if (!t.publisherName) t.publisherName = '未知用户'; });
-    res.json(tasks);
+    res.json({
+      tasks,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    });
   } catch (err) {
     console.error('获取所有任务失败:', err);
     res.status(500).json({ error: '获取所有任务失败' });
   }
 });
 
+// 获取单个任务详情
 app.get('/api/tasks/:id', async (req, res) => {
   try {
     const task = await Task.aggregate([
@@ -472,6 +442,7 @@ app.get('/api/tasks/:id', async (req, res) => {
   }
 });
 
+// 发布任务
 app.post('/api/tasks', authMiddleware, async (req, res) => {
   const { title, description, reward, publisherName, publisherPhone, locationAddress, latitude, longitude, mediaList, category } = req.body;
   const publisherId = req.userId;
@@ -491,6 +462,7 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
   res.json(task);
 });
 
+// 取消任务
 app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const task = await Task.findById(req.params.id).select('status publisherId reward title').lean();
@@ -503,6 +475,7 @@ app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
   res.json({ success: true });
 });
 
+// 接取任务
 app.put('/api/tasks/:id/accept', authMiddleware, async (req, res) => {
   const takerId = req.userId;
   const { takerName } = req.body;
@@ -517,6 +490,7 @@ app.put('/api/tasks/:id/accept', authMiddleware, async (req, res) => {
   res.json({ success: true });
 });
 
+// 取消接取
 app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const task = await Task.findById(req.params.id);
@@ -541,6 +515,7 @@ app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
   res.json({ success: true });
 });
 
+// 更新任务状态
 app.put('/api/tasks/:id/status', authMiddleware, async (req, res) => {
   const { travelStatus, estimatedMinutes, travelStartTime } = req.body;
   const update = { updatedAt: new Date() };
@@ -551,6 +526,7 @@ app.put('/api/tasks/:id/status', authMiddleware, async (req, res) => {
   res.json({ success: true });
 });
 
+// 提交凭证
 app.post('/api/tasks/:id/submit-proof', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { proofMedia } = req.body;
@@ -564,6 +540,7 @@ app.post('/api/tasks/:id/submit-proof', authMiddleware, async (req, res) => {
   res.json({ success: true });
 });
 
+// 确认支付
 app.post('/api/tasks/:id/confirm-payment', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const task = await Task.findById(req.params.id);
@@ -582,6 +559,7 @@ app.post('/api/tasks/:id/confirm-payment', authMiddleware, async (req, res) => {
   res.json({ success: true });
 });
 
+// 修改赏金
 app.put('/api/tasks/:id/reward', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { reward: newReward } = req.body;
@@ -600,24 +578,28 @@ app.put('/api/tasks/:id/reward', authMiddleware, async (req, res) => {
   res.json({ success: true, reward: newReward });
 });
 
+// 获取用户信息
 app.get('/api/user/:id', async (req, res) => {
   const user = await User.findById(req.params.id).lean();
   if (!user) return res.status(404).json({ error: '用户不存在' });
   res.json(user);
 });
 
+// 更新用户信息
 app.put('/api/user/:id', authMiddleware, async (req, res) => {
   if (req.params.id !== req.userId) return res.status(403).json({ error: '无权修改' });
   await User.updateOne({ _id: req.params.id }, { $set: req.body });
   res.json({ success: true });
 });
 
+// 获取账单
 app.get('/api/bills/:userId', authMiddleware, async (req, res) => {
   if (req.params.userId !== req.userId) return res.status(403).json({ error: '无权查看' });
   const bills = await Bill.find({ userId: req.params.userId }).sort({ createdAt: -1 }).limit(50).lean();
   res.json(bills);
 });
 
+// 获取对话列表
 app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
@@ -626,7 +608,11 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   const tasks = await Task.find({
     $or: [{ publisherId: userId }, { takerId: userId }],
     status: { $ne: 'cancelled' }
-  }).select('-mediaList -proofMedia').sort({ updatedAt: -1 }).lean();
+  })
+  .select('-mediaList -proofMedia')
+  .sort({ updatedAt: -1 })
+  .limit(20)
+  .lean();
   const conversations = [];
   for (const task of tasks) {
     if (deletedSet.has(task._id.toString())) continue;
@@ -653,17 +639,20 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   res.json(conversations);
 });
 
+// 获取消息
 app.get('/api/messages/:taskId', async (req, res) => {
   const messages = await Message.find({ taskId: req.params.taskId }).sort({ createdAt: 1 }).lean();
   res.json(messages);
 });
 
+// 发送消息
 app.post('/api/messages', async (req, res) => {
   const message = new Message(req.body);
   await message.save();
   res.json(message);
 });
 
+// 标记已读
 app.put('/api/messages/read/:taskId/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权操作' });
@@ -674,6 +663,7 @@ app.put('/api/messages/read/:taskId/:userId', authMiddleware, async (req, res) =
   res.json({ success: true });
 });
 
+// 删除消息
 app.delete('/api/messages/:messageId', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const message = await Message.findById(req.params.messageId);
@@ -683,6 +673,7 @@ app.delete('/api/messages/:messageId', authMiddleware, async (req, res) => {
   res.json({ success: true });
 });
 
+// 删除对话
 app.delete('/api/conversations/:taskId/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权操作' });
@@ -690,6 +681,7 @@ app.delete('/api/conversations/:taskId/:userId', authMiddleware, async (req, res
   res.json({ success: true });
 });
 
+// 上传文件
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: '没有文件' });
   const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
@@ -700,6 +692,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const AMAP_KEY = '30107d62cf0ec682643d1097a48f7da4';
 
+// 地理编码
 app.post('/api/geocode', async (req, res) => {
   const { address } = req.body;
   if (!address) return res.status(400).json({ error: '地址不能为空' });
@@ -733,6 +726,7 @@ app.post('/api/geocode', async (req, res) => {
   }
 });
 
+// 逆地理编码
 app.post('/api/regeo', async (req, res) => {
   const { lat, lng } = req.body;
   if (!lat || !lng) return res.status(400).json({ error: '缺少经纬度' });
@@ -760,6 +754,7 @@ app.post('/api/regeo', async (req, res) => {
   }
 });
 
+// 实名认证
 app.post('/api/verify-id', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { realName, idCard } = req.body;
@@ -771,12 +766,14 @@ app.post('/api/verify-id', authMiddleware, async (req, res) => {
   }
 });
 
+// 信用日志
 app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
   if (req.params.userId !== req.userId) return res.status(403).json({ error: '无权查看' });
   const logs = await CreditLog.find({ userId: req.params.userId }).sort({ createdAt: -1 }).lean();
   res.json(logs);
 });
 
+// 评价相关
 app.get('/api/ratings/task/:taskId/user/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
