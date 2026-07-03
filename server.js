@@ -286,51 +286,14 @@ app.post('/api/login', async (req, res) => {
   });
 });
 
-// ========== 修复：使用 $toObjectId 转换类型 ==========
+// ========== 获取 available 任务（增加 limit 防止数据过多） ==========
 app.get('/api/tasks', async (req, res) => {
   try {
-    const tasks = await Task.aggregate([
-      { $match: { status: 'available' } },
-      {
-        $lookup: {
-          from: 'users',
-          let: { pubId: { $toObjectId: '$publisherId' } },
-          pipeline: [
-            { $match: { $expr: { $eq: ['$_id', '$$pubId'] } } }
-          ],
-          as: 'publisher'
-        }
-      },
-      { $unwind: { path: '$publisher', preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          description: 1,
-          reward: 1,
-          status: 1,
-          publisherId: 1,
-          publisherName: { $ifNull: ['$publisher.nickname', '$publisher.username'] },
-          publisherPhone: 1,
-          locationAddress: 1,
-          latitude: 1,
-          longitude: 1,
-          takerId: 1,
-          takerName: 1,
-          takenAt: 1,
-          travelStatus: 1,
-          travelStartTime: 1,
-          estimatedMinutes: 1,
-          takerCompleted: 1,
-          proofMedia: 1,
-          mediaList: 1,
-          category: 1,
-          createdAt: 1,
-          updatedAt: 1
-        }
-      },
-      { $sort: { createdAt: -1 } }
-    ]);
+    const tasks = await Task.find({ status: 'available' })
+      .select('-mediaList -proofMedia')
+      .sort({ createdAt: -1 })
+      .limit(100) // 限制最多 100 条
+      .lean();
     res.json(tasks);
   } catch (err) {
     console.error('获取任务列表失败:', err);
@@ -338,56 +301,35 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
+// ========== 分页获取所有任务（排除大字段，默认 20 条/页） ==========
 app.get('/api/tasks/all', async (req, res) => {
   try {
-    const tasks = await Task.aggregate([
-      {
-        $lookup: {
-          from: 'users',
-          let: { pubId: { $toObjectId: '$publisherId' } },
-          pipeline: [
-            { $match: { $expr: { $eq: ['$_id', '$$pubId'] } } }
-          ],
-          as: 'publisher'
-        }
-      },
-      { $unwind: { path: '$publisher', preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          description: 1,
-          reward: 1,
-          status: 1,
-          publisherId: 1,
-          publisherName: { $ifNull: ['$publisher.nickname', '$publisher.username'] },
-          publisherPhone: 1,
-          locationAddress: 1,
-          latitude: 1,
-          longitude: 1,
-          takerId: 1,
-          takerName: 1,
-          takenAt: 1,
-          travelStatus: 1,
-          travelStartTime: 1,
-          estimatedMinutes: 1,
-          takerCompleted: 1,
-          proofMedia: 1,
-          mediaList: 1,
-          category: 1,
-          createdAt: 1,
-          updatedAt: 1
-        }
-      },
-      { $sort: { createdAt: -1 } }
-    ]);
-    res.json(tasks);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const tasks = await Task.find()
+      .select('-mediaList -proofMedia')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await Task.countDocuments();
+
+    res.json({
+      tasks,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    });
   } catch (err) {
     console.error('获取所有任务失败:', err);
     res.status(500).json({ error: '获取所有任务失败' });
   }
 });
 
+// ========== 获取单个任务详情（聚合查询，因需关联用户信息） ==========
 app.get('/api/tasks/:id', async (req, res) => {
   try {
     const task = await Task.aggregate([
