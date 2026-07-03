@@ -92,6 +92,8 @@ const TaskSchema = new mongoose.Schema({
   publisherName: String,
   publisherPhone: String,
   locationAddress: String,
+  latitude: { type: Number, default: null },
+  longitude: { type: Number, default: null },
   takerId: { type: String, default: null },
   takerName: { type: String, default: null },
   takenAt: { type: Date, default: null },
@@ -284,30 +286,159 @@ app.post('/api/login', async (req, res) => {
   });
 });
 
+// ========== 修改：get /api/tasks 使用聚合查询返回 publisherName ==========
 app.get('/api/tasks', async (req, res) => {
-  const tasks = await Task.find({ status: 'available' })
-    .select('-mediaList -proofMedia')
-    .sort({ createdAt: -1 })
-    .lean();
-  res.json(tasks);
+  try {
+    const tasks = await Task.aggregate([
+      { $match: { status: 'available' } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'publisherId',
+          foreignField: '_id',
+          as: 'publisher'
+        }
+      },
+      { $unwind: { path: '$publisher', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          description: 1,
+          reward: 1,
+          status: 1,
+          publisherId: 1,
+          publisherName: { $ifNull: ['$publisher.nickname', '$publisher.username'] },
+          publisherPhone: 1,
+          locationAddress: 1,
+          latitude: 1,
+          longitude: 1,
+          takerId: 1,
+          takerName: 1,
+          takenAt: 1,
+          travelStatus: 1,
+          travelStartTime: 1,
+          estimatedMinutes: 1,
+          takerCompleted: 1,
+          proofMedia: 1,
+          mediaList: 1,
+          category: 1,
+          createdAt: 1,
+          updatedAt: 1
+        }
+      },
+      { $sort: { createdAt: -1 } }
+    ]);
+    res.json(tasks);
+  } catch (err) {
+    console.error('获取任务列表失败:', err);
+    res.status(500).json({ error: '获取任务列表失败' });
+  }
 });
 
+// ========== 修改：get /api/tasks/all 使用聚合查询返回 publisherName ==========
 app.get('/api/tasks/all', async (req, res) => {
-  const tasks = await Task.find()
-    .select('-mediaList -proofMedia')
-    .sort({ createdAt: -1 })
-    .lean();
-  res.json(tasks);
+  try {
+    const tasks = await Task.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'publisherId',
+          foreignField: '_id',
+          as: 'publisher'
+        }
+      },
+      { $unwind: { path: '$publisher', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          description: 1,
+          reward: 1,
+          status: 1,
+          publisherId: 1,
+          publisherName: { $ifNull: ['$publisher.nickname', '$publisher.username'] },
+          publisherPhone: 1,
+          locationAddress: 1,
+          latitude: 1,
+          longitude: 1,
+          takerId: 1,
+          takerName: 1,
+          takenAt: 1,
+          travelStatus: 1,
+          travelStartTime: 1,
+          estimatedMinutes: 1,
+          takerCompleted: 1,
+          proofMedia: 1,
+          mediaList: 1,
+          category: 1,
+          createdAt: 1,
+          updatedAt: 1
+        }
+      },
+      { $sort: { createdAt: -1 } }
+    ]);
+    res.json(tasks);
+  } catch (err) {
+    console.error('获取所有任务失败:', err);
+    res.status(500).json({ error: '获取所有任务失败' });
+  }
 });
 
+// ========== 修改：get /api/tasks/:id 使用聚合查询返回 publisherName ==========
 app.get('/api/tasks/:id', async (req, res) => {
-  const task = await Task.findById(req.params.id).lean();
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  res.json(task);
+  try {
+    const task = await Task.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(req.params.id) } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'publisherId',
+          foreignField: '_id',
+          as: 'publisher'
+        }
+      },
+      { $unwind: { path: '$publisher', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          description: 1,
+          reward: 1,
+          status: 1,
+          publisherId: 1,
+          publisherName: { $ifNull: ['$publisher.nickname', '$publisher.username'] },
+          publisherPhone: 1,
+          locationAddress: 1,
+          latitude: 1,
+          longitude: 1,
+          takerId: 1,
+          takerName: 1,
+          takenAt: 1,
+          travelStatus: 1,
+          travelStartTime: 1,
+          estimatedMinutes: 1,
+          takerCompleted: 1,
+          proofMedia: 1,
+          mediaList: 1,
+          category: 1,
+          createdAt: 1,
+          updatedAt: 1
+        }
+      }
+    ]);
+    if (!task || task.length === 0) {
+      return res.status(404).json({ error: '任务不存在' });
+    }
+    res.json(task[0]);
+  } catch (err) {
+    console.error('获取任务详情失败:', err);
+    res.status(500).json({ error: '获取任务详情失败' });
+  }
 });
 
 app.post('/api/tasks', authMiddleware, async (req, res) => {
-  const { title, description, reward, publisherName, publisherPhone, locationAddress, mediaList, category } = req.body;
+  const { title, description, reward, publisherName, publisherPhone, locationAddress, latitude, longitude, mediaList, category } = req.body;
   const publisherId = req.userId;
   const user = await User.findById(publisherId);
   if (!user) return res.status(404).json({ error: '用户不存在' });
@@ -316,7 +447,7 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
   await updateUserBalance(publisherId, -reward, reward);
   const task = new Task({
     title, description, reward, publisherId, publisherName, publisherPhone,
-    locationAddress, mediaList, category, status: 'available'
+    locationAddress, latitude, longitude, mediaList, category, status: 'available'
   });
   await task.save();
   await Bill.create({ userId: publisherId, type: 'expense', amount: -reward, desc: `发布任务冻结：${title}` });
@@ -678,17 +809,25 @@ app.post('/api/ratings', authMiddleware, async (req, res) => {
   res.json({ success: true, rating: newRating });
 });
 
-// ========== 新增：统计接口 ==========
+// ========== 修改：统计接口 ==========
 app.get('/api/stats/:userId', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
 
-  const allTasks = await Task.find({}).lean();
-  const published = allTasks.filter(t => t.publisherId.toString() === userId).length;
-  const accepted = allTasks.filter(t => t.takerId && t.takerId.toString() === userId && (t.status === 'ongoing' || t.status === 'completed')).length;
-  const completed = allTasks.filter(t => t.takerId && t.takerId.toString() === userId && t.status === 'completed').length;
+  try {
+    const allTasks = await Task.find({}).lean();
+    // 发布：所有 publisherId 匹配的任务
+    const published = allTasks.filter(t => t.publisherId?.toString() === userId).length;
+    // 接取：所有 takerId 匹配的任务（不限状态）
+    const accepted = allTasks.filter(t => t.takerId?.toString() === userId).length;
+    // 完成：takerId 匹配且 status === 'completed'
+    const completed = allTasks.filter(t => t.takerId?.toString() === userId && t.status === 'completed').length;
 
-  res.json({ published, accepted, completed });
+    res.json({ published, accepted, completed });
+  } catch (err) {
+    console.error('获取统计数据失败:', err);
+    res.status(500).json({ error: '获取统计数据失败' });
+  }
 });
 
 app.get('/*splat', (req, res) => {
