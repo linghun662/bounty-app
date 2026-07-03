@@ -215,7 +215,7 @@ async function initDefaultData() {
       title: '帮忙取快递',
       description: '西门驿站取件送到3栋',
       reward: 12,
-      publisherId: user1._id,
+      publisherId: user1._id.toString(),
       publisherName: '小明',
       locationAddress: '上海交大闵行',
       category: '取件'
@@ -224,7 +224,7 @@ async function initDefaultData() {
       title: '前端页面调试',
       description: 'CSS样式错位',
       reward: 45,
-      publisherId: user2._id,
+      publisherId: user2._id.toString(),
       publisherName: '小红',
       locationAddress: '徐家汇',
       category: '调试'
@@ -286,7 +286,7 @@ app.post('/api/login', async (req, res) => {
   });
 });
 
-// ========== 修改：get /api/tasks 使用聚合查询返回 publisherName ==========
+// ========== 修复：使用 $toObjectId 转换类型 ==========
 app.get('/api/tasks', async (req, res) => {
   try {
     const tasks = await Task.aggregate([
@@ -294,8 +294,10 @@ app.get('/api/tasks', async (req, res) => {
       {
         $lookup: {
           from: 'users',
-          localField: 'publisherId',
-          foreignField: '_id',
+          let: { pubId: { $toObjectId: '$publisherId' } },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$pubId'] } } }
+          ],
           as: 'publisher'
         }
       },
@@ -336,15 +338,16 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
-// ========== 修改：get /api/tasks/all 使用聚合查询返回 publisherName ==========
 app.get('/api/tasks/all', async (req, res) => {
   try {
     const tasks = await Task.aggregate([
       {
         $lookup: {
           from: 'users',
-          localField: 'publisherId',
-          foreignField: '_id',
+          let: { pubId: { $toObjectId: '$publisherId' } },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$pubId'] } } }
+          ],
           as: 'publisher'
         }
       },
@@ -385,7 +388,6 @@ app.get('/api/tasks/all', async (req, res) => {
   }
 });
 
-// ========== 修改：get /api/tasks/:id 使用聚合查询返回 publisherName ==========
 app.get('/api/tasks/:id', async (req, res) => {
   try {
     const task = await Task.aggregate([
@@ -393,8 +395,10 @@ app.get('/api/tasks/:id', async (req, res) => {
       {
         $lookup: {
           from: 'users',
-          localField: 'publisherId',
-          foreignField: '_id',
+          let: { pubId: { $toObjectId: '$publisherId' } },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$pubId'] } } }
+          ],
           as: 'publisher'
         }
       },
@@ -446,7 +450,7 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
   if (reward > user.balance) return res.status(400).json({ error: '余额不足' });
   await updateUserBalance(publisherId, -reward, reward);
   const task = new Task({
-    title, description, reward, publisherId, publisherName, publisherPhone,
+    title, description, reward, publisherId: publisherId.toString(), publisherName, publisherPhone,
     locationAddress, latitude, longitude, mediaList, category, status: 'available'
   });
   await task.save();
@@ -473,7 +477,7 @@ app.put('/api/tasks/:id/accept', authMiddleware, async (req, res) => {
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取' });
   task.status = 'ongoing';
-  task.takerId = takerId;
+  task.takerId = takerId.toString();
   task.takerName = takerName;
   task.takenAt = new Date();
   await task.save();
@@ -809,7 +813,7 @@ app.post('/api/ratings', authMiddleware, async (req, res) => {
   res.json({ success: true, rating: newRating });
 });
 
-// ========== 修改：统计接口 ==========
+// ========== 统计接口 ==========
 app.get('/api/stats/:userId', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
