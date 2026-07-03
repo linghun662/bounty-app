@@ -286,13 +286,13 @@ app.post('/api/login', async (req, res) => {
   });
 });
 
-// ========== 获取 available 任务（增加 limit 防止数据过多） ==========
+// ========== 获取 available 任务（限制 100 条，排除大字段） ==========
 app.get('/api/tasks', async (req, res) => {
   try {
     const tasks = await Task.find({ status: 'available' })
       .select('-mediaList -proofMedia')
       .sort({ createdAt: -1 })
-      .limit(100) // 限制最多 100 条
+      .limit(100)
       .lean();
     res.json(tasks);
   } catch (err) {
@@ -301,35 +301,22 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
-// ========== 分页获取所有任务（排除大字段，默认 20 条/页） ==========
+// ========== 获取所有任务（限制 100 条，排除大字段） ==========
 app.get('/api/tasks/all', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
-
     const tasks = await Task.find()
       .select('-mediaList -proofMedia')
       .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
+      .limit(100)
       .lean();
-
-    const total = await Task.countDocuments();
-
-    res.json({
-      tasks,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit)
-    });
+    res.json(tasks);
   } catch (err) {
     console.error('获取所有任务失败:', err);
     res.status(500).json({ error: '获取所有任务失败' });
   }
 });
 
-// ========== 获取单个任务详情（聚合查询，因需关联用户信息） ==========
+// ========== 获取单个任务详情（使用简单 $lookup，保证兼容性） ==========
 app.get('/api/tasks/:id', async (req, res) => {
   try {
     const task = await Task.aggregate([
@@ -337,10 +324,8 @@ app.get('/api/tasks/:id', async (req, res) => {
       {
         $lookup: {
           from: 'users',
-          let: { pubId: { $toObjectId: '$publisherId' } },
-          pipeline: [
-            { $match: { $expr: { $eq: ['$_id', '$$pubId'] } } }
-          ],
+          localField: 'publisherId',
+          foreignField: '_id',
           as: 'publisher'
         }
       },
@@ -376,9 +361,25 @@ app.get('/api/tasks/:id', async (req, res) => {
     if (!task || task.length === 0) {
       return res.status(404).json({ error: '任务不存在' });
     }
+    // 如果关联查询失败，回退到任务文档中的 publisherName
+    if (!task[0].publisherName) {
+      const fallbackTask = await Task.findById(req.params.id).lean();
+      if (fallbackTask) {
+        task[0].publisherName = fallbackTask.publisherName || '未知用户';
+      }
+    }
     res.json(task[0]);
   } catch (err) {
     console.error('获取任务详情失败:', err);
+    // 出错时回退到直接 findById
+    try {
+      const fallbackTask = await Task.findById(req.params.id).lean();
+      if (fallbackTask) {
+        return res.json(fallbackTask);
+      }
+    } catch (e) {
+      console.error('回退查询也失败:', e);
+    }
     res.status(500).json({ error: '获取任务详情失败' });
   }
 });
@@ -762,13 +763,9 @@ app.get('/api/stats/:userId', authMiddleware, async (req, res) => {
 
   try {
     const allTasks = await Task.find({}).lean();
-    // 发布：所有 publisherId 匹配的任务
     const published = allTasks.filter(t => t.publisherId?.toString() === userId).length;
-    // 接取：所有 takerId 匹配的任务（不限状态）
     const accepted = allTasks.filter(t => t.takerId?.toString() === userId).length;
-    // 完成：takerId 匹配且 status === 'completed'
     const completed = allTasks.filter(t => t.takerId?.toString() === userId && t.status === 'completed').length;
-
     res.json({ published, accepted, completed });
   } catch (err) {
     console.error('获取统计数据失败:', err);
