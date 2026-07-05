@@ -7,25 +7,40 @@
     "build": "echo '前端已就绪'",
     "sync": "npx cap sync",
     "open:android": "npx cap open android",
-    "open:ios": "npx cap open ios"
+    "open:ios": "npx cap open ios",
+    "start": "node server.js"
   },
   "dependencies": {
-    "@capacitor/android": "^5.7.0",
-    "@capacitor/app": "^5.0.6",
-    "@capacitor/camera": "^5.0.6",
-    "@capacitor/cli": "^5.7.0",
-    "@capacitor/core": "^5.7.0",
-    "@capacitor/filesystem": "^5.1.4",
-    "@capacitor/geolocation": "^5.0.6",
-    "@capacitor/ios": "^5.7.0",
-    "@capacitor/splash-screen": "^5.0.6",
-    "@capacitor/status-bar": "^5.0.6",
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/camera": "^8.2.0",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/device": "^8.0.2",
+    "@capacitor/geolocation": "^8.2.0",
+    "@capacitor/local-notifications": "^8.2.0",
+    "@capacitor/push-notifications": "^8.1.1",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
+    "@capgo/capacitor-updater": "^8.49.7",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.0",
     "multer": "^2.1.1",
-    "node-fetch": "^2.7.0"
-  }
+    "node-fetch": "^2.7.0",
+    "ws": "^8.21.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/linghun662/bounty-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/linghun662/bounty-app/issues"
+  },
+  "homepage": "https://github.com/linghun662/bounty-app#readme"
 }
