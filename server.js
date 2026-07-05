@@ -6,6 +6,8 @@ const multer = require('multer');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const WebSocket = require('ws');
+const http = require('http');
 
 let fetch;
 try {
@@ -29,6 +31,42 @@ async function fetchWithTimeout(url, options = {}, timeout = 5000) {
 }
 
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+// ========== WebSocket 连接管理 ==========
+const clients = new Map(); // userId -> WebSocket
+
+wss.on('connection', (ws, req) => {
+  // 从 URL 参数中获取 userId（连接时传入 ?userId=xxx）
+  const url = new URL(req.url, 'http://localhost');
+  const userId = url.searchParams.get('userId');
+  if (!userId) {
+    ws.close();
+    return;
+  }
+  clients.set(userId, ws);
+  console.log(`WebSocket 用户 ${userId} 已连接`);
+
+  ws.on('close', () => {
+    clients.delete(userId);
+    console.log(`WebSocket 用户 ${userId} 已断开`);
+  });
+
+  ws.on('error', (err) => {
+    console.error('WebSocket 错误:', err);
+  });
+});
+
+// 广播消息给指定用户
+function sendToUser(userId, message) {
+  const ws = clients.get(userId);
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(message));
+    return true;
+  }
+  return false;
+}
 
 app.use(cors({
   origin: [
@@ -352,7 +390,7 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
-// ========== 获取所有任务（分页） ==========
+// 获取所有任务（分页）
 app.get('/api/tasks/all', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -645,11 +683,70 @@ app.get('/api/messages/:taskId', async (req, res) => {
   res.json(messages);
 });
 
-// 发送消息
+// ========== 发送消息（HTTP 保存 + WebSocket 推送） ==========
 app.post('/api/messages', async (req, res) => {
-  const message = new Message(req.body);
-  await message.save();
-  res.json(message);
+  try {
+    const { taskId, senderId, senderName, text, isNego } = req.body;
+    if (!taskId || !senderId || !text) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    // 保存消息到数据库
+    const message = new Message({
+      taskId,
+      senderId,
+      senderName,
+      text,
+      isNego: isNego || false,
+      time: new Date().toISOString(),
+      read: false,
+      createdAt: new Date()
+    });
+    await message.save();
+
+    // 获取任务信息，确定接收方
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ error: '任务不存在' });
+    }
+
+    // 确定接收方 ID（对方是任务的另一位参与者）
+    let receiverId = null;
+    if (task.publisherId === senderId) {
+      receiverId = task.takerId;
+    } else if (task.takerId === senderId) {
+      receiverId = task.publisherId;
+    }
+
+    // 如果有接收方且在线，通过 WebSocket 推送消息
+    if (receiverId) {
+      const payload = {
+        type: 'new_message',
+        data: {
+          _id: message._id,
+          taskId: message.taskId,
+          senderId: message.senderId,
+          senderName: message.senderName,
+          text: message.text,
+          isNego: message.isNego,
+          time: message.time,
+          createdAt: message.createdAt,
+          read: message.read
+        }
+      };
+      const sent = sendToUser(receiverId, payload);
+      if (sent) {
+        console.log(`消息已推送给用户 ${receiverId}`);
+      } else {
+        console.log(`用户 ${receiverId} 不在线，消息已存入数据库`);
+      }
+    }
+
+    res.json(message);
+  } catch (err) {
+    console.error('发送消息失败:', err);
+    res.status(500).json({ error: '发送消息失败' });
+  }
 });
 
 // 标记已读
@@ -864,7 +961,7 @@ app.get('/*splat', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
+server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   await initDefaultData();
 });
