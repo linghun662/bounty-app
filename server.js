@@ -65,6 +65,25 @@ function sendToUser(userId, message) {
   return false;
 }
 
+// ========== 工具函数：转换 row 中的布尔字段 ==========
+function fixBooleans(row) {
+  if (!row) return row;
+  const result = { ...row };
+  // 需要转换的字段列表
+  const booleanFields = ['takerCompleted', 'idCardVerified', 'read', 'isNego'];
+  for (const field of booleanFields) {
+    if (result[field] !== undefined && result[field] !== null) {
+      result[field] = result[field] === 1 || result[field] === true;
+    }
+  }
+  return result;
+}
+
+function fixBooleansInArray(rows) {
+  if (!rows) return rows;
+  return rows.map(row => fixBooleans(row));
+}
+
 // ========== 中间件 ==========
 app.use(cors({
   origin: [
@@ -271,7 +290,6 @@ app.post('/api/register', async (req, res) => {
       sql: 'INSERT INTO users (id, username, password, nickname, phone) VALUES (?, ?, ?, ?, ?)',
       args: [userId, username, hashedPassword, nickname || username, phone || ''],
     });
-    // 信用日志
     await turso.execute({
       sql: 'INSERT INTO creditlogs (id, userId, reason, change, createdAt) VALUES (?, ?, ?, ?, ?)',
       args: [generateId(), userId, '注册奖励', 60, Date.now()],
@@ -300,21 +318,23 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: '用户名或密码错误' });
     }
     const token = jwt.sign({ userId: userData.id }, JWT_SECRET, { expiresIn: '7d' });
+    // 转换布尔字段
+    const fixedUser = fixBooleans(userData);
     res.json({
       success: true,
       token,
       user: {
-        id: userData.id,
-        username: userData.username,
-        nickname: userData.nickname,
-        balance: userData.balance,
-        frozenBalance: userData.frozenBalance,
-        credit: userData.credit,
-        idCardVerified: userData.idCardVerified === 1,
-        signature: userData.signature,
-        hometown: userData.hometown,
-        avatar: userData.avatar,
-        phone: userData.phone,
+        id: fixedUser.id,
+        username: fixedUser.username,
+        nickname: fixedUser.nickname,
+        balance: fixedUser.balance,
+        frozenBalance: fixedUser.frozenBalance,
+        credit: fixedUser.credit,
+        idCardVerified: fixedUser.idCardVerified,
+        signature: fixedUser.signature,
+        hometown: fixedUser.hometown,
+        avatar: fixedUser.avatar,
+        phone: fixedUser.phone,
       },
     });
   } catch (err) {
@@ -323,13 +343,13 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// 获取任务列表（available）
+// 获取任务列表
 app.get('/api/tasks', async (req, res) => {
   try {
     const tasks = await turso.execute(
       'SELECT * FROM tasks WHERE status = \'available\' ORDER BY createdAt DESC LIMIT 100'
     );
-    res.json(tasks.rows);
+    res.json(fixBooleansInArray(tasks.rows));
   } catch (err) {
     console.error('获取任务列表失败:', err);
     res.status(500).json({ error: '获取任务列表失败' });
@@ -348,7 +368,7 @@ app.get('/api/tasks/all', async (req, res) => {
       args: [limit, offset],
     });
     res.json({
-      tasks: tasks.rows,
+      tasks: fixBooleansInArray(tasks.rows),
       total: total.rows[0].count,
       page,
       totalPages: Math.ceil(total.rows[0].count / limit),
@@ -381,7 +401,7 @@ app.get('/api/tasks/:id', async (req, res) => {
         t.publisherName = '未知用户';
       }
     }
-    res.json(t);
+    res.json(fixBooleans(t));
   } catch (err) {
     console.error('获取任务详情失败:', err);
     res.status(500).json({ error: '获取任务详情失败' });
@@ -401,7 +421,6 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
     const userData = user.rows[0];
     if (!userData.idCardVerified) return res.status(403).json({ error: '请先实名认证' });
     if (reward > userData.balance) return res.status(400).json({ error: '余额不足' });
-    // 扣余额
     await turso.execute({
       sql: 'UPDATE users SET balance = balance - ?, frozenBalance = frozenBalance + ? WHERE id = ?',
       args: [reward, reward, publisherId],
@@ -430,7 +449,6 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
         Date.now(),
       ],
     });
-    // 记录账单
     await turso.execute({
       sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
       args: [generateId(), publisherId, 'expense', -reward, `发布任务冻结：${title}`, Date.now()],
@@ -439,7 +457,7 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
       sql: 'SELECT * FROM tasks WHERE id = ?',
       args: [taskId],
     });
-    res.json(newTask.rows[0]);
+    res.json(fixBooleans(newTask.rows[0]));
   } catch (err) {
     console.error('发布任务失败:', err);
     res.status(500).json({ error: '发布任务失败' });
@@ -516,7 +534,6 @@ app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
       sql: 'UPDATE tasks SET status = \'available\', takerId = NULL, takerName = NULL, takenAt = NULL, travelStatus = \'idle\', travelStartTime = NULL, estimatedMinutes = NULL, takerCompleted = 0, updatedAt = ? WHERE id = ?',
       args: [Date.now(), req.params.id],
     });
-    // 扣除信用分
     const user = await turso.execute({
       sql: 'SELECT credit FROM users WHERE id = ?',
       args: [userId],
@@ -539,7 +556,7 @@ app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
   }
 });
 
-// 更新任务状态（travelStatus等）
+// 更新任务状态
 app.put('/api/tasks/:id/status', authMiddleware, async (req, res) => {
   const { travelStatus, estimatedMinutes, travelStartTime } = req.body;
   const update = {};
@@ -600,7 +617,6 @@ app.post('/api/tasks/:id/confirm-payment', authMiddleware, async (req, res) => {
     if (t.status !== 'ongoing' || !t.takerCompleted) {
       return res.status(400).json({ error: '接取者尚未提交凭证' });
     }
-    // 转账：发布者减少冻结余额，接取者增加余额
     await turso.execute({
       sql: 'UPDATE users SET balance = balance + ?, frozenBalance = frozenBalance - ? WHERE id = ?',
       args: [t.reward, t.reward, t.publisherId],
@@ -613,12 +629,10 @@ app.post('/api/tasks/:id/confirm-payment', authMiddleware, async (req, res) => {
       sql: 'UPDATE tasks SET status = \'completed\', updatedAt = ? WHERE id = ?',
       args: [Date.now(), req.params.id],
     });
-    // 账单
     await turso.execute({
       sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
       args: [generateId(), t.takerId, 'income', t.reward, `完成任务：${t.title}`, Date.now()],
     });
-    // 信用+5
     await turso.execute({
       sql: 'UPDATE users SET credit = credit + 5 WHERE id = ?',
       args: [t.takerId],
@@ -678,11 +692,7 @@ app.get('/api/user/:id', async (req, res) => {
       args: [req.params.id],
     });
     if (user.rows.length === 0) return res.status(404).json({ error: '用户不存在' });
-    const u = user.rows[0];
-    res.json({
-      ...u,
-      idCardVerified: u.idCardVerified === 1,
-    });
+    res.json(fixBooleans(user.rows[0]));
   } catch (err) {
     console.error('获取用户信息失败:', err);
     res.status(500).json({ error: '获取用户信息失败' });
@@ -776,7 +786,7 @@ app.get('/api/messages/:taskId', async (req, res) => {
       sql: 'SELECT * FROM messages WHERE taskId = ? ORDER BY createdAt ASC',
       args: [req.params.taskId],
     });
-    res.json(messages.rows);
+    res.json(fixBooleansInArray(messages.rows));
   } catch (err) {
     console.error('获取消息失败:', err);
     res.status(500).json({ error: '获取消息失败' });
@@ -798,7 +808,6 @@ app.post('/api/messages', async (req, res) => {
     });
     const newMsg = { id: messageId, taskId, senderId, senderName, text, isNego: !!isNego, time: new Date().toISOString(), createdAt: now, read: 0 };
 
-    // 获取任务，确定接收方
     const task = await turso.execute({
       sql: 'SELECT * FROM tasks WHERE id = ?',
       args: [taskId],
@@ -814,13 +823,13 @@ app.post('/api/messages', async (req, res) => {
       receiverId = t.publisherId;
     }
     if (receiverId) {
-      const payload = { type: 'new_message', data: newMsg };
+      const payload = { type: 'new_message', data: fixBooleans(newMsg) };
       const sent = sendToUser(receiverId, payload);
       console.log(`推送结果: ${sent ? '✅ 成功' : '❌ 失败'}, 接收方: ${receiverId}`);
     } else {
       console.log('❌ 未找到接收方');
     }
-    res.json(newMsg);
+    res.json(fixBooleans(newMsg));
   } catch (err) {
     console.error('发送消息失败:', err);
     res.status(500).json({ error: '发送消息失败' });
@@ -897,7 +906,6 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 地理编码（直接调用高德 API）
 const AMAP_KEY = '30107d62cf0ec682643d1097a48f7da4';
 
 app.post('/api/geocode', async (req, res) => {
@@ -912,7 +920,6 @@ app.post('/api/geocode', async (req, res) => {
       const c = cached.rows[0];
       return res.json({ lat: c.lat, lng: c.lng });
     }
-    // 调用高德 API
     const url = `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(address)}&key=${AMAP_KEY}&output=JSON`;
     const response = await fetch(url);
     const data = await response.json();
@@ -934,7 +941,6 @@ app.post('/api/geocode', async (req, res) => {
   }
 });
 
-// 逆地理编码
 app.post('/api/regeo', async (req, res) => {
   const { lat, lng } = req.body;
   if (!lat || !lng) return res.status(400).json({ error: '缺少经纬度' });
@@ -954,7 +960,6 @@ app.post('/api/regeo', async (req, res) => {
   }
 });
 
-// 实名认证
 app.post('/api/verify-id', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { realName, idCard } = req.body;
@@ -974,7 +979,6 @@ app.post('/api/verify-id', authMiddleware, async (req, res) => {
   }
 });
 
-// 信用日志
 app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
   if (req.params.userId !== req.userId) return res.status(403).json({ error: '无权查看' });
   try {
@@ -989,7 +993,6 @@ app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-// 评价相关
 app.get('/api/ratings/task/:taskId/user/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
@@ -1045,7 +1048,6 @@ app.post('/api/ratings', authMiddleware, async (req, res) => {
       sql: 'INSERT INTO ratings (id, taskId, fromUserId, toUserId, rating, comment, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
       args: [ratingId, taskId, fromUserId, toUserId, rating, comment || '', Date.now()],
     });
-    // 信用分变化
     let creditChange = 0;
     if (rating >= 4) creditChange = 2;
     else if (rating <= 2) creditChange = -2;
@@ -1066,7 +1068,6 @@ app.post('/api/ratings', authMiddleware, async (req, res) => {
   }
 });
 
-// 统计接口
 app.get('/api/stats/:userId', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
@@ -1098,7 +1099,6 @@ app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ========== 启动服务器 ==========
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
