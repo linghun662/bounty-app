@@ -1,46 +1,45 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const WebSocket = require('ws');
+const { createClient } = require('@libsql/client');
 const http = require('http');
-
-let fetch;
-try {
-  fetch = global.fetch;
-  if (!fetch) throw new Error();
-} catch(e) {
-  fetch = require('node-fetch');
-}
-
-async function fetchWithTimeout(url, options = {}, timeout = 5000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
-    clearTimeout(id);
-    return response;
-  } catch (err) {
-    clearTimeout(id);
-    throw err;
-  }
-}
+const WebSocket = require('ws');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// ========== WebSocket 连接管理 ==========
-const clients = new Map(); // userId -> WebSocket
+// ========== Turso 客户端 ==========
+const turso = createClient({
+  url: process.env.TURSO_DATABASE_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
-wss.on('connection', (ws, req) => {
+// ========== WebSocket 连接管理 ==========
+const clients = new Map();
+
+wss.on('connection', async (ws, req) => {
   const url = new URL(req.url, 'http://localhost');
   const userId = url.searchParams.get('userId');
   if (!userId) {
+    ws.close();
+    return;
+  }
+  try {
+    const user = await turso.execute({
+      sql: 'SELECT id FROM users WHERE id = ?',
+      args: [userId],
+    });
+    if (user.rows.length === 0) {
+      ws.close();
+      return;
+    }
+  } catch (err) {
+    console.error('验证用户失败:', err);
     ws.close();
     return;
   }
@@ -57,7 +56,6 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-// 广播消息给指定用户
 function sendToUser(userId, message) {
   const ws = clients.get(userId);
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -67,6 +65,7 @@ function sendToUser(userId, message) {
   return false;
 }
 
+// ========== 中间件 ==========
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -75,11 +74,10 @@ app.use(cors({
     'https://bounty-app-production.up.railway.app',
     /\.railway\.app$/,
     /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
-    'file://'
+    'file://',
   ],
-  credentials: true
+  credentials: true,
 }));
-
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -90,129 +88,17 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, unique + ext);
-  }
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, unique + path.extname(file.originalname));
+  },
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-me';
 
-// ========== 修复1：优先使用 Railway 注入的 MONGO_URL ==========
-const mongoUri = process.env.MONGO_URL || process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty';
-mongoose.connect(mongoUri, {
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
-});
-// =========================================================
-
-const UserSchema = new mongoose.Schema({
-  username: { type: String, unique: true },
-  password: String,
-  nickname: String,
-  phone: String,
-  balance: { type: Number, default: 100 },
-  frozenBalance: { type: Number, default: 0 },
-  credit: { type: Number, default: 60 },
-  idCardVerified: { type: Boolean, default: false },
-  signature: String,
-  hometown: String,
-  avatar: String,
-  deletedConversations: [{ type: String }]
-});
-const User = mongoose.model('User', UserSchema);
-
-const TaskSchema = new mongoose.Schema({
-  title: String,
-  description: String,
-  reward: Number,
-  status: { type: String, default: 'available' },
-  publisherId: String,
-  publisherName: String,
-  publisherPhone: String,
-  locationAddress: String,
-  latitude: { type: Number, default: null },
-  longitude: { type: Number, default: null },
-  takerId: { type: String, default: null },
-  takerName: { type: String, default: null },
-  takenAt: { type: Date, default: null },
-  travelStatus: { type: String, default: 'idle' },
-  travelStartTime: { type: Number, default: null },
-  estimatedMinutes: { type: Number, default: null },
-  takerCompleted: { type: Boolean, default: false },
-  proofMedia: { type: Array, default: [] },
-  mediaList: Array,
-  category: String,
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-});
-
-TaskSchema.index({ status: 1, createdAt: -1 });
-TaskSchema.index({ publisherId: 1 });
-TaskSchema.index({ takerId: 1 });
-
-const Task = mongoose.model('Task', TaskSchema);
-// 修复2：索引创建失败时仅打印警告，不阻止启动
-Task.ensureIndexes().catch(err => console.warn('索引创建警告（不影响运行）:', err.message));
-
-const MessageSchema = new mongoose.Schema({
-  taskId: String,
-  senderId: String,
-  senderName: String,
-  text: String,
-  isNego: { type: Boolean, default: false },
-  time: String,
-  read: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now }
-});
-const Message = mongoose.model('Message', MessageSchema);
-
-const BillSchema = new mongoose.Schema({
-  userId: String,
-  type: String,
-  amount: Number,
-  desc: String,
-  createdAt: { type: Date, default: Date.now }
-});
-const Bill = mongoose.model('Bill', BillSchema);
-
-const CreditLogSchema = new mongoose.Schema({
-  userId: String,
-  reason: String,
-  change: Number,
-  createdAt: { type: Date, default: Date.now }
-});
-const CreditLog = mongoose.model('CreditLog', CreditLogSchema);
-
-const GeocodeCacheSchema = new mongoose.Schema({
-  address: { type: String, unique: true },
-  lat: Number,
-  lng: Number,
-  expires: { type: Date, default: () => Date.now() + 7*24*60*60*1000 }
-});
-const GeocodeCache = mongoose.models.GeocodeCache || mongoose.model('GeocodeCache', GeocodeCacheSchema);
-
-const RatingSchema = new mongoose.Schema({
-  taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', required: true },
-  fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  toUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  rating: { type: Number, min: 1, max: 5, required: true },
-  comment: { type: String, default: '' },
-  createdAt: { type: Date, default: Date.now }
-});
-RatingSchema.index({ taskId: 1, fromUserId: 1, toUserId: 1 }, { unique: true });
-const Rating = mongoose.model('Rating', RatingSchema);
-
-async function updateUserBalance(userId, deltaBalance, deltaFrozen = 0) {
-  const user = await User.findById(userId);
-  if (!user) throw new Error(`用户不存在: ${userId}`);
-  if (user.balance + deltaBalance < 0) throw new Error(`余额不足，当前余额 ${user.balance}，需扣减 ${-deltaBalance}`);
-  if (user.frozenBalance + deltaFrozen < 0) throw new Error(`冻结余额不足，当前冻结 ${user.frozenBalance}，需解冻 ${-deltaFrozen}`);
-  user.balance += deltaBalance;
-  user.frozenBalance += deltaFrozen;
-  await user.save();
-  return user;
+// ========== 辅助函数 ==========
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
 function authMiddleware(req, res, next) {
@@ -223,193 +109,249 @@ function authMiddleware(req, res, next) {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.userId = decoded.userId;
     next();
-  } catch(err) {
+  } catch (err) {
     return res.status(401).json({ error: 'token 无效或过期' });
   }
 }
 
-async function initDefaultData() {
-  const userCount = await User.countDocuments();
-  if (userCount === 0) {
-    console.log('数据库为空，正在创建默认测试数据...');
-    const hashedPwd = await bcrypt.hash('123456', 10);
-    const user1 = await User.create({
-      username: 'xiaoming',
-      password: hashedPwd,
-      nickname: '小明',
-      phone: '13800000001',
-      balance: 200,
-      credit: 85,
-      idCardVerified: true
-    });
-    const user2 = await User.create({
-      username: 'hong',
-      password: hashedPwd,
-      nickname: '小红',
-      phone: '13800000002',
-      balance: 150,
-      credit: 72,
-      idCardVerified: true
-    });
-
-    await Task.create({
-      title: '帮忙取快递',
-      description: '西门驿站取件送到3栋',
-      reward: 12,
-      publisherId: user1._id.toString(),
-      publisherName: '小明',
-      locationAddress: '上海交大闵行',
-      category: '取件'
-    });
-    await Task.create({
-      title: '前端页面调试',
-      description: 'CSS样式错位',
-      reward: 45,
-      publisherId: user2._id.toString(),
-      publisherName: '小红',
-      locationAddress: '徐家汇',
-      category: '调试'
-    });
-
-    console.log('默认测试数据创建完成（2个任务）');
+// ========== 初始化数据库表 ==========
+async function initTables() {
+  try {
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE,
+        password TEXT,
+        nickname TEXT,
+        phone TEXT,
+        balance INTEGER DEFAULT 100,
+        frozenBalance INTEGER DEFAULT 0,
+        credit INTEGER DEFAULT 60,
+        idCardVerified INTEGER DEFAULT 0,
+        signature TEXT,
+        hometown TEXT,
+        avatar TEXT,
+        deletedConversations TEXT
+      )
+    `);
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS tasks (
+        id TEXT PRIMARY KEY,
+        title TEXT,
+        description TEXT,
+        reward INTEGER,
+        status TEXT DEFAULT 'available',
+        publisherId TEXT,
+        publisherName TEXT,
+        publisherPhone TEXT,
+        locationAddress TEXT,
+        latitude REAL,
+        longitude REAL,
+        takerId TEXT,
+        takerName TEXT,
+        takenAt INTEGER,
+        travelStatus TEXT DEFAULT 'idle',
+        travelStartTime INTEGER,
+        estimatedMinutes INTEGER,
+        takerCompleted INTEGER DEFAULT 0,
+        proofMedia TEXT,
+        mediaList TEXT,
+        category TEXT,
+        createdAt INTEGER,
+        updatedAt INTEGER
+      )
+    `);
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id TEXT PRIMARY KEY,
+        taskId TEXT,
+        senderId TEXT,
+        senderName TEXT,
+        text TEXT,
+        isNego INTEGER DEFAULT 0,
+        time TEXT,
+        read INTEGER DEFAULT 0,
+        createdAt INTEGER
+      )
+    `);
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS bills (
+        id TEXT PRIMARY KEY,
+        userId TEXT,
+        type TEXT,
+        amount INTEGER,
+        desc TEXT,
+        createdAt INTEGER
+      )
+    `);
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS creditlogs (
+        id TEXT PRIMARY KEY,
+        userId TEXT,
+        reason TEXT,
+        change INTEGER,
+        createdAt INTEGER
+      )
+    `);
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS geocodecaches (
+        address TEXT PRIMARY KEY,
+        lat REAL,
+        lng REAL,
+        expires INTEGER
+      )
+    `);
+    await turso.execute(`
+      CREATE TABLE IF NOT EXISTS ratings (
+        id TEXT PRIMARY KEY,
+        taskId TEXT,
+        fromUserId TEXT,
+        toUserId TEXT,
+        rating INTEGER,
+        comment TEXT,
+        createdAt INTEGER
+      )
+    `);
+    console.log('✅ 所有表已创建/确认');
+  } catch (err) {
+    console.error('❌ 建表失败:', err);
   }
 }
 
-// ========== 注册 ==========
+// ========== 初始化默认数据 ==========
+async function initDefaultData() {
+  try {
+    const count = await turso.execute('SELECT COUNT(*) as count FROM users');
+    if (count.rows[0].count === 0) {
+      const hashedPwd = await bcrypt.hash('123456', 10);
+      const userId1 = generateId();
+      const userId2 = generateId();
+      await turso.execute({
+        sql: 'INSERT INTO users (id, username, password, nickname, phone, balance, credit, idCardVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        args: [userId1, 'xiaoming', hashedPwd, '小明', '13800000001', 200, 85, 1],
+      });
+      await turso.execute({
+        sql: 'INSERT INTO users (id, username, password, nickname, phone, balance, credit, idCardVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        args: [userId2, 'hong', hashedPwd, '小红', '13800000002', 150, 72, 1],
+      });
+
+      const taskId1 = generateId();
+      const taskId2 = generateId();
+      await turso.execute({
+        sql: 'INSERT INTO tasks (id, title, description, reward, publisherId, publisherName, locationAddress, category, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        args: [taskId1, '帮忙取快递', '西门驿站取件送到3栋', 12, userId1, '小明', '上海交大闵行', '取件', Date.now()],
+      });
+      await turso.execute({
+        sql: 'INSERT INTO tasks (id, title, description, reward, publisherId, publisherName, locationAddress, category, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        args: [taskId2, '前端页面调试', 'CSS样式错位', 45, userId2, '小红', '徐家汇', '调试', Date.now()],
+      });
+      console.log('默认测试数据创建完成（2个任务）');
+    }
+  } catch (err) {
+    console.error('初始化默认数据失败:', err);
+  }
+}
+
+// ========== 路由 ==========
+
+// 注册
 app.post('/api/register', async (req, res) => {
   const { username, password, nickname, phone } = req.body;
-  const exist = await User.findOne({ username });
-  if (exist) return res.status(400).json({ error: '用户名已存在' });
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const user = new User({ username, password: hashedPassword, nickname: nickname || username, phone });
-  await user.save();
-  await CreditLog.create({ userId: user._id, reason: '注册奖励', change: 60 });
-  res.json({ success: true });
+  try {
+    const exist = await turso.execute({
+      sql: 'SELECT id FROM users WHERE username = ?',
+      args: [username],
+    });
+    if (exist.rows.length > 0) {
+      return res.status(400).json({ error: '用户名已存在' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const userId = generateId();
+    await turso.execute({
+      sql: 'INSERT INTO users (id, username, password, nickname, phone) VALUES (?, ?, ?, ?, ?)',
+      args: [userId, username, hashedPassword, nickname || username, phone || ''],
+    });
+    // 信用日志
+    await turso.execute({
+      sql: 'INSERT INTO creditlogs (id, userId, reason, change, createdAt) VALUES (?, ?, ?, ?, ?)',
+      args: [generateId(), userId, '注册奖励', 60, Date.now()],
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('注册失败:', err);
+    res.status(500).json({ error: '注册失败' });
+  }
 });
 
-// ========== 登录 ==========
+// 登录
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
-  const user = await User.findOne({ username });
-  if (!user) return res.status(401).json({ error: '用户名或密码错误' });
-
-  let isValid = false;
   try {
-    isValid = await bcrypt.compare(password, user.password);
-  } catch(e) { isValid = false; }
-
-  if (!isValid && user.password && user.password.length < 60) {
-    if (user.password === password) {
-      isValid = true;
-      const hashedPassword = await bcrypt.hash(password, 10);
-      await User.updateOne({ _id: user._id }, { $set: { password: hashedPassword } });
-      console.log(`用户 ${username} 的密码已从明文升级为 bcrypt`);
+    const user = await turso.execute({
+      sql: 'SELECT * FROM users WHERE username = ?',
+      args: [username],
+    });
+    if (user.rows.length === 0) {
+      return res.status(401).json({ error: '用户名或密码错误' });
     }
+    const userData = user.rows[0];
+    const isValid = await bcrypt.compare(password, userData.password);
+    if (!isValid) {
+      return res.status(401).json({ error: '用户名或密码错误' });
+    }
+    const token = jwt.sign({ userId: userData.id }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: userData.id,
+        username: userData.username,
+        nickname: userData.nickname,
+        balance: userData.balance,
+        frozenBalance: userData.frozenBalance,
+        credit: userData.credit,
+        idCardVerified: userData.idCardVerified === 1,
+        signature: userData.signature,
+        hometown: userData.hometown,
+        avatar: userData.avatar,
+        phone: userData.phone,
+      },
+    });
+  } catch (err) {
+    console.error('登录失败:', err);
+    res.status(500).json({ error: '登录失败' });
   }
-
-  if (!isValid) return res.status(401).json({ error: '用户名或密码错误' });
-
-  const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({
-    success: true,
-    token,
-    user: {
-      id: user._id,
-      username: user.username,
-      nickname: user.nickname,
-      balance: user.balance,
-      frozenBalance: user.frozenBalance,
-      credit: user.credit,
-      idCardVerified: user.idCardVerified,
-      signature: user.signature,
-      hometown: user.hometown,
-      avatar: user.avatar,
-      phone: user.phone
-    }
-  });
 });
 
-// ========== 任务接口 ==========
+// 获取任务列表（available）
 app.get('/api/tasks', async (req, res) => {
   try {
-    const tasks = await Task.aggregate([
-      { $match: { status: 'available' } },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'publisherId',
-          foreignField: '_id',
-          as: 'publisher'
-        }
-      },
-      { $unwind: { path: '$publisher', preserveNullAndEmptyArrays: true } },
-      {
-        $addFields: {
-          publisherName: {
-            $ifNull: [
-              '$publisherName',
-              { $ifNull: ['$publisher.nickname', '$publisher.username'] }
-            ]
-          }
-        }
-      },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          description: 1,
-          reward: 1,
-          status: 1,
-          publisherId: 1,
-          publisherName: 1,
-          publisherPhone: 1,
-          locationAddress: 1,
-          latitude: 1,
-          longitude: 1,
-          takerId: 1,
-          takerName: 1,
-          takenAt: 1,
-          travelStatus: 1,
-          travelStartTime: 1,
-          estimatedMinutes: 1,
-          takerCompleted: 1,
-          proofMedia: 1,
-          mediaList: 1,
-          category: 1,
-          createdAt: 1,
-          updatedAt: 1
-        }
-      },
-      { $sort: { createdAt: -1 } },
-      { $limit: 100 }
-    ]);
-    tasks.forEach(t => { if (!t.publisherName) t.publisherName = '未知用户'; });
-    res.json(tasks);
+    const tasks = await turso.execute(
+      'SELECT * FROM tasks WHERE status = "available" ORDER BY createdAt DESC LIMIT 100'
+    );
+    res.json(tasks.rows);
   } catch (err) {
     console.error('获取任务列表失败:', err);
     res.status(500).json({ error: '获取任务列表失败' });
   }
 });
 
+// 获取所有任务（分页）
 app.get('/api/tasks/all', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
-
-    const total = await Task.countDocuments();
-    const tasks = await Task.find()
-      .select('-mediaList -proofMedia')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
-    tasks.forEach(t => { if (!t.publisherName) t.publisherName = '未知用户'; });
+    const offset = (page - 1) * limit;
+    const total = await turso.execute('SELECT COUNT(*) as count FROM tasks');
+    const tasks = await turso.execute({
+      sql: 'SELECT * FROM tasks ORDER BY createdAt DESC LIMIT ? OFFSET ?',
+      args: [limit, offset],
+    });
     res.json({
-      tasks,
-      total,
+      tasks: tasks.rows,
+      total: total.rows[0].count,
       page,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total.rows[0].count / limit),
     });
   } catch (err) {
     console.error('获取所有任务失败:', err);
@@ -417,315 +359,469 @@ app.get('/api/tasks/all', async (req, res) => {
   }
 });
 
+// 获取单个任务
 app.get('/api/tasks/:id', async (req, res) => {
   try {
-    const task = await Task.aggregate([
-      { $match: { _id: new mongoose.Types.ObjectId(req.params.id) } },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'publisherId',
-          foreignField: '_id',
-          as: 'publisher'
-        }
-      },
-      { $unwind: { path: '$publisher', preserveNullAndEmptyArrays: true } },
-      {
-        $addFields: {
-          publisherName: {
-            $ifNull: [
-              '$publisherName',
-              { $ifNull: ['$publisher.nickname', '$publisher.username'] }
-            ]
-          }
-        }
-      },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          description: 1,
-          reward: 1,
-          status: 1,
-          publisherId: 1,
-          publisherName: 1,
-          publisherPhone: 1,
-          locationAddress: 1,
-          latitude: 1,
-          longitude: 1,
-          takerId: 1,
-          takerName: 1,
-          takenAt: 1,
-          travelStatus: 1,
-          travelStartTime: 1,
-          estimatedMinutes: 1,
-          takerCompleted: 1,
-          proofMedia: 1,
-          mediaList: 1,
-          category: 1,
-          createdAt: 1,
-          updatedAt: 1
-        }
-      }
-    ]);
-    if (!task || task.length === 0) {
+    const task = await turso.execute({
+      sql: 'SELECT * FROM tasks WHERE id = ?',
+      args: [req.params.id],
+    });
+    if (task.rows.length === 0) {
       return res.status(404).json({ error: '任务不存在' });
     }
-    if (!task[0].publisherName) task[0].publisherName = '未知用户';
-    res.json(task[0]);
+    // 补充 publisherName（如果缺失）
+    const t = task.rows[0];
+    if (!t.publisherName) {
+      const user = await turso.execute({
+        sql: 'SELECT nickname, username FROM users WHERE id = ?',
+        args: [t.publisherId],
+      });
+      if (user.rows.length > 0) {
+        t.publisherName = user.rows[0].nickname || user.rows[0].username || '未知用户';
+      } else {
+        t.publisherName = '未知用户';
+      }
+    }
+    res.json(t);
   } catch (err) {
     console.error('获取任务详情失败:', err);
     res.status(500).json({ error: '获取任务详情失败' });
   }
 });
 
+// 发布任务
 app.post('/api/tasks', authMiddleware, async (req, res) => {
   const { title, description, reward, publisherName, publisherPhone, locationAddress, latitude, longitude, mediaList, category } = req.body;
   const publisherId = req.userId;
-  const user = await User.findById(publisherId);
-  if (!user) return res.status(404).json({ error: '用户不存在' });
-  if (!user.idCardVerified) return res.status(403).json({ error: '请先实名认证' });
-  if (reward > user.balance) return res.status(400).json({ error: '余额不足' });
-  await updateUserBalance(publisherId, -reward, reward);
-  const task = new Task({
-    title, description, reward, publisherId: publisherId.toString(),
-    publisherName: publisherName || user.nickname || user.username || '未知用户',
-    publisherPhone,
-    locationAddress, latitude, longitude, mediaList, category, status: 'available'
-  });
-  await task.save();
-  await Bill.create({ userId: publisherId, type: 'expense', amount: -reward, desc: `发布任务冻结：${title}` });
-  res.json(task);
+  try {
+    const user = await turso.execute({
+      sql: 'SELECT * FROM users WHERE id = ?',
+      args: [publisherId],
+    });
+    if (user.rows.length === 0) return res.status(404).json({ error: '用户不存在' });
+    const userData = user.rows[0];
+    if (!userData.idCardVerified) return res.status(403).json({ error: '请先实名认证' });
+    if (reward > userData.balance) return res.status(400).json({ error: '余额不足' });
+    // 扣余额
+    await turso.execute({
+      sql: 'UPDATE users SET balance = balance - ?, frozenBalance = frozenBalance + ? WHERE id = ?',
+      args: [reward, reward, publisherId],
+    });
+    const taskId = generateId();
+    await turso.execute({
+      sql: `INSERT INTO tasks (
+        id, title, description, reward, publisherId, publisherName, publisherPhone,
+        locationAddress, latitude, longitude, mediaList, category, status, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        taskId,
+        title,
+        description || '',
+        reward,
+        publisherId,
+        publisherName || userData.nickname || userData.username || '未知用户',
+        publisherPhone || '',
+        locationAddress || '',
+        latitude || 0,
+        longitude || 0,
+        JSON.stringify(mediaList || []),
+        category || '',
+        'available',
+        Date.now(),
+        Date.now(),
+      ],
+    });
+    // 记录账单
+    await turso.execute({
+      sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+      args: [generateId(), publisherId, 'expense', -reward, `发布任务冻结：${title}`, Date.now()],
+    });
+    const newTask = await turso.execute({
+      sql: 'SELECT * FROM tasks WHERE id = ?',
+      args: [taskId],
+    });
+    res.json(newTask.rows[0]);
+  } catch (err) {
+    console.error('发布任务失败:', err);
+    res.status(500).json({ error: '发布任务失败' });
+  }
 });
 
+// 取消任务
 app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
   const userId = req.userId;
-  const task = await Task.findById(req.params.id).select('status publisherId reward title').lean();
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.publisherId.toString() !== userId.toString()) return res.status(403).json({ error: '无权取消' });
-  if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成' });
-  await Task.updateOne({ _id: req.params.id }, { $set: { status: 'cancelled', updatedAt: new Date() } });
-  await updateUserBalance(userId, task.reward, -task.reward);
-  await Bill.create({ userId, type: 'income', amount: task.reward, desc: `取消任务退款：${task.title || '未命名任务'}` });
-  res.json({ success: true });
+  try {
+    const task = await turso.execute({
+      sql: 'SELECT status, publisherId, reward, title FROM tasks WHERE id = ?',
+      args: [req.params.id],
+    });
+    if (task.rows.length === 0) return res.status(404).json({ error: '任务不存在' });
+    const t = task.rows[0];
+    if (t.publisherId !== userId) return res.status(403).json({ error: '无权取消' });
+    if (t.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成' });
+    await turso.execute({
+      sql: 'UPDATE tasks SET status = "cancelled", updatedAt = ? WHERE id = ?',
+      args: [Date.now(), req.params.id],
+    });
+    await turso.execute({
+      sql: 'UPDATE users SET balance = balance + ?, frozenBalance = frozenBalance - ? WHERE id = ?',
+      args: [t.reward, t.reward, userId],
+    });
+    await turso.execute({
+      sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+      args: [generateId(), userId, 'income', t.reward, `取消任务退款：${t.title}`, Date.now()],
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('取消任务失败:', err);
+    res.status(500).json({ error: '取消任务失败' });
+  }
 });
 
+// 接取任务
 app.put('/api/tasks/:id/accept', authMiddleware, async (req, res) => {
   const takerId = req.userId;
   const { takerName } = req.body;
-  const task = await Task.findById(req.params.id);
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取' });
-  task.status = 'ongoing';
-  task.takerId = takerId.toString();
-  task.takerName = takerName;
-  task.takenAt = new Date();
-  await task.save();
-  res.json({ success: true });
+  try {
+    const task = await turso.execute({
+      sql: 'SELECT * FROM tasks WHERE id = ?',
+      args: [req.params.id],
+    });
+    if (task.rows.length === 0) return res.status(404).json({ error: '任务不存在' });
+    const t = task.rows[0];
+    if (t.status !== 'available') return res.status(400).json({ error: '任务已被接取' });
+    await turso.execute({
+      sql: 'UPDATE tasks SET status = "ongoing", takerId = ?, takerName = ?, takenAt = ?, updatedAt = ? WHERE id = ?',
+      args: [takerId, takerName || '未知用户', Date.now(), Date.now(), req.params.id],
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('接取任务失败:', err);
+    res.status(500).json({ error: '接取任务失败' });
+  }
 });
 
+// 取消接取
 app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
   const userId = req.userId;
-  const task = await Task.findById(req.params.id);
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.takerId !== userId) return res.status(403).json({ error: '无权取消' });
-  if (task.status !== 'ongoing') return res.status(400).json({ error: '状态错误' });
-  task.status = 'available';
-  task.takerId = null;
-  task.takerName = null;
-  task.takenAt = null;
-  task.travelStatus = 'idle';
-  task.travelStartTime = null;
-  task.estimatedMinutes = null;
-  task.takerCompleted = false;
-  await task.save();
-  const user = await User.findById(userId);
-  if (user) {
-    const newCredit = Math.max(0, user.credit - 5);
-    await User.findByIdAndUpdate(userId, { credit: newCredit });
-    await CreditLog.create({ userId, reason: '取消接取任务', change: -5 });
+  try {
+    const task = await turso.execute({
+      sql: 'SELECT * FROM tasks WHERE id = ?',
+      args: [req.params.id],
+    });
+    if (task.rows.length === 0) return res.status(404).json({ error: '任务不存在' });
+    const t = task.rows[0];
+    if (t.takerId !== userId) return res.status(403).json({ error: '无权取消' });
+    if (t.status !== 'ongoing') return res.status(400).json({ error: '状态错误' });
+    await turso.execute({
+      sql: 'UPDATE tasks SET status = "available", takerId = NULL, takerName = NULL, takenAt = NULL, travelStatus = "idle", travelStartTime = NULL, estimatedMinutes = NULL, takerCompleted = 0, updatedAt = ? WHERE id = ?',
+      args: [Date.now(), req.params.id],
+    });
+    // 扣除信用分
+    const user = await turso.execute({
+      sql: 'SELECT credit FROM users WHERE id = ?',
+      args: [userId],
+    });
+    if (user.rows.length > 0) {
+      const newCredit = Math.max(0, user.rows[0].credit - 5);
+      await turso.execute({
+        sql: 'UPDATE users SET credit = ? WHERE id = ?',
+        args: [newCredit, userId],
+      });
+      await turso.execute({
+        sql: 'INSERT INTO creditlogs (id, userId, reason, change, createdAt) VALUES (?, ?, ?, ?, ?)',
+        args: [generateId(), userId, '取消接取任务', -5, Date.now()],
+      });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('取消接取失败:', err);
+    res.status(500).json({ error: '取消接取失败' });
   }
-  res.json({ success: true });
 });
 
+// 更新任务状态（travelStatus等）
 app.put('/api/tasks/:id/status', authMiddleware, async (req, res) => {
   const { travelStatus, estimatedMinutes, travelStartTime } = req.body;
-  const update = { updatedAt: new Date() };
+  const update = {};
   if (travelStatus !== undefined) update.travelStatus = travelStatus;
   if (estimatedMinutes !== undefined) update.estimatedMinutes = estimatedMinutes;
   if (travelStartTime !== undefined) update.travelStartTime = travelStartTime;
-  await Task.updateOne({ _id: req.params.id }, { $set: update });
-  res.json({ success: true });
+  update.updatedAt = Date.now();
+  try {
+    const fields = Object.keys(update).map(k => `${k} = ?`).join(', ');
+    const values = Object.values(update);
+    values.push(req.params.id);
+    await turso.execute({
+      sql: `UPDATE tasks SET ${fields} WHERE id = ?`,
+      args: values,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('更新任务状态失败:', err);
+    res.status(500).json({ error: '更新任务状态失败' });
+  }
 });
 
+// 提交凭证
 app.post('/api/tasks/:id/submit-proof', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { proofMedia } = req.body;
-  const task = await Task.findById(req.params.id);
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.takerId !== userId) return res.status(403).json({ error: '只有接取者可提交凭证' });
-  if (task.status !== 'ongoing') return res.status(400).json({ error: '任务状态不正确' });
-  task.proofMedia = proofMedia;
-  task.takerCompleted = true;
-  await task.save();
-  res.json({ success: true });
+  try {
+    const task = await turso.execute({
+      sql: 'SELECT * FROM tasks WHERE id = ?',
+      args: [req.params.id],
+    });
+    if (task.rows.length === 0) return res.status(404).json({ error: '任务不存在' });
+    const t = task.rows[0];
+    if (t.takerId !== userId) return res.status(403).json({ error: '只有接取者可提交凭证' });
+    if (t.status !== 'ongoing') return res.status(400).json({ error: '任务状态不正确' });
+    await turso.execute({
+      sql: 'UPDATE tasks SET proofMedia = ?, takerCompleted = 1, updatedAt = ? WHERE id = ?',
+      args: [JSON.stringify(proofMedia || []), Date.now(), req.params.id],
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('提交凭证失败:', err);
+    res.status(500).json({ error: '提交凭证失败' });
+  }
 });
 
+// 确认支付
 app.post('/api/tasks/:id/confirm-payment', authMiddleware, async (req, res) => {
   const userId = req.userId;
-  const task = await Task.findById(req.params.id);
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.publisherId !== userId) return res.status(403).json({ error: '只有发布者可确认' });
-  if (task.status !== 'ongoing' || !task.takerCompleted) {
-    return res.status(400).json({ error: '接取者尚未提交凭证' });
+  try {
+    const task = await turso.execute({
+      sql: 'SELECT * FROM tasks WHERE id = ?',
+      args: [req.params.id],
+    });
+    if (task.rows.length === 0) return res.status(404).json({ error: '任务不存在' });
+    const t = task.rows[0];
+    if (t.publisherId !== userId) return res.status(403).json({ error: '只有发布者可确认' });
+    if (t.status !== 'ongoing' || !t.takerCompleted) {
+      return res.status(400).json({ error: '接取者尚未提交凭证' });
+    }
+    // 转账：发布者减少冻结余额，接取者增加余额
+    await turso.execute({
+      sql: 'UPDATE users SET balance = balance + ?, frozenBalance = frozenBalance - ? WHERE id = ?',
+      args: [t.reward, t.reward, t.publisherId],
+    });
+    await turso.execute({
+      sql: 'UPDATE users SET balance = balance + ? WHERE id = ?',
+      args: [t.reward, t.takerId],
+    });
+    await turso.execute({
+      sql: 'UPDATE tasks SET status = "completed", updatedAt = ? WHERE id = ?',
+      args: [Date.now(), req.params.id],
+    });
+    // 账单
+    await turso.execute({
+      sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+      args: [generateId(), t.takerId, 'income', t.reward, `完成任务：${t.title}`, Date.now()],
+    });
+    // 信用+5
+    await turso.execute({
+      sql: 'UPDATE users SET credit = credit + 5 WHERE id = ?',
+      args: [t.takerId],
+    });
+    await turso.execute({
+      sql: 'INSERT INTO creditlogs (id, userId, reason, change, createdAt) VALUES (?, ?, ?, ?, ?)',
+      args: [generateId(), t.takerId, `完成任务“${t.title}”`, 5, Date.now()],
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('确认支付失败:', err);
+    res.status(500).json({ error: '确认支付失败' });
   }
-  await updateUserBalance(task.publisherId, 0, -task.reward);
-  await updateUserBalance(task.takerId, task.reward, 0);
-  task.status = 'completed';
-  await task.save();
-  await Bill.create({ userId: task.takerId, type: 'income', amount: task.reward, desc: `完成任务：${task.title}` });
-  await CreditLog.create({ userId: task.takerId, reason: `完成任务“${task.title}”`, change: 5 });
-  await User.findByIdAndUpdate(task.takerId, { $inc: { credit: 5 } });
-  res.json({ success: true });
 });
 
+// 修改赏金
 app.put('/api/tasks/:id/reward', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { reward: newReward } = req.body;
-  const task = await Task.findById(req.params.id);
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.publisherId !== userId) return res.status(403).json({ error: '只有发布者可修改赏金' });
-  if (task.status !== 'available') return res.status(400).json({ error: '任务已被接取，无法修改' });
-  const diff = newReward - task.reward;
-  if (diff > 0) {
-    await updateUserBalance(userId, -diff, diff);
-  } else if (diff < 0) {
-    await updateUserBalance(userId, -diff, diff);
+  try {
+    const task = await turso.execute({
+      sql: 'SELECT * FROM tasks WHERE id = ?',
+      args: [req.params.id],
+    });
+    if (task.rows.length === 0) return res.status(404).json({ error: '任务不存在' });
+    const t = task.rows[0];
+    if (t.publisherId !== userId) return res.status(403).json({ error: '只有发布者可修改赏金' });
+    if (t.status !== 'available') return res.status(400).json({ error: '任务已被接取，无法修改' });
+    const diff = newReward - t.reward;
+    if (diff > 0) {
+      await turso.execute({
+        sql: 'UPDATE users SET balance = balance - ?, frozenBalance = frozenBalance + ? WHERE id = ?',
+        args: [diff, diff, userId],
+      });
+    } else if (diff < 0) {
+      await turso.execute({
+        sql: 'UPDATE users SET balance = balance + ?, frozenBalance = frozenBalance - ? WHERE id = ?',
+        args: [-diff, -diff, userId],
+      });
+    }
+    await turso.execute({
+      sql: 'UPDATE tasks SET reward = ?, updatedAt = ? WHERE id = ?',
+      args: [newReward, Date.now(), req.params.id],
+    });
+    res.json({ success: true, reward: newReward });
+  } catch (err) {
+    console.error('修改赏金失败:', err);
+    res.status(500).json({ error: '修改赏金失败' });
   }
-  task.reward = newReward;
-  await task.save();
-  res.json({ success: true, reward: newReward });
 });
 
+// 获取用户信息
 app.get('/api/user/:id', async (req, res) => {
-  const user = await User.findById(req.params.id).lean();
-  if (!user) return res.status(404).json({ error: '用户不存在' });
-  res.json(user);
+  try {
+    const user = await turso.execute({
+      sql: 'SELECT id, username, nickname, phone, balance, frozenBalance, credit, idCardVerified, signature, hometown, avatar FROM users WHERE id = ?',
+      args: [req.params.id],
+    });
+    if (user.rows.length === 0) return res.status(404).json({ error: '用户不存在' });
+    const u = user.rows[0];
+    res.json({
+      ...u,
+      idCardVerified: u.idCardVerified === 1,
+    });
+  } catch (err) {
+    console.error('获取用户信息失败:', err);
+    res.status(500).json({ error: '获取用户信息失败' });
+  }
 });
 
+// 更新用户信息
 app.put('/api/user/:id', authMiddleware, async (req, res) => {
   if (req.params.id !== req.userId) return res.status(403).json({ error: '无权修改' });
-  await User.updateOne({ _id: req.params.id }, { $set: req.body });
-  res.json({ success: true });
+  const updates = req.body;
+  const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+  const values = Object.values(updates);
+  values.push(req.params.id);
+  try {
+    await turso.execute({
+      sql: `UPDATE users SET ${fields} WHERE id = ?`,
+      args: values,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('更新用户信息失败:', err);
+    res.status(500).json({ error: '更新用户信息失败' });
+  }
 });
 
+// 获取账单
 app.get('/api/bills/:userId', authMiddleware, async (req, res) => {
   if (req.params.userId !== req.userId) return res.status(403).json({ error: '无权查看' });
-  const bills = await Bill.find({ userId: req.params.userId }).sort({ createdAt: -1 }).limit(50).lean();
-  res.json(bills);
+  try {
+    const bills = await turso.execute({
+      sql: 'SELECT * FROM bills WHERE userId = ? ORDER BY createdAt DESC LIMIT 50',
+      args: [req.params.userId],
+    });
+    res.json(bills.rows);
+  } catch (err) {
+    console.error('获取账单失败:', err);
+    res.status(500).json({ error: '获取账单失败' });
+  }
 });
 
-// ========== 修复3：添加用户存在性检查 ==========
+// 获取对话列表
 app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
-  const user = await User.findById(userId).lean();
-  if (!user) {
-    return res.status(404).json({ error: '用户不存在' });
-  }
-  const deletedSet = new Set(user.deletedConversations || []);
-  const tasks = await Task.find({
-    $or: [{ publisherId: userId }, { takerId: userId }],
-    status: { $ne: 'cancelled' }
-  })
-  .select('-mediaList -proofMedia')
-  .sort({ updatedAt: -1 })
-  .limit(20)
-  .lean();
-  const conversations = [];
-  for (const task of tasks) {
-    if (deletedSet.has(task._id.toString())) continue;
-    const lastMsg = await Message.findOne({ taskId: task._id.toString() }).sort({ createdAt: -1 }).lean();
-    const unreadCount = await Message.countDocuments({
-      taskId: task._id.toString(),
-      senderId: { $ne: userId },
-      read: false
+  try {
+    const user = await turso.execute({
+      sql: 'SELECT deletedConversations FROM users WHERE id = ?',
+      args: [userId],
     });
-    let otherId = task.publisherId === userId ? task.takerId : task.publisherId;
-    let otherName = task.publisherId === userId ? task.takerName : task.publisherName;
-    if (otherId && otherName) {
-      conversations.push({
-        taskId: task._id,
-        otherId,
-        otherName,
-        lastMsg: lastMsg?.text || null,
-        reward: task.reward,
-        taskTitle: task.title,
-        unread: unreadCount
+    const deletedSet = new Set(user.rows[0]?.deletedConversations ? JSON.parse(user.rows[0].deletedConversations) : []);
+    const tasks = await turso.execute({
+      sql: `SELECT * FROM tasks WHERE (publisherId = ? OR takerId = ?) AND status != 'cancelled' ORDER BY updatedAt DESC LIMIT 20`,
+      args: [userId, userId],
+    });
+    const conversations = [];
+    for (const task of tasks.rows) {
+      if (deletedSet.has(task.id)) continue;
+      const lastMsg = await turso.execute({
+        sql: 'SELECT * FROM messages WHERE taskId = ? ORDER BY createdAt DESC LIMIT 1',
+        args: [task.id],
       });
+      const unreadCount = await turso.execute({
+        sql: 'SELECT COUNT(*) as count FROM messages WHERE taskId = ? AND senderId != ? AND read = 0',
+        args: [task.id, userId],
+      });
+      let otherId = task.publisherId === userId ? task.takerId : task.publisherId;
+      let otherName = task.publisherId === userId ? task.takerName : task.publisherName;
+      if (otherId && otherName) {
+        conversations.push({
+          taskId: task.id,
+          otherId,
+          otherName,
+          lastMsg: lastMsg.rows[0]?.text || null,
+          reward: task.reward,
+          taskTitle: task.title,
+          unread: unreadCount.rows[0].count,
+        });
+      }
     }
+    res.json(conversations);
+  } catch (err) {
+    console.error('获取对话列表失败:', err);
+    res.status(500).json({ error: '获取对话列表失败' });
   }
-  res.json(conversations);
 });
-// =====================================================
 
 // 获取消息
 app.get('/api/messages/:taskId', async (req, res) => {
-  const messages = await Message.find({ taskId: req.params.taskId }).sort({ createdAt: 1 }).lean();
-  res.json(messages);
+  try {
+    const messages = await turso.execute({
+      sql: 'SELECT * FROM messages WHERE taskId = ? ORDER BY createdAt ASC',
+      args: [req.params.taskId],
+    });
+    res.json(messages.rows);
+  } catch (err) {
+    console.error('获取消息失败:', err);
+    res.status(500).json({ error: '获取消息失败' });
+  }
 });
 
-// ========== 发送消息 ==========
+// 发送消息
 app.post('/api/messages', async (req, res) => {
   try {
     const { taskId, senderId, senderName, text, isNego } = req.body;
     if (!taskId || !senderId || !text) {
       return res.status(400).json({ error: '缺少必要参数' });
     }
-
-    const message = new Message({
-      taskId,
-      senderId,
-      senderName,
-      text,
-      isNego: isNego || false,
-      time: new Date().toISOString(),
-      read: false,
-      createdAt: new Date()
+    const messageId = generateId();
+    const now = Date.now();
+    await turso.execute({
+      sql: 'INSERT INTO messages (id, taskId, senderId, senderName, text, isNego, time, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      args: [messageId, taskId, senderId, senderName, text, isNego ? 1 : 0, new Date().toISOString(), now],
     });
-    await message.save();
+    const newMsg = { id: messageId, taskId, senderId, senderName, text, isNego: !!isNego, time: new Date().toISOString(), createdAt: now, read: 0 };
 
-    const task = await Task.findById(taskId);
-    if (!task) {
+    // 获取任务，确定接收方
+    const task = await turso.execute({
+      sql: 'SELECT * FROM tasks WHERE id = ?',
+      args: [taskId],
+    });
+    if (task.rows.length === 0) {
       return res.status(404).json({ error: '任务不存在' });
     }
-
+    const t = task.rows[0];
     let receiverId = null;
-    if (task.publisherId && task.publisherId.toString() === senderId) {
-      receiverId = task.takerId;
-    } else if (task.takerId && task.takerId.toString() === senderId) {
-      receiverId = task.publisherId;
+    if (t.publisherId === senderId) {
+      receiverId = t.takerId;
+    } else if (t.takerId === senderId) {
+      receiverId = t.publisherId;
     }
-
     if (receiverId) {
-      const payload = {
-        type: 'new_message',
-        data: {
-          _id: message._id,
-          taskId: message.taskId,
-          senderId: message.senderId,
-          senderName: message.senderName,
-          text: message.text,
-          isNego: message.isNego,
-          time: message.time,
-          createdAt: message.createdAt,
-          read: message.read
-        }
-      };
-      sendToUser(receiverId, payload);
+      const payload = { type: 'new_message', data: newMsg };
+      const sent = sendToUser(receiverId, payload);
+      console.log(`推送结果: ${sent ? '✅ 成功' : '❌ 失败'}, 接收方: ${receiverId}`);
+    } else {
+      console.log('❌ 未找到接收方');
     }
-
-    res.json(message);
+    res.json(newMsg);
   } catch (err) {
     console.error('发送消息失败:', err);
     res.status(500).json({ error: '发送消息失败' });
@@ -736,29 +832,61 @@ app.post('/api/messages', async (req, res) => {
 app.put('/api/messages/read/:taskId/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权操作' });
-  await Message.updateMany(
-    { taskId, senderId: { $ne: userId }, read: false },
-    { $set: { read: true } }
-  );
-  res.json({ success: true });
+  try {
+    await turso.execute({
+      sql: 'UPDATE messages SET read = 1 WHERE taskId = ? AND senderId != ? AND read = 0',
+      args: [taskId, userId],
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('标记已读失败:', err);
+    res.status(500).json({ error: '标记已读失败' });
+  }
 });
 
 // 删除消息
 app.delete('/api/messages/:messageId', authMiddleware, async (req, res) => {
   const userId = req.userId;
-  const message = await Message.findById(req.params.messageId);
-  if (!message) return res.status(404).json({ error: '消息不存在' });
-  if (message.senderId !== userId) return res.status(403).json({ error: '无权删除' });
-  await Message.deleteOne({ _id: req.params.messageId });
-  res.json({ success: true });
+  try {
+    const msg = await turso.execute({
+      sql: 'SELECT senderId FROM messages WHERE id = ?',
+      args: [req.params.messageId],
+    });
+    if (msg.rows.length === 0) return res.status(404).json({ error: '消息不存在' });
+    if (msg.rows[0].senderId !== userId) return res.status(403).json({ error: '无权删除' });
+    await turso.execute({
+      sql: 'DELETE FROM messages WHERE id = ?',
+      args: [req.params.messageId],
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('删除消息失败:', err);
+    res.status(500).json({ error: '删除消息失败' });
+  }
 });
 
 // 删除对话
 app.delete('/api/conversations/:taskId/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权操作' });
-  await User.updateOne({ _id: userId }, { $addToSet: { deletedConversations: taskId } });
-  res.json({ success: true });
+  try {
+    const user = await turso.execute({
+      sql: 'SELECT deletedConversations FROM users WHERE id = ?',
+      args: [userId],
+    });
+    const list = user.rows[0]?.deletedConversations ? JSON.parse(user.rows[0].deletedConversations) : [];
+    if (!list.includes(taskId)) {
+      list.push(taskId);
+      await turso.execute({
+        sql: 'UPDATE users SET deletedConversations = ? WHERE id = ?',
+        args: [JSON.stringify(list), userId],
+      });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('删除对话失败:', err);
+    res.status(500).json({ error: '删除对话失败' });
+  }
 });
 
 // 上传文件
@@ -770,38 +898,39 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// 地理编码（直接调用高德 API）
 const AMAP_KEY = '30107d62cf0ec682643d1097a48f7da4';
 
-// 地理编码
 app.post('/api/geocode', async (req, res) => {
   const { address } = req.body;
   if (!address) return res.status(400).json({ error: '地址不能为空' });
   try {
-    let cached = await GeocodeCache.findOne({ address });
-    if (cached && cached.expires > Date.now()) {
-      return res.json({ lat: cached.lat, lng: cached.lng });
+    let cached = await turso.execute({
+      sql: 'SELECT * FROM geocodecaches WHERE address = ? AND expires > ?',
+      args: [address, Date.now()],
+    });
+    if (cached.rows.length > 0) {
+      const c = cached.rows[0];
+      return res.json({ lat: c.lat, lng: c.lng });
     }
+    // 调用高德 API
     const url = `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(address)}&key=${AMAP_KEY}&output=JSON`;
-    const response = await fetchWithTimeout(url, {}, 5000);
+    const response = await fetch(url);
     const data = await response.json();
     if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
       const loc = data.geocodes[0].location.split(',');
       const lng = parseFloat(loc[0]);
       const lat = parseFloat(loc[1]);
-      if (cached) {
-        cached.lat = lat;
-        cached.lng = lng;
-        cached.expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
-        await cached.save();
-      } else {
-        await GeocodeCache.create({ address, lat, lng });
-      }
+      await turso.execute({
+        sql: 'INSERT OR REPLACE INTO geocodecaches (address, lat, lng, expires) VALUES (?, ?, ?, ?)',
+        args: [address, lat, lng, Date.now() + 7 * 24 * 60 * 60 * 1000],
+      });
       res.json({ lat, lng });
     } else {
       res.status(404).json({ error: '地址无法解析' });
     }
   } catch (err) {
-    console.error('地理编码错误', err);
+    console.error('地理编码错误:', err);
     res.status(500).json({ error: '地理编码失败' });
   }
 });
@@ -812,24 +941,16 @@ app.post('/api/regeo', async (req, res) => {
   if (!lat || !lng) return res.status(400).json({ error: '缺少经纬度' });
   try {
     const url = `https://restapi.amap.com/v3/geocode/regeo?output=json&location=${lng},${lat}&key=${AMAP_KEY}&radius=200&extensions=all`;
-    const response = await fetchWithTimeout(url, {}, 5000);
+    const response = await fetch(url);
     const data = await response.json();
     if (data.status === '1' && data.regeocode) {
-      const addrComp = data.regeocode.addressComponent;
-      const formatted = data.regeocode.formatted_address;
-      let street = addrComp.streetNumber?.street || '';
-      let number = addrComp.streetNumber?.number || '';
-      let building = addrComp.building?.name || '';
-      let detailedAddress = formatted;
-      if (street && number && !detailedAddress.includes(street)) detailedAddress += ` ${street}${number}`;
-      else if (street && !detailedAddress.includes(street)) detailedAddress += ` ${street}`;
-      if (building && !detailedAddress.includes(building)) detailedAddress += ` ${building}`;
-      res.json({ address: detailedAddress });
+      const formatted = data.regeocode.formatted_address || '';
+      res.json({ address: formatted });
     } else {
       res.status(404).json({ error: '无法解析位置' });
     }
   } catch (err) {
-    console.error('逆地理编码错误', err);
+    console.error('逆地理编码错误:', err);
     res.status(500).json({ error: '逆地理编码失败' });
   }
 });
@@ -839,8 +960,16 @@ app.post('/api/verify-id', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { realName, idCard } = req.body;
   if (realName && idCard.length >= 15) {
-    await User.updateOne({ _id: userId }, { $set: { idCardVerified: true } });
-    res.json({ success: true });
+    try {
+      await turso.execute({
+        sql: 'UPDATE users SET idCardVerified = 1 WHERE id = ?',
+        args: [userId],
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('实名认证失败:', err);
+      res.status(500).json({ error: '实名认证失败' });
+    }
   } else {
     res.status(400).json({ error: '认证信息无效' });
   }
@@ -849,90 +978,117 @@ app.post('/api/verify-id', authMiddleware, async (req, res) => {
 // 信用日志
 app.get('/api/credit-logs/:userId', authMiddleware, async (req, res) => {
   if (req.params.userId !== req.userId) return res.status(403).json({ error: '无权查看' });
-  const logs = await CreditLog.find({ userId: req.params.userId }).sort({ createdAt: -1 }).lean();
-  res.json(logs);
+  try {
+    const logs = await turso.execute({
+      sql: 'SELECT * FROM creditlogs WHERE userId = ? ORDER BY createdAt DESC',
+      args: [req.params.userId],
+    });
+    res.json(logs.rows);
+  } catch (err) {
+    console.error('获取信用日志失败:', err);
+    res.status(500).json({ error: '获取信用日志失败' });
+  }
 });
 
 // 评价相关
 app.get('/api/ratings/task/:taskId/user/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
-  const rating = await Rating.findOne({ taskId, fromUserId: userId }).lean();
-  res.json(rating || null);
+  try {
+    const rating = await turso.execute({
+      sql: 'SELECT * FROM ratings WHERE taskId = ? AND fromUserId = ?',
+      args: [taskId, userId],
+    });
+    res.json(rating.rows[0] || null);
+  } catch (err) {
+    console.error('获取评价失败:', err);
+    res.status(500).json({ error: '获取评价失败' });
+  }
 });
 
 app.get('/api/ratings/user/:userId', authMiddleware, async (req, res) => {
   if (req.params.userId !== req.userId) return res.status(403).json({ error: '无权查看' });
-  const ratings = await Rating.find({ toUserId: req.params.userId })
-    .populate('fromUserId', 'nickname')
-    .sort({ createdAt: -1 })
-    .lean();
-  res.json(ratings);
+  try {
+    const ratings = await turso.execute({
+      sql: 'SELECT * FROM ratings WHERE toUserId = ? ORDER BY createdAt DESC',
+      args: [req.params.userId],
+    });
+    res.json(ratings.rows);
+  } catch (err) {
+    console.error('获取用户评价失败:', err);
+    res.status(500).json({ error: '获取用户评价失败' });
+  }
 });
 
 app.post('/api/ratings', authMiddleware, async (req, res) => {
   const { taskId, toUserId, rating, comment } = req.body;
   const fromUserId = req.userId;
-  
-  if (!taskId || !toUserId || rating === undefined) {
-    return res.status(400).json({ error: '缺少必要参数' });
-  }
-  if (rating < 1 || rating > 5) {
-    return res.status(400).json({ error: '评分必须为1-5' });
-  }
-  if (fromUserId === toUserId) {
-    return res.status(400).json({ error: '不能给自己评价' });
-  }
-
-  const task = await Task.findById(taskId);
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.status !== 'completed') {
-    return res.status(400).json({ error: '任务尚未完成，不能评价' });
-  }
-  if (task.publisherId.toString() !== fromUserId && task.takerId.toString() !== fromUserId) {
-    return res.status(403).json({ error: '您不是该任务的参与者' });
-  }
-  if (task.publisherId.toString() !== toUserId && task.takerId.toString() !== toUserId) {
-    return res.status(400).json({ error: '被评价人不是该任务的参与者' });
-  }
-
-  const existing = await Rating.findOne({ taskId, fromUserId, toUserId });
-  if (existing) {
-    return res.status(400).json({ error: '您已经评价过该任务了' });
-  }
-
-  const newRating = new Rating({ taskId, fromUserId, toUserId, rating, comment: comment || '' });
-  await newRating.save();
-
-  let creditChange = 0;
-  if (rating >= 4) creditChange = 2;
-  else if (rating <= 2) creditChange = -2;
-  if (creditChange !== 0) {
-    const toUser = await User.findById(toUserId);
-    if (toUser) {
-      const newCredit = Math.max(0, toUser.credit + creditChange);
-      await User.findByIdAndUpdate(toUserId, { credit: newCredit });
-      await CreditLog.create({
-        userId: toUserId,
-        reason: `收到${rating >= 4 ? '好评' : '差评'}（任务: ${task.title}）`,
-        change: creditChange
+  if (!taskId || !toUserId || rating === undefined) return res.status(400).json({ error: '缺少必要参数' });
+  if (rating < 1 || rating > 5) return res.status(400).json({ error: '评分必须为1-5' });
+  if (fromUserId === toUserId) return res.status(400).json({ error: '不能给自己评价' });
+  try {
+    const task = await turso.execute({
+      sql: 'SELECT * FROM tasks WHERE id = ?',
+      args: [taskId],
+    });
+    if (task.rows.length === 0) return res.status(404).json({ error: '任务不存在' });
+    const t = task.rows[0];
+    if (t.status !== 'completed') return res.status(400).json({ error: '任务尚未完成，不能评价' });
+    if (t.publisherId !== fromUserId && t.takerId !== fromUserId) return res.status(403).json({ error: '您不是该任务的参与者' });
+    if (t.publisherId !== toUserId && t.takerId !== toUserId) return res.status(400).json({ error: '被评价人不是该任务的参与者' });
+    const existing = await turso.execute({
+      sql: 'SELECT id FROM ratings WHERE taskId = ? AND fromUserId = ? AND toUserId = ?',
+      args: [taskId, fromUserId, toUserId],
+    });
+    if (existing.rows.length > 0) return res.status(400).json({ error: '您已经评价过该任务了' });
+    const ratingId = generateId();
+    await turso.execute({
+      sql: 'INSERT INTO ratings (id, taskId, fromUserId, toUserId, rating, comment, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      args: [ratingId, taskId, fromUserId, toUserId, rating, comment || '', Date.now()],
+    });
+    // 信用分变化
+    let creditChange = 0;
+    if (rating >= 4) creditChange = 2;
+    else if (rating <= 2) creditChange = -2;
+    if (creditChange !== 0) {
+      await turso.execute({
+        sql: 'UPDATE users SET credit = credit + ? WHERE id = ?',
+        args: [creditChange, toUserId],
+      });
+      await turso.execute({
+        sql: 'INSERT INTO creditlogs (id, userId, reason, change, createdAt) VALUES (?, ?, ?, ?, ?)',
+        args: [generateId(), toUserId, `收到${rating >= 4 ? '好评' : '差评'}（任务: ${t.title}）`, creditChange, Date.now()],
       });
     }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('提交评价失败:', err);
+    res.status(500).json({ error: '提交评价失败' });
   }
-
-  res.json({ success: true, rating: newRating });
 });
 
-// ========== 统计接口 ==========
+// 统计接口
 app.get('/api/stats/:userId', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
-
   try {
-    const published = await Task.countDocuments({ publisherId: userId });
-    const accepted = await Task.countDocuments({ takerId: userId, status: 'ongoing' });
-    const completed = await Task.countDocuments({ takerId: userId, status: 'completed' });
-    res.json({ published, accepted, completed });
+    const published = await turso.execute({
+      sql: 'SELECT COUNT(*) as count FROM tasks WHERE publisherId = ?',
+      args: [userId],
+    });
+    const accepted = await turso.execute({
+      sql: 'SELECT COUNT(*) as count FROM tasks WHERE takerId = ? AND status = "ongoing"',
+      args: [userId],
+    });
+    const completed = await turso.execute({
+      sql: 'SELECT COUNT(*) as count FROM tasks WHERE takerId = ? AND status = "completed"',
+      args: [userId],
+    });
+    res.json({
+      published: published.rows[0].count,
+      accepted: accepted.rows[0].count,
+      completed: completed.rows[0].count,
+    });
   } catch (err) {
     console.error('获取统计数据失败:', err);
     res.status(500).json({ error: '获取统计数据失败' });
@@ -943,8 +1099,10 @@ app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// ========== 启动服务器 ==========
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
+  await initTables();
   await initDefaultData();
 });
