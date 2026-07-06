@@ -99,13 +99,13 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-me';
 
-// ========== 修改这里：优先使用 Railway 的 MONGO_URL ==========
+// ========== 修复1：优先使用 Railway 注入的 MONGO_URL ==========
 const mongoUri = process.env.MONGO_URL || process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty';
 mongoose.connect(mongoUri, {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
 });
-// ========================================================
+// =========================================================
 
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
@@ -153,7 +153,8 @@ TaskSchema.index({ publisherId: 1 });
 TaskSchema.index({ takerId: 1 });
 
 const Task = mongoose.model('Task', TaskSchema);
-Task.ensureIndexes().catch(err => console.error('索引创建失败:', err));
+// 修复2：索引创建失败时仅打印警告，不阻止启动
+Task.ensureIndexes().catch(err => console.warn('索引创建警告（不影响运行）:', err.message));
 
 const MessageSchema = new mongoose.Schema({
   taskId: String,
@@ -624,10 +625,14 @@ app.get('/api/bills/:userId', authMiddleware, async (req, res) => {
   res.json(bills);
 });
 
+// ========== 修复3：添加用户存在性检查 ==========
 app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
   const user = await User.findById(userId).lean();
+  if (!user) {
+    return res.status(404).json({ error: '用户不存在' });
+  }
   const deletedSet = new Set(user.deletedConversations || []);
   const tasks = await Task.find({
     $or: [{ publisherId: userId }, { takerId: userId }],
@@ -662,6 +667,7 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   }
   res.json(conversations);
 });
+// =====================================================
 
 // 获取消息
 app.get('/api/messages/:taskId', async (req, res) => {
@@ -669,7 +675,7 @@ app.get('/api/messages/:taskId', async (req, res) => {
   res.json(messages);
 });
 
-// ========== 发送消息（已修复接收方比较） ==========
+// ========== 发送消息 ==========
 app.post('/api/messages', async (req, res) => {
   try {
     const { taskId, senderId, senderName, text, isNego } = req.body;
@@ -677,7 +683,6 @@ app.post('/api/messages', async (req, res) => {
       return res.status(400).json({ error: '缺少必要参数' });
     }
 
-    // 保存消息到数据库
     const message = new Message({
       taskId,
       senderId,
@@ -690,13 +695,11 @@ app.post('/api/messages', async (req, res) => {
     });
     await message.save();
 
-    // 获取任务信息，确定接收方
     const task = await Task.findById(taskId);
     if (!task) {
       return res.status(404).json({ error: '任务不存在' });
     }
 
-    // ========== 修复：用 toString() 比较，避免类型不匹配 ==========
     let receiverId = null;
     if (task.publisherId && task.publisherId.toString() === senderId) {
       receiverId = task.takerId;
@@ -704,7 +707,6 @@ app.post('/api/messages', async (req, res) => {
       receiverId = task.publisherId;
     }
 
-    // 如果有接收方且在线，通过 WebSocket 推送消息
     if (receiverId) {
       const payload = {
         type: 'new_message',
@@ -720,10 +722,7 @@ app.post('/api/messages', async (req, res) => {
           read: message.read
         }
       };
-      const sent = sendToUser(receiverId, payload);
-      console.log(`推送结果: ${sent ? '✅ 成功' : '❌ 失败'}, 接收方: ${receiverId}`);
-    } else {
-      console.log('❌ 未找到接收方');
+      sendToUser(receiverId, payload);
     }
 
     res.json(message);
