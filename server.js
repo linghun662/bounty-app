@@ -737,10 +737,7 @@ app.get('/api/bills/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-// ============================================================
-// 核心修改：对话列表接口 - 和闲鱼一样显示真实昵称
-// 规则：只要有消息记录，就显示对话，对方显示真实昵称
-// ============================================================
+// ========== 核心：对话列表接口 ==========
 app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
@@ -753,52 +750,50 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
     });
     const deletedSet = new Set(user.rows[0]?.deletedConversations ? JSON.parse(user.rows[0].deletedConversations) : []);
 
-    // ============================================================
-    // 核心改动：查找所有该用户参与的消息
-    // 包括：用户发送的消息 或 用户收到的消息
-    // ============================================================
-    const messages = await turso.execute({
-      sql: 'SELECT DISTINCT taskId FROM messages WHERE senderId = ? OR taskId IN (SELECT taskId FROM messages WHERE senderId = ?)',
+    // 1. 查询所有该用户参与的任务（发布或接取）
+    const taskRows = await turso.execute({
+      sql: `SELECT id FROM tasks WHERE (publisherId = ? OR takerId = ?) AND status != 'cancelled'`,
       args: [userId, userId],
     });
+    const taskIds = taskRows.rows.map(r => r.id);
 
-    if (messages.rows.length === 0) {
+    // 2. 查询所有该用户发送过消息的任务
+    const msgRows = await turso.execute({
+      sql: 'SELECT DISTINCT taskId FROM messages WHERE senderId = ?',
+      args: [userId],
+    });
+    const msgTaskIds = msgRows.rows.map(r => r.taskId);
+
+    // 合并去重
+    const allTaskIds = [...new Set([...taskIds, ...msgTaskIds])];
+    if (allTaskIds.length === 0) {
       return res.json([]);
     }
 
-    const taskIds = messages.rows.map(r => r.taskId);
-    const placeholders = taskIds.map(() => '?').join(',');
-    
-    // 获取这些任务的信息
+    const placeholders = allTaskIds.map(() => '?').join(',');
     const taskRes = await turso.execute({
       sql: `SELECT * FROM tasks WHERE id IN (${placeholders}) AND status != 'cancelled'`,
-      args: taskIds,
+      args: allTaskIds,
     });
 
     const conversations = [];
     for (const task of taskRes.rows) {
       if (deletedSet.has(task.id)) continue;
 
-      // ============================================================
-      // 核心改动：确定对方 ID 和昵称（永远显示真实昵称）
-      // 1. 如果当前用户是发布者，对方是接取者（如果有）
-      // 2. 如果当前用户是接取者，对方是发布者
-      // 3. 如果都不是，从消息中找另一个发送者
-      // ============================================================
+      // 确定对方
       let otherId = null;
       let otherName = null;
 
-      // 从任务中找
       if (task.publisherId === userId) {
         otherId = task.takerId;
       } else if (task.takerId === userId) {
         otherId = task.publisherId;
       }
 
-      // 如果任务中没找到（未接取），从消息中找对方
       if (!otherId) {
+        // 从消息中找对方
         const otherMsg = await turso.execute({
-          sql: 'SELECT senderId, senderName FROM messages WHERE taskId = ? AND senderId != ? ORDER BY createdAt ASC LIMIT 1',
+          sql: 'SELECT senderId, senderName FROM messages WHERE taskId = ? AND senderId != ? LIMIT 1',
           args: [task.id, userId],
         });
         if (otherMsg.rows.length > 0) {
@@ -807,24 +802,10 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
         }
       }
 
-      // 如果仍然没有，跳过
       if (!otherId) continue;
 
-      // ============================================================
-      // 核心改动：从用户表查询真实昵称
-      // 永远不显示"发布者"、"接取者"、"待接取"
-      // ============================================================
-      if (otherName) {
-        // 已经有了昵称（从消息中获取），但确保它是最新的
-        const userRes = await turso.execute({
-          sql: 'SELECT nickname, username FROM users WHERE id = ?',
-          args: [otherId],
-        });
-        if (userRes.rows.length > 0) {
-          otherName = userRes.rows[0].nickname || userRes.rows[0].username || '用户';
-        }
-      } else {
-        // 从用户表获取昵称
+      // 获取对方真实昵称
+      if (!otherName) {
         const userRes = await turso.execute({
           sql: 'SELECT nickname, username FROM users WHERE id = ?',
           args: [otherId],
@@ -836,13 +817,13 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
         }
       }
 
-      // 获取最后一条消息
+      // 最后消息
       const lastMsg = await turso.execute({
         sql: 'SELECT * FROM messages WHERE taskId = ? ORDER BY createdAt DESC LIMIT 1',
         args: [task.id],
       });
 
-      // 获取未读消息数
+      // 未读计数
       const unreadCount = await turso.execute({
         sql: 'SELECT COUNT(*) as count FROM messages WHERE taskId = ? AND senderId != ? AND read = 0',
         args: [task.id, userId],
@@ -850,8 +831,8 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
 
       conversations.push({
         taskId: task.id,
-        otherId: otherId,
-        otherName: otherName,  // 永远是真实昵称
+        otherId,
+        otherName,
         lastMsg: lastMsg.rows[0]?.text || null,
         reward: task.reward,
         taskTitle: task.title,
@@ -879,6 +860,7 @@ app.get('/api/messages/:taskId', async (req, res) => {
   }
 });
 
+// ========== 发送消息 ==========
 app.post('/api/messages', async (req, res) => {
   try {
     const { taskId, senderId, senderName, text, isNego } = req.body;
@@ -921,14 +903,16 @@ app.post('/api/messages', async (req, res) => {
   }
 });
 
+// ========== 标记已读 ==========
 app.put('/api/messages/read/:taskId/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权操作' });
   try {
-    await turso.execute({
+    const result = await turso.execute({
       sql: 'UPDATE messages SET read = 1 WHERE taskId = ? AND senderId != ? AND read = 0',
       args: [taskId, userId],
     });
+    console.log(`标记已读: taskId=${taskId}, userId=${userId}, 影响行数=${result.rowsAffected}`);
     res.json({ success: true });
   } catch (err) {
     console.error('标记已读失败:', err);
