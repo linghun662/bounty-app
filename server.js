@@ -92,11 +92,9 @@ function fixJsonFields(row) {
   return result;
 }
 
-// 综合修复：布尔 + JSON + 添加 _id 兼容前端
 function fixRow(row) {
   if (!row) return row;
   let result = fixJsonFields(fixBooleans(row));
-  // 兼容前端：同时返回 id 和 _id
   if (result.id) {
     result._id = result.id;
   }
@@ -739,44 +737,88 @@ app.get('/api/bills/:userId', authMiddleware, async (req, res) => {
   }
 });
 
+// ========== 修改：对话列表 - 返回有消息记录的所有任务 ==========
 app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
+
   try {
+    // 获取用户信息
     const user = await turso.execute({
       sql: 'SELECT deletedConversations FROM users WHERE id = ?',
       args: [userId],
     });
     const deletedSet = new Set(user.rows[0]?.deletedConversations ? JSON.parse(user.rows[0].deletedConversations) : []);
-    const tasks = await turso.execute({
-      sql: `SELECT * FROM tasks WHERE (publisherId = ? OR takerId = ?) AND status != 'cancelled' ORDER BY updatedAt DESC LIMIT 20`,
-      args: [userId, userId],
+
+    // 获取所有有消息记录的任务（不要求takerId存在）
+    const messages = await turso.execute({
+      sql: 'SELECT DISTINCT taskId FROM messages ORDER BY createdAt DESC',
     });
+
+    if (messages.rows.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    const taskIds = messages.rows.map(r => r.taskId);
+    const placeholders = taskIds.map(() => '?').join(',');
+    const tasks = await turso.execute({
+      sql: `SELECT * FROM tasks WHERE id IN (${placeholders}) AND status != 'cancelled' ORDER BY updatedAt DESC`,
+      args: taskIds,
+    });
+
     const conversations = [];
     for (const task of tasks.rows) {
       if (deletedSet.has(task.id)) continue;
+      // 检查当前用户是否是该任务的参与者（发布者或接取者）
+      const isParticipant = task.publisherId === userId || task.takerId === userId;
+      if (!isParticipant) continue;
+
+      // 获取最后一条消息
       const lastMsg = await turso.execute({
         sql: 'SELECT * FROM messages WHERE taskId = ? ORDER BY createdAt DESC LIMIT 1',
         args: [task.id],
       });
+
+      // 获取未读消息数
       const unreadCount = await turso.execute({
         sql: 'SELECT COUNT(*) as count FROM messages WHERE taskId = ? AND senderId != ? AND read = 0',
         args: [task.id, userId],
       });
+
       let otherId = task.publisherId === userId ? task.takerId : task.publisherId;
       let otherName = task.publisherId === userId ? task.takerName : task.publisherName;
-      if (otherId && otherName) {
-        conversations.push({
-          taskId: task.id,
-          otherId,
-          otherName,
-          lastMsg: lastMsg.rows[0]?.text || null,
-          reward: task.reward,
-          taskTitle: task.title,
-          unread: unreadCount.rows[0].count,
+
+      // 如果没有接取者（takerId为空），尝试从已有消息中获取对方的名称
+      if (!otherId || !otherName) {
+        // 查找对方发送的消息
+        const otherMsg = await turso.execute({
+          sql: 'SELECT senderId, senderName FROM messages WHERE taskId = ? AND senderId != ? LIMIT 1',
+          args: [task.id, userId],
         });
+        if (otherMsg.rows.length > 0) {
+          otherId = otherMsg.rows[0].senderId;
+          otherName = otherMsg.rows[0].senderName;
+        } else {
+          // 如果还没有对方消息，跳过
+          continue;
+        }
       }
+
+      // 如果 still 没有 otherName，使用默认值
+      if (!otherName) otherName = '用户';
+
+      conversations.push({
+        taskId: task.id,
+        otherId,
+        otherName,
+        lastMsg: lastMsg.rows[0]?.text || null,
+        reward: task.reward,
+        taskTitle: task.title,
+        unread: unreadCount.rows[0].count,
+      });
     }
+
     res.json(conversations);
   } catch (err) {
     console.error('获取对话列表失败:', err);
