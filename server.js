@@ -65,11 +65,10 @@ function sendToUser(userId, message) {
   return false;
 }
 
-// ========== 工具函数：转换 row 中的布尔字段 ==========
+// ========== 工具函数 ==========
 function fixBooleans(row) {
   if (!row) return row;
   const result = { ...row };
-  // 需要转换的字段列表
   const booleanFields = ['takerCompleted', 'idCardVerified', 'read', 'isNego'];
   for (const field of booleanFields) {
     if (result[field] !== undefined && result[field] !== null) {
@@ -82,6 +81,40 @@ function fixBooleans(row) {
 function fixBooleansInArray(rows) {
   if (!rows) return rows;
   return rows.map(row => fixBooleans(row));
+}
+
+// 新增：修复 JSON 字符串字段（解析为数组或对象）
+function fixJsonFields(row) {
+  if (!row) return row;
+  const result = { ...row };
+  // 需要解析的 JSON 字段
+  const jsonFields = ['mediaList', 'proofMedia', 'deletedConversations'];
+  for (const field of jsonFields) {
+    if (result[field] !== undefined && result[field] !== null && typeof result[field] === 'string') {
+      try {
+        result[field] = JSON.parse(result[field]);
+      } catch (e) {
+        // 如果解析失败，保持原值
+      }
+    }
+  }
+  return result;
+}
+
+function fixJsonFieldsInArray(rows) {
+  if (!rows) return rows;
+  return rows.map(row => fixJsonFields(row));
+}
+
+// 综合修复：布尔 + JSON
+function fixRow(row) {
+  if (!row) return row;
+  return fixJsonFields(fixBooleans(row));
+}
+
+function fixRows(rows) {
+  if (!rows) return rows;
+  return rows.map(row => fixRow(row));
 }
 
 // ========== 中间件 ==========
@@ -115,7 +148,6 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-me';
 
-// ========== 辅助函数 ==========
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
@@ -273,7 +305,6 @@ async function initDefaultData() {
 
 // ========== 路由 ==========
 
-// 注册
 app.post('/api/register', async (req, res) => {
   const { username, password, nickname, phone } = req.body;
   try {
@@ -301,7 +332,6 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// 登录
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -318,8 +348,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: '用户名或密码错误' });
     }
     const token = jwt.sign({ userId: userData.id }, JWT_SECRET, { expiresIn: '7d' });
-    // 转换布尔字段
-    const fixedUser = fixBooleans(userData);
+    const fixedUser = fixRow(userData);
     res.json({
       success: true,
       token,
@@ -343,20 +372,18 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// 获取任务列表
 app.get('/api/tasks', async (req, res) => {
   try {
     const tasks = await turso.execute(
       'SELECT * FROM tasks WHERE status = \'available\' ORDER BY createdAt DESC LIMIT 100'
     );
-    res.json(fixBooleansInArray(tasks.rows));
+    res.json(fixRows(tasks.rows));
   } catch (err) {
     console.error('获取任务列表失败:', err);
     res.status(500).json({ error: '获取任务列表失败' });
   }
 });
 
-// 获取所有任务（分页）
 app.get('/api/tasks/all', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -368,7 +395,7 @@ app.get('/api/tasks/all', async (req, res) => {
       args: [limit, offset],
     });
     res.json({
-      tasks: fixBooleansInArray(tasks.rows),
+      tasks: fixRows(tasks.rows),
       total: total.rows[0].count,
       page,
       totalPages: Math.ceil(total.rows[0].count / limit),
@@ -379,7 +406,6 @@ app.get('/api/tasks/all', async (req, res) => {
   }
 });
 
-// 获取单个任务
 app.get('/api/tasks/:id', async (req, res) => {
   try {
     const task = await turso.execute({
@@ -401,14 +427,13 @@ app.get('/api/tasks/:id', async (req, res) => {
         t.publisherName = '未知用户';
       }
     }
-    res.json(fixBooleans(t));
+    res.json(fixRow(t));
   } catch (err) {
     console.error('获取任务详情失败:', err);
     res.status(500).json({ error: '获取任务详情失败' });
   }
 });
 
-// 发布任务
 app.post('/api/tasks', authMiddleware, async (req, res) => {
   const { title, description, reward, publisherName, publisherPhone, locationAddress, latitude, longitude, mediaList, category } = req.body;
   const publisherId = req.userId;
@@ -457,14 +482,13 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
       sql: 'SELECT * FROM tasks WHERE id = ?',
       args: [taskId],
     });
-    res.json(fixBooleans(newTask.rows[0]));
+    res.json(fixRow(newTask.rows[0]));
   } catch (err) {
     console.error('发布任务失败:', err);
     res.status(500).json({ error: '发布任务失败' });
   }
 });
 
-// 取消任务
 app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
   const userId = req.userId;
   try {
@@ -495,7 +519,6 @@ app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
   }
 });
 
-// 接取任务
 app.put('/api/tasks/:id/accept', authMiddleware, async (req, res) => {
   const takerId = req.userId;
   const { takerName } = req.body;
@@ -518,7 +541,6 @@ app.put('/api/tasks/:id/accept', authMiddleware, async (req, res) => {
   }
 });
 
-// 取消接取
 app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
   const userId = req.userId;
   try {
@@ -556,7 +578,6 @@ app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
   }
 });
 
-// 更新任务状态
 app.put('/api/tasks/:id/status', authMiddleware, async (req, res) => {
   const { travelStatus, estimatedMinutes, travelStartTime } = req.body;
   const update = {};
@@ -579,7 +600,6 @@ app.put('/api/tasks/:id/status', authMiddleware, async (req, res) => {
   }
 });
 
-// 提交凭证
 app.post('/api/tasks/:id/submit-proof', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { proofMedia } = req.body;
@@ -603,7 +623,6 @@ app.post('/api/tasks/:id/submit-proof', authMiddleware, async (req, res) => {
   }
 });
 
-// 确认支付
 app.post('/api/tasks/:id/confirm-payment', authMiddleware, async (req, res) => {
   const userId = req.userId;
   try {
@@ -648,7 +667,6 @@ app.post('/api/tasks/:id/confirm-payment', authMiddleware, async (req, res) => {
   }
 });
 
-// 修改赏金
 app.put('/api/tasks/:id/reward', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { reward: newReward } = req.body;
@@ -684,7 +702,6 @@ app.put('/api/tasks/:id/reward', authMiddleware, async (req, res) => {
   }
 });
 
-// 获取用户信息
 app.get('/api/user/:id', async (req, res) => {
   try {
     const user = await turso.execute({
@@ -692,14 +709,13 @@ app.get('/api/user/:id', async (req, res) => {
       args: [req.params.id],
     });
     if (user.rows.length === 0) return res.status(404).json({ error: '用户不存在' });
-    res.json(fixBooleans(user.rows[0]));
+    res.json(fixRow(user.rows[0]));
   } catch (err) {
     console.error('获取用户信息失败:', err);
     res.status(500).json({ error: '获取用户信息失败' });
   }
 });
 
-// 更新用户信息
 app.put('/api/user/:id', authMiddleware, async (req, res) => {
   if (req.params.id !== req.userId) return res.status(403).json({ error: '无权修改' });
   const updates = req.body;
@@ -718,7 +734,6 @@ app.put('/api/user/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// 获取账单
 app.get('/api/bills/:userId', authMiddleware, async (req, res) => {
   if (req.params.userId !== req.userId) return res.status(403).json({ error: '无权查看' });
   try {
@@ -733,7 +748,6 @@ app.get('/api/bills/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-// 获取对话列表
 app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
@@ -779,21 +793,19 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   }
 });
 
-// 获取消息
 app.get('/api/messages/:taskId', async (req, res) => {
   try {
     const messages = await turso.execute({
       sql: 'SELECT * FROM messages WHERE taskId = ? ORDER BY createdAt ASC',
       args: [req.params.taskId],
     });
-    res.json(fixBooleansInArray(messages.rows));
+    res.json(fixRows(messages.rows));
   } catch (err) {
     console.error('获取消息失败:', err);
     res.status(500).json({ error: '获取消息失败' });
   }
 });
 
-// 发送消息
 app.post('/api/messages', async (req, res) => {
   try {
     const { taskId, senderId, senderName, text, isNego } = req.body;
@@ -823,20 +835,19 @@ app.post('/api/messages', async (req, res) => {
       receiverId = t.publisherId;
     }
     if (receiverId) {
-      const payload = { type: 'new_message', data: fixBooleans(newMsg) };
+      const payload = { type: 'new_message', data: fixRow(newMsg) };
       const sent = sendToUser(receiverId, payload);
       console.log(`推送结果: ${sent ? '✅ 成功' : '❌ 失败'}, 接收方: ${receiverId}`);
     } else {
       console.log('❌ 未找到接收方');
     }
-    res.json(fixBooleans(newMsg));
+    res.json(fixRow(newMsg));
   } catch (err) {
     console.error('发送消息失败:', err);
     res.status(500).json({ error: '发送消息失败' });
   }
 });
 
-// 标记已读
 app.put('/api/messages/read/:taskId/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权操作' });
@@ -852,7 +863,6 @@ app.put('/api/messages/read/:taskId/:userId', authMiddleware, async (req, res) =
   }
 });
 
-// 删除消息
 app.delete('/api/messages/:messageId', authMiddleware, async (req, res) => {
   const userId = req.userId;
   try {
@@ -873,7 +883,6 @@ app.delete('/api/messages/:messageId', authMiddleware, async (req, res) => {
   }
 });
 
-// 删除对话
 app.delete('/api/conversations/:taskId/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权操作' });
@@ -897,7 +906,6 @@ app.delete('/api/conversations/:taskId/:userId', authMiddleware, async (req, res
   }
 });
 
-// 上传文件
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: '没有文件' });
   const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
