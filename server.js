@@ -99,10 +99,13 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-me';
 
-mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty', {
+// ========== 修改这里：优先使用 Railway 的 MONGO_URL ==========
+const mongoUri = process.env.MONGO_URL || process.env.MONGODB_URL || 'mongodb://localhost:27017/bounty';
+mongoose.connect(mongoUri, {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
 });
+// ========================================================
 
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
