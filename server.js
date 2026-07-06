@@ -737,7 +737,10 @@ app.get('/api/bills/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-// ========== 对话列表接口（最新优化版） ==========
+// ============================================================
+// 核心修改：对话列表接口 - 和闲鱼一样显示真实昵称
+// 规则：只要有消息记录，就显示对话，对方显示真实昵称
+// ============================================================
 app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
@@ -750,48 +753,50 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
     });
     const deletedSet = new Set(user.rows[0]?.deletedConversations ? JSON.parse(user.rows[0].deletedConversations) : []);
 
-    // 查询该用户发布或接取的所有任务（包括未接取）
-    const tasks = await turso.execute({
-      sql: `SELECT * FROM tasks WHERE (publisherId = ? OR takerId = ?) AND status != 'cancelled' ORDER BY updatedAt DESC`,
+    // ============================================================
+    // 核心改动：查找所有该用户参与的消息
+    // 包括：用户发送的消息 或 用户收到的消息
+    // ============================================================
+    const messages = await turso.execute({
+      sql: 'SELECT DISTINCT taskId FROM messages WHERE senderId = ? OR taskId IN (SELECT taskId FROM messages WHERE senderId = ?)',
       args: [userId, userId],
     });
 
+    if (messages.rows.length === 0) {
+      return res.json([]);
+    }
+
+    const taskIds = messages.rows.map(r => r.taskId);
+    const placeholders = taskIds.map(() => '?').join(',');
+    
+    // 获取这些任务的信息
+    const taskRes = await turso.execute({
+      sql: `SELECT * FROM tasks WHERE id IN (${placeholders}) AND status != 'cancelled'`,
+      args: taskIds,
+    });
+
     const conversations = [];
-    for (const task of tasks.rows) {
+    for (const task of taskRes.rows) {
       if (deletedSet.has(task.id)) continue;
 
+      // ============================================================
+      // 核心改动：确定对方 ID 和昵称（永远显示真实昵称）
+      // 1. 如果当前用户是发布者，对方是接取者（如果有）
+      // 2. 如果当前用户是接取者，对方是发布者
+      // 3. 如果都不是，从消息中找另一个发送者
+      // ============================================================
       let otherId = null;
       let otherName = null;
 
-      // 1. 先从任务中确定对方
+      // 从任务中找
       if (task.publisherId === userId) {
-        // 当前用户是发布者，对方是接取者（如果有）
         otherId = task.takerId;
-        if (otherId) {
-          const otherUser = await turso.execute({
-            sql: 'SELECT nickname, username FROM users WHERE id = ?',
-            args: [otherId],
-          });
-          if (otherUser.rows.length > 0) {
-            otherName = otherUser.rows[0].nickname || otherUser.rows[0].username || '未知用户';
-          }
-        }
       } else if (task.takerId === userId) {
-        // 当前用户是接取者，对方是发布者
         otherId = task.publisherId;
-        if (otherId) {
-          const otherUser = await turso.execute({
-            sql: 'SELECT nickname, username FROM users WHERE id = ?',
-            args: [otherId],
-          });
-          if (otherUser.rows.length > 0) {
-            otherName = otherUser.rows[0].nickname || otherUser.rows[0].username || '未知用户';
-          }
-        }
       }
 
-      // 2. 如果任务中未确定对方（即未接取），从消息中查找对方
-      if (!otherId || !otherName) {
+      // 如果任务中没找到（未接取），从消息中找对方
+      if (!otherId) {
         const otherMsg = await turso.execute({
           sql: 'SELECT senderId, senderName FROM messages WHERE taskId = ? AND senderId != ? ORDER BY createdAt ASC LIMIT 1',
           args: [task.id, userId],
@@ -802,8 +807,34 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
         }
       }
 
-      // 3. 如果仍然没有对方信息，跳过此任务（无对话对象）
-      if (!otherId || !otherName) continue;
+      // 如果仍然没有，跳过
+      if (!otherId) continue;
+
+      // ============================================================
+      // 核心改动：从用户表查询真实昵称
+      // 永远不显示"发布者"、"接取者"、"待接取"
+      // ============================================================
+      if (otherName) {
+        // 已经有了昵称（从消息中获取），但确保它是最新的
+        const userRes = await turso.execute({
+          sql: 'SELECT nickname, username FROM users WHERE id = ?',
+          args: [otherId],
+        });
+        if (userRes.rows.length > 0) {
+          otherName = userRes.rows[0].nickname || userRes.rows[0].username || '用户';
+        }
+      } else {
+        // 从用户表获取昵称
+        const userRes = await turso.execute({
+          sql: 'SELECT nickname, username FROM users WHERE id = ?',
+          args: [otherId],
+        });
+        if (userRes.rows.length > 0) {
+          otherName = userRes.rows[0].nickname || userRes.rows[0].username || '用户';
+        } else {
+          otherName = '用户';
+        }
+      }
 
       // 获取最后一条消息
       const lastMsg = await turso.execute({
@@ -819,8 +850,8 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
 
       conversations.push({
         taskId: task.id,
-        otherId,
-        otherName,
+        otherId: otherId,
+        otherName: otherName,  // 永远是真实昵称
         lastMsg: lastMsg.rows[0]?.text || null,
         reward: task.reward,
         taskTitle: task.title,
