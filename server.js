@@ -78,38 +78,29 @@ function fixBooleans(row) {
   return result;
 }
 
-function fixBooleansInArray(rows) {
-  if (!rows) return rows;
-  return rows.map(row => fixBooleans(row));
-}
-
-// 新增：修复 JSON 字符串字段（解析为数组或对象）
 function fixJsonFields(row) {
   if (!row) return row;
   const result = { ...row };
-  // 需要解析的 JSON 字段
   const jsonFields = ['mediaList', 'proofMedia', 'deletedConversations'];
   for (const field of jsonFields) {
     if (result[field] !== undefined && result[field] !== null && typeof result[field] === 'string') {
       try {
         result[field] = JSON.parse(result[field]);
-      } catch (e) {
-        // 如果解析失败，保持原值
-      }
+      } catch (e) {}
     }
   }
   return result;
 }
 
-function fixJsonFieldsInArray(rows) {
-  if (!rows) return rows;
-  return rows.map(row => fixJsonFields(row));
-}
-
-// 综合修复：布尔 + JSON
+// 综合修复：布尔 + JSON + 添加 _id 兼容前端
 function fixRow(row) {
   if (!row) return row;
-  return fixJsonFields(fixBooleans(row));
+  let result = fixJsonFields(fixBooleans(row));
+  // 兼容前端：同时返回 id 和 _id
+  if (result.id) {
+    result._id = result.id;
+  }
+  return result;
 }
 
 function fixRows(rows) {
