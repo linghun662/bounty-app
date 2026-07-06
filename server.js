@@ -327,7 +327,7 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/tasks', async (req, res) => {
   try {
     const tasks = await turso.execute(
-      'SELECT * FROM tasks WHERE status = "available" ORDER BY createdAt DESC LIMIT 100'
+      'SELECT * FROM tasks WHERE status = \'available\' ORDER BY createdAt DESC LIMIT 100'
     );
     res.json(tasks.rows);
   } catch (err) {
@@ -369,7 +369,6 @@ app.get('/api/tasks/:id', async (req, res) => {
     if (task.rows.length === 0) {
       return res.status(404).json({ error: '任务不存在' });
     }
-    // 补充 publisherName（如果缺失）
     const t = task.rows[0];
     if (!t.publisherName) {
       const user = await turso.execute({
@@ -460,7 +459,7 @@ app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
     if (t.publisherId !== userId) return res.status(403).json({ error: '无权取消' });
     if (t.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成' });
     await turso.execute({
-      sql: 'UPDATE tasks SET status = "cancelled", updatedAt = ? WHERE id = ?',
+      sql: 'UPDATE tasks SET status = \'cancelled\', updatedAt = ? WHERE id = ?',
       args: [Date.now(), req.params.id],
     });
     await turso.execute({
@@ -491,7 +490,7 @@ app.put('/api/tasks/:id/accept', authMiddleware, async (req, res) => {
     const t = task.rows[0];
     if (t.status !== 'available') return res.status(400).json({ error: '任务已被接取' });
     await turso.execute({
-      sql: 'UPDATE tasks SET status = "ongoing", takerId = ?, takerName = ?, takenAt = ?, updatedAt = ? WHERE id = ?',
+      sql: 'UPDATE tasks SET status = \'ongoing\', takerId = ?, takerName = ?, takenAt = ?, updatedAt = ? WHERE id = ?',
       args: [takerId, takerName || '未知用户', Date.now(), Date.now(), req.params.id],
     });
     res.json({ success: true });
@@ -514,7 +513,7 @@ app.put('/api/tasks/:id/cancel-accept', authMiddleware, async (req, res) => {
     if (t.takerId !== userId) return res.status(403).json({ error: '无权取消' });
     if (t.status !== 'ongoing') return res.status(400).json({ error: '状态错误' });
     await turso.execute({
-      sql: 'UPDATE tasks SET status = "available", takerId = NULL, takerName = NULL, takenAt = NULL, travelStatus = "idle", travelStartTime = NULL, estimatedMinutes = NULL, takerCompleted = 0, updatedAt = ? WHERE id = ?',
+      sql: 'UPDATE tasks SET status = \'available\', takerId = NULL, takerName = NULL, takenAt = NULL, travelStatus = \'idle\', travelStartTime = NULL, estimatedMinutes = NULL, takerCompleted = 0, updatedAt = ? WHERE id = ?',
       args: [Date.now(), req.params.id],
     });
     // 扣除信用分
@@ -611,7 +610,7 @@ app.post('/api/tasks/:id/confirm-payment', authMiddleware, async (req, res) => {
       args: [t.reward, t.takerId],
     });
     await turso.execute({
-      sql: 'UPDATE tasks SET status = "completed", updatedAt = ? WHERE id = ?',
+      sql: 'UPDATE tasks SET status = \'completed\', updatedAt = ? WHERE id = ?',
       args: [Date.now(), req.params.id],
     });
     // 账单
@@ -1077,11 +1076,11 @@ app.get('/api/stats/:userId', authMiddleware, async (req, res) => {
       args: [userId],
     });
     const accepted = await turso.execute({
-      sql: 'SELECT COUNT(*) as count FROM tasks WHERE takerId = ? AND status = "ongoing"',
+      sql: 'SELECT COUNT(*) as count FROM tasks WHERE takerId = ? AND status = \'ongoing\'',
       args: [userId],
     });
     const completed = await turso.execute({
-      sql: 'SELECT COUNT(*) as count FROM tasks WHERE takerId = ? AND status = "completed"',
+      sql: 'SELECT COUNT(*) as count FROM tasks WHERE takerId = ? AND status = \'completed\'',
       args: [userId],
     });
     res.json({
