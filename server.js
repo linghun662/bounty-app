@@ -478,35 +478,104 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
   }
 });
 
+// ========== 取消任务（修改后的完整逻辑） ==========
 app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
   const userId = req.userId;
   try {
     const task = await turso.execute({
-      sql: 'SELECT status, publisherId, reward, title FROM tasks WHERE id = ?',
+      sql: 'SELECT * FROM tasks WHERE id = ?',
       args: [req.params.id],
     });
-    if (task.rows.length === 0) return res.status(404).json({ error: '任务不存在' });
+    if (task.rows.length === 0) {
+      return res.status(404).json({ error: '任务不存在' });
+    }
     const t = task.rows[0];
-    if (t.publisherId !== userId) return res.status(403).json({ error: '无权取消' });
-    if (t.status !== 'available') return res.status(400).json({ error: '任务已被接取或已完成' });
-    await turso.execute({
-      sql: 'UPDATE tasks SET status = \'cancelled\', updatedAt = ? WHERE id = ?',
-      args: [Date.now(), req.params.id],
-    });
-    await turso.execute({
-      sql: 'UPDATE users SET balance = balance + ?, frozenBalance = frozenBalance - ? WHERE id = ?',
-      args: [t.reward, t.reward, userId],
-    });
-    await turso.execute({
-      sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
-      args: [generateId(), userId, 'income', t.reward, `取消任务退款：${t.title}`, Date.now()],
-    });
-    res.json({ success: true });
+
+    if (t.publisherId !== userId) {
+      return res.status(403).json({ error: '无权取消此任务' });
+    }
+
+    if (t.status === 'completed' || t.status === 'cancelled') {
+      return res.status(400).json({ error: '任务已完成或已取消，无法再次取消' });
+    }
+
+    // 场景1：无人接取
+    if (t.status === 'available') {
+      await turso.execute({
+        sql: 'UPDATE users SET balance = balance + ?, frozenBalance = frozenBalance - ? WHERE id = ?',
+        args: [t.reward, t.reward, userId],
+      });
+      await turso.execute({
+        sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+        args: [generateId(), userId, 'income', t.reward, `取消任务退款：${t.title}`, Date.now()],
+      });
+      await turso.execute({
+        sql: 'UPDATE tasks SET status = \'cancelled\', updatedAt = ? WHERE id = ?',
+        args: [Date.now(), req.params.id],
+      });
+      return res.json({ success: true });
+    }
+
+    // 场景2：有人接取
+    if (t.status === 'ongoing') {
+      if (t.takerCompleted) {
+        return res.status(400).json({ error: '接取者已提交完成凭证，无法取消' });
+      }
+
+      // 解冻赏金并退还给发布者
+      await turso.execute({
+        sql: 'UPDATE users SET balance = balance + ?, frozenBalance = frozenBalance - ? WHERE id = ?',
+        args: [t.reward, t.reward, userId],
+      });
+      await turso.execute({
+        sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+        args: [generateId(), userId, 'income', t.reward, `取消任务退款（任务进行中）：${t.title}`, Date.now()],
+      });
+
+      // 解除接取者绑定
+      await turso.execute({
+        sql: `UPDATE tasks SET 
+          status = 'cancelled',
+          takerId = NULL,
+          takerName = NULL,
+          takenAt = NULL,
+          travelStatus = 'idle',
+          travelStartTime = NULL,
+          estimatedMinutes = NULL,
+          takerCompleted = 0,
+          updatedAt = ?
+          WHERE id = ?`,
+        args: [Date.now(), req.params.id],
+      });
+
+      // 扣除发布者信誉分（-5）
+      await turso.execute({
+        sql: 'UPDATE users SET credit = MAX(0, credit - 5) WHERE id = ?',
+        args: [userId],
+      });
+      await turso.execute({
+        sql: 'INSERT INTO creditlogs (id, userId, reason, change, createdAt) VALUES (?, ?, ?, ?, ?)',
+        args: [generateId(), userId, '取消正在进行的任务', -5, Date.now()],
+      });
+
+      // 通知接取者
+      if (t.takerId) {
+        sendToUser(t.takerId, {
+          type: 'task_cancelled',
+          data: { taskId: req.params.id, title: t.title }
+        });
+      }
+
+      return res.json({ success: true });
+    }
+
+    return res.status(400).json({ error: '任务状态不允许取消' });
   } catch (err) {
     console.error('取消任务失败:', err);
     res.status(500).json({ error: '取消任务失败' });
   }
 });
+// ========== 取消任务修改结束 ==========
 
 app.put('/api/tasks/:id/accept', authMiddleware, async (req, res) => {
   const takerId = req.userId;
@@ -737,34 +806,30 @@ app.get('/api/bills/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-// ========== 核心：对话列表接口（已修改，添加 lastMessageTime） ==========
+// ========== 对话列表（含 lastMessageTime） ==========
 app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
 
   try {
-    // 获取用户删除列表
     const user = await turso.execute({
       sql: 'SELECT deletedConversations FROM users WHERE id = ?',
       args: [userId],
     });
     const deletedSet = new Set(user.rows[0]?.deletedConversations ? JSON.parse(user.rows[0].deletedConversations) : []);
 
-    // 1. 查询所有该用户参与的任务（发布或接取）
     const taskRows = await turso.execute({
       sql: `SELECT id FROM tasks WHERE (publisherId = ? OR takerId = ?) AND status != 'cancelled'`,
       args: [userId, userId],
     });
     const taskIds = taskRows.rows.map(r => r.id);
 
-    // 2. 查询所有该用户发送过消息的任务
     const msgRows = await turso.execute({
       sql: 'SELECT DISTINCT taskId FROM messages WHERE senderId = ?',
       args: [userId],
     });
     const msgTaskIds = msgRows.rows.map(r => r.taskId);
 
-    // 合并去重
     const allTaskIds = [...new Set([...taskIds, ...msgTaskIds])];
     if (allTaskIds.length === 0) {
       return res.json([]);
@@ -780,7 +845,6 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
     for (const task of taskRes.rows) {
       if (deletedSet.has(task.id)) continue;
 
-      // 确定对方
       let otherId = null;
       let otherName = null;
 
@@ -791,7 +855,6 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
       }
 
       if (!otherId) {
-        // 从消息中找对方
         const otherMsg = await turso.execute({
           sql: 'SELECT senderId, senderName FROM messages WHERE taskId = ? AND senderId != ? LIMIT 1',
           args: [task.id, userId],
@@ -804,7 +867,6 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
 
       if (!otherId) continue;
 
-      // 获取对方真实昵称
       if (!otherName) {
         const userRes = await turso.execute({
           sql: 'SELECT nickname, username FROM users WHERE id = ?',
@@ -817,21 +879,18 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
         }
       }
 
-      // 获取最后消息及时间
       const lastMsg = await turso.execute({
         sql: 'SELECT * FROM messages WHERE taskId = ? ORDER BY createdAt DESC LIMIT 1',
         args: [task.id],
       });
 
-      // 计算 lastMessageTime：优先使用最后消息的 time，否则使用任务创建时间
       let lastMessageTime;
       if (lastMsg.rows.length > 0) {
-        lastMessageTime = lastMsg.rows[0].time;  // ISO 字符串
+        lastMessageTime = lastMsg.rows[0].time;
       } else {
         lastMessageTime = new Date(task.createdAt).toISOString();
       }
 
-      // 未读计数
       const unreadCount = await turso.execute({
         sql: 'SELECT COUNT(*) as count FROM messages WHERE taskId = ? AND senderId != ? AND read = 0',
         args: [task.id, userId],
@@ -845,7 +904,7 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
         reward: task.reward,
         taskTitle: task.title,
         unread: unreadCount.rows[0].count,
-        lastMessageTime,   // ✅ 新增字段
+        lastMessageTime,
       });
     }
 
@@ -869,7 +928,6 @@ app.get('/api/messages/:taskId', async (req, res) => {
   }
 });
 
-// ========== 发送消息 ==========
 app.post('/api/messages', async (req, res) => {
   try {
     const { taskId, senderId, senderName, text, isNego } = req.body;
@@ -912,7 +970,6 @@ app.post('/api/messages', async (req, res) => {
   }
 });
 
-// ========== 标记已读 ==========
 app.put('/api/messages/read/:taskId/:userId', authMiddleware, async (req, res) => {
   const { taskId, userId } = req.params;
   if (userId !== req.userId) return res.status(403).json({ error: '无权操作' });
