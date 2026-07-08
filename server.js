@@ -737,7 +737,7 @@ app.get('/api/bills/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-// ========== 核心：对话列表接口 ==========
+// ========== 核心：对话列表接口（已修改，添加 lastMessageTime） ==========
 app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
   const userId = req.params.userId;
   if (userId !== req.userId) return res.status(403).json({ error: '无权查看' });
@@ -817,11 +817,19 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
         }
       }
 
-      // 最后消息
+      // 获取最后消息及时间
       const lastMsg = await turso.execute({
         sql: 'SELECT * FROM messages WHERE taskId = ? ORDER BY createdAt DESC LIMIT 1',
         args: [task.id],
       });
+
+      // 计算 lastMessageTime：优先使用最后消息的 time，否则使用任务创建时间
+      let lastMessageTime;
+      if (lastMsg.rows.length > 0) {
+        lastMessageTime = lastMsg.rows[0].time;  // ISO 字符串
+      } else {
+        lastMessageTime = new Date(task.createdAt).toISOString();
+      }
 
       // 未读计数
       const unreadCount = await turso.execute({
@@ -837,6 +845,7 @@ app.get('/api/user/:userId/conversations', authMiddleware, async (req, res) => {
         reward: task.reward,
         taskTitle: task.title,
         unread: unreadCount.rows[0].count,
+        lastMessageTime,   // ✅ 新增字段
       });
     }
 
