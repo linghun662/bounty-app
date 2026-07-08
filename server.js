@@ -723,6 +723,7 @@ app.post('/api/tasks/:id/confirm-payment', authMiddleware, async (req, res) => {
   }
 });
 
+// ========== 修改赏金（允许 available 和 ongoing 状态） ==========
 app.put('/api/tasks/:id/reward', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { reward: newReward } = req.body;
@@ -734,7 +735,10 @@ app.put('/api/tasks/:id/reward', authMiddleware, async (req, res) => {
     if (task.rows.length === 0) return res.status(404).json({ error: '任务不存在' });
     const t = task.rows[0];
     if (t.publisherId !== userId) return res.status(403).json({ error: '只有发布者可修改赏金' });
-    if (t.status !== 'available') return res.status(400).json({ error: '任务已被接取，无法修改' });
+    // 允许 available 和 ongoing 状态修改（议价场景）
+    if (t.status !== 'available' && t.status !== 'ongoing') {
+      return res.status(400).json({ error: '任务状态不允许修改赏金' });
+    }
     const diff = newReward - t.reward;
     if (diff > 0) {
       await turso.execute({
@@ -757,6 +761,7 @@ app.put('/api/tasks/:id/reward', authMiddleware, async (req, res) => {
     res.status(500).json({ error: '修改赏金失败' });
   }
 });
+// ========== 修改结束 ==========
 
 app.get('/api/user/:id', async (req, res) => {
   try {
