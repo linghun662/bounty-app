@@ -198,7 +198,9 @@ async function initTables() {
         mediaList TEXT,
         category TEXT,
         createdAt INTEGER,
-        updatedAt INTEGER
+        updatedAt INTEGER,
+        pendingBargainPrice INTEGER,
+        bargainRequesterId TEXT
       )
     `);
     await turso.execute(`
@@ -443,8 +445,9 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
     await turso.execute({
       sql: `INSERT INTO tasks (
         id, title, description, reward, publisherId, publisherName, publisherPhone,
-        locationAddress, latitude, longitude, mediaList, category, status, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        locationAddress, latitude, longitude, mediaList, category, status, createdAt, updatedAt,
+        pendingBargainPrice, bargainRequesterId
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         taskId,
         title,
@@ -461,6 +464,8 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
         'available',
         Date.now(),
         Date.now(),
+        null,
+        null,
       ],
     });
     await turso.execute({
@@ -723,7 +728,7 @@ app.post('/api/tasks/:id/confirm-payment', authMiddleware, async (req, res) => {
   }
 });
 
-// ========== 修改赏金（允许 available 和 ongoing 状态） ==========
+// ========== 修改赏金（支持议价流程） ==========
 app.put('/api/tasks/:id/reward', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { reward: newReward } = req.body;
@@ -732,30 +737,147 @@ app.put('/api/tasks/:id/reward', authMiddleware, async (req, res) => {
       sql: 'SELECT * FROM tasks WHERE id = ?',
       args: [req.params.id],
     });
-    if (task.rows.length === 0) return res.status(404).json({ error: '任务不存在' });
+    if (task.rows.length === 0) {
+      return res.status(404).json({ error: '任务不存在' });
+    }
     const t = task.rows[0];
-    if (t.publisherId !== userId) return res.status(403).json({ error: '只有发布者可修改赏金' });
-    // 允许 available 和 ongoing 状态修改（议价场景）
+
     if (t.status !== 'available' && t.status !== 'ongoing') {
       return res.status(400).json({ error: '任务状态不允许修改赏金' });
     }
-    const diff = newReward - t.reward;
-    if (diff > 0) {
+
+    const isPublisher = t.publisherId === userId;
+    const isTaker = t.takerId === userId && t.status === 'ongoing';
+
+    // ---------- 场景1：接取者（或接收方）发起议价请求 ----------
+    if (!isPublisher && isTaker) {
       await turso.execute({
-        sql: 'UPDATE users SET balance = balance - ?, frozenBalance = frozenBalance + ? WHERE id = ?',
-        args: [diff, diff, userId],
+        sql: 'UPDATE tasks SET pendingBargainPrice = ?, bargainRequesterId = ?, updatedAt = ? WHERE id = ?',
+        args: [newReward, userId, Date.now(), req.params.id],
       });
-    } else if (diff < 0) {
-      await turso.execute({
-        sql: 'UPDATE users SET balance = balance + ?, frozenBalance = frozenBalance - ? WHERE id = ?',
-        args: [-diff, -diff, userId],
+
+      // 通知发布者
+      const publisherWs = clients.get(t.publisherId);
+      if (publisherWs && publisherWs.readyState === WebSocket.OPEN) {
+        publisherWs.send(JSON.stringify({
+          type: 'bargain_request',
+          data: {
+            taskId: req.params.id,
+            title: t.title,
+            requesterId: userId,
+            requesterName: t.takerName || '接取者',
+            newReward: newReward,
+            currentReward: t.reward
+          }
+        }));
+      }
+
+      return res.json({
+        success: true,
+        bargainPending: true,
+        message: '议价请求已发送，等待发布者补交差价'
       });
     }
-    await turso.execute({
-      sql: 'UPDATE tasks SET reward = ?, updatedAt = ? WHERE id = ?',
-      args: [newReward, Date.now(), req.params.id],
-    });
-    res.json({ success: true, reward: newReward });
+
+    // ---------- 场景2：发布者处理 ----------
+    if (isPublisher) {
+      const pendingPrice = t.pendingBargainPrice;
+      const requesterId = t.bargainRequesterId;
+
+      // 如果有待确认的议价，且请求的新价格与待确认价格一致，视为补交差价
+      if (pendingPrice !== null && pendingPrice !== undefined && newReward === pendingPrice) {
+        const diff = newReward - t.reward;
+        if (diff > 0) {
+          // 发布者需要增加冻结资金
+          const user = await turso.execute({
+            sql: 'SELECT balance FROM users WHERE id = ?',
+            args: [userId],
+          });
+          if (user.rows.length === 0 || user.rows[0].balance < diff) {
+            return res.status(400).json({ error: '余额不足，无法补交差价' });
+          }
+          await turso.execute({
+            sql: 'UPDATE users SET balance = balance - ?, frozenBalance = frozenBalance + ? WHERE id = ?',
+            args: [diff, diff, userId],
+          });
+          await turso.execute({
+            sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+            args: [generateId(), userId, 'expense', -diff, `补交议价差价（任务：${t.title}）`, Date.now()],
+          });
+        } else if (diff < 0) {
+          // 降价：退还差额给发布者
+          await turso.execute({
+            sql: 'UPDATE users SET balance = balance + ?, frozenBalance = frozenBalance - ? WHERE id = ?',
+            args: [-diff, -diff, userId],
+          });
+          await turso.execute({
+            sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+            args: [generateId(), userId, 'income', -diff, `议价降价退款（任务：${t.title}）`, Date.now()],
+          });
+        }
+
+        // 更新任务价格，清除 pending 状态
+        await turso.execute({
+          sql: 'UPDATE tasks SET reward = ?, pendingBargainPrice = NULL, bargainRequesterId = NULL, updatedAt = ? WHERE id = ?',
+          args: [newReward, Date.now(), req.params.id],
+        });
+
+        // 通知议价请求者（接取者）价格已更新
+        if (requesterId) {
+          const requesterWs = clients.get(requesterId);
+          if (requesterWs && requesterWs.readyState === WebSocket.OPEN) {
+            requesterWs.send(JSON.stringify({
+              type: 'bargain_accepted',
+              data: {
+                taskId: req.params.id,
+                title: t.title,
+                newReward: newReward,
+                message: '发布者已补交差价，价格已更新'
+              }
+            }));
+          }
+        }
+
+        return res.json({ success: true, reward: newReward });
+      }
+
+      // ---------- 场景3：发布者直接修改赏金（无议价） ----------
+      const diff = newReward - t.reward;
+      if (diff > 0) {
+        const user = await turso.execute({
+          sql: 'SELECT balance FROM users WHERE id = ?',
+          args: [userId],
+        });
+        if (user.rows.length === 0 || user.rows[0].balance < diff) {
+          return res.status(400).json({ error: '余额不足' });
+        }
+        await turso.execute({
+          sql: 'UPDATE users SET balance = balance - ?, frozenBalance = frozenBalance + ? WHERE id = ?',
+          args: [diff, diff, userId],
+        });
+        await turso.execute({
+          sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+          args: [generateId(), userId, 'expense', -diff, `修改赏金（任务：${t.title}）`, Date.now()],
+        });
+      } else if (diff < 0) {
+        await turso.execute({
+          sql: 'UPDATE users SET balance = balance + ?, frozenBalance = frozenBalance - ? WHERE id = ?',
+          args: [-diff, -diff, userId],
+        });
+        await turso.execute({
+          sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+          args: [generateId(), userId, 'income', -diff, `修改赏金（任务：${t.title}）`, Date.now()],
+        });
+      }
+      await turso.execute({
+        sql: 'UPDATE tasks SET reward = ?, updatedAt = ? WHERE id = ?',
+        args: [newReward, Date.now(), req.params.id],
+      });
+
+      return res.json({ success: true, reward: newReward });
+    }
+
+    return res.status(403).json({ error: '无权修改赏金' });
   } catch (err) {
     console.error('修改赏金失败:', err);
     res.status(500).json({ error: '修改赏金失败' });
