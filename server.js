@@ -378,9 +378,9 @@ app.get('/api/tasks/all', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
-    const total = await turso.execute('SELECT COUNT(*) as count FROM tasks');
+    const total = await turso.execute('SELECT COUNT(*) as count FROM tasks WHERE status != \'cancelled\'');
     const tasks = await turso.execute({
-      sql: 'SELECT * FROM tasks ORDER BY createdAt DESC LIMIT ? OFFSET ?',
+      sql: 'SELECT * FROM tasks WHERE status != \'cancelled\' ORDER BY createdAt DESC LIMIT ? OFFSET ?',
       args: [limit, offset],
     });
     res.json({
@@ -478,7 +478,7 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
   }
 });
 
-// ========== 取消任务（修改后的完整逻辑） ==========
+// ======================== 取消任务（物理删除） ========================
 app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
   const userId = req.userId;
   try {
@@ -495,12 +495,17 @@ app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: '无权取消此任务' });
     }
 
-    if (t.status === 'completed' || t.status === 'cancelled') {
-      return res.status(400).json({ error: '任务已完成或已取消，无法再次取消' });
+    if (t.status === 'completed') {
+      return res.status(400).json({ error: '任务已完成，无法取消' });
     }
 
-    // 场景1：无人接取
+    if (t.status === 'cancelled') {
+      return res.status(400).json({ error: '任务已取消' });
+    }
+
+    // ---------- 场景1：无人接取 ----------
     if (t.status === 'available') {
+      // 退还冻结赏金
       await turso.execute({
         sql: 'UPDATE users SET balance = balance + ?, frozenBalance = frozenBalance - ? WHERE id = ?',
         args: [t.reward, t.reward, userId],
@@ -509,14 +514,17 @@ app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
         sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
         args: [generateId(), userId, 'income', t.reward, `取消任务退款：${t.title}`, Date.now()],
       });
+
+      // ==== 物理删除任务 ====
       await turso.execute({
-        sql: 'UPDATE tasks SET status = \'cancelled\', updatedAt = ? WHERE id = ?',
-        args: [Date.now(), req.params.id],
+        sql: 'DELETE FROM tasks WHERE id = ?',
+        args: [req.params.id],
       });
-      return res.json({ success: true });
+
+      return res.json({ success: true, deleted: true });
     }
 
-    // 场景2：有人接取
+    // ---------- 场景2：有人接取 ----------
     if (t.status === 'ongoing') {
       if (t.takerCompleted) {
         return res.status(400).json({ error: '接取者已提交完成凭证，无法取消' });
@@ -530,22 +538,6 @@ app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
       await turso.execute({
         sql: 'INSERT INTO bills (id, userId, type, amount, desc, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
         args: [generateId(), userId, 'income', t.reward, `取消任务退款（任务进行中）：${t.title}`, Date.now()],
-      });
-
-      // 解除接取者绑定
-      await turso.execute({
-        sql: `UPDATE tasks SET 
-          status = 'cancelled',
-          takerId = NULL,
-          takerName = NULL,
-          takenAt = NULL,
-          travelStatus = 'idle',
-          travelStartTime = NULL,
-          estimatedMinutes = NULL,
-          takerCompleted = 0,
-          updatedAt = ?
-          WHERE id = ?`,
-        args: [Date.now(), req.params.id],
       });
 
       // 扣除发布者信誉分（-5）
@@ -566,7 +558,13 @@ app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
         });
       }
 
-      return res.json({ success: true });
+      // ==== 物理删除任务 ====
+      await turso.execute({
+        sql: 'DELETE FROM tasks WHERE id = ?',
+        args: [req.params.id],
+      });
+
+      return res.json({ success: true, deleted: true });
     }
 
     return res.status(400).json({ error: '任务状态不允许取消' });
@@ -575,7 +573,7 @@ app.put('/api/tasks/:id/cancel', authMiddleware, async (req, res) => {
     res.status(500).json({ error: '取消任务失败' });
   }
 });
-// ========== 取消任务修改结束 ==========
+// ======================== 取消任务修改结束 ========================
 
 app.put('/api/tasks/:id/accept', authMiddleware, async (req, res) => {
   const takerId = req.userId;
